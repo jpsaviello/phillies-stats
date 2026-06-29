@@ -46,7 +46,7 @@ export default function Standings() {
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums">{r.wins}</td>
                 <td className="px-4 py-3 text-center tabular-nums">{r.losses}</td>
-                <td className="px-4 py-3 text-center tabular-nums">{r.pct}</td>
+                <td className="px-4 py-3 text-center tabular-nums">{r.wins === 0 && r.losses === 0 ? '—' : (r.wins / (r.wins + r.losses)).toFixed(3)}</td>
                 <td className="px-4 py-3 text-center tabular-nums">{r.gamesBack}</td>
               </tr>
             )

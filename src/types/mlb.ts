@@ -55,7 +55,6 @@ export interface StandingsRecord {
   team: { id: number; name: string }
   wins: number
   losses: number
-  pct: string
   gamesBack: string
   divisionRank: string
 }
