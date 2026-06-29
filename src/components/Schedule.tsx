@@ -30,6 +30,8 @@ export default function Schedule() {
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>
   if (!dates.length) return <div className="p-8 text-center text-gray-500">No games found.</div>
 
+  const today = new Date().toISOString().split('T')[0]
+
   return (
     <div className="max-w-2xl space-y-2">
       {dates.map(({ date, games }) =>
@@ -40,10 +42,14 @@ export default function Schedule() {
           const oppScore = isHome ? game.teams.away.score : game.teams.home.score
           const isFinished = game.status.detailedState === 'Final'
           const won = isHome ? game.teams.home.isWinner : game.teams.away.isWinner
+          const isToday = date === today
 
           return (
-            <div key={game.gamePk} className="flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-              <div className="text-sm text-gray-500 w-24 shrink-0">{formatDate(date)}</div>
+            <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-[#E81828]' : ''}`}>
+              <div className="text-sm text-gray-500 w-24 shrink-0">
+                {formatDate(date)}
+                {isToday && <span className="ml-2 text-xs font-bold text-[#E81828] uppercase">Today</span>}
+              </div>
               <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
               <div className="font-medium text-gray-900 flex-1">{opponent}</div>
               {isFinished ? (
