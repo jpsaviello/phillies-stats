@@ -17,7 +17,7 @@ export async function fetchRoster() {
 
 export async function fetchBattingStats() {
   const data = await get<{ stats: { splits: { player: import('../types/mlb').Player; stat: import('../types/mlb').BattingStats }[] }[] }>(
-    `/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL`
+    `/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL&hydrate=person`
   )
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
