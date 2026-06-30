@@ -94,8 +94,12 @@ const ODDS_CACHE_TTL = 30 * 60 * 1000
 export async function fetchOdds(): Promise<OddsGame[]> {
   const raw = localStorage.getItem(ODDS_CACHE_KEY)
   if (raw) {
-    const cached: { timestamp: number; data: OddsGame[] } = JSON.parse(raw)
-    if (Date.now() - cached.timestamp < ODDS_CACHE_TTL) return cached.data
+    try {
+      const cached: { timestamp: number; data: OddsGame[] } = JSON.parse(raw)
+      if (Date.now() - cached.timestamp < ODDS_CACHE_TTL) return cached.data
+    } catch {
+      localStorage.removeItem(ODDS_CACHE_KEY)
+    }
   }
   const key = import.meta.env.VITE_ODDS_API_KEY as string
   const url =
