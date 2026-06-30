@@ -47,6 +47,10 @@ export async function fetchSchedule(startDate: string, endDate: string) {
   return data.dates
 }
 
+export function teamLogoUrl(teamId: number): string {
+  return `https://www.mlbstatic.com/team-logos/${teamId}.svg`
+}
+
 export interface Game {
   gamePk: number
   gameDate: string

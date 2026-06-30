@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchSchedule } from '../api/mlb'
+import { fetchSchedule, teamLogoUrl } from '../api/mlb'
 import type { Game } from '../api/mlb'
 
 const PHILLIES_ID = 143
@@ -43,6 +43,7 @@ export default function Schedule() {
           const oppScore = isHome ? game.teams.away.score : game.teams.home.score
           const isFinished = game.status.detailedState === 'Final'
           const won = isHome ? game.teams.home.isWinner : game.teams.away.isWinner
+          const opponentId = isHome ? game.teams.away.team.id : game.teams.home.team.id
           const isToday = date === today
 
           return (
@@ -52,6 +53,12 @@ export default function Schedule() {
                 {isToday && <span className="ml-2 text-xs font-bold text-[#E81828] uppercase">Today</span>}
               </div>
               <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
+              <img
+                src={teamLogoUrl(opponentId)}
+                alt={opponent}
+                className="w-6 h-6 shrink-0"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
               <div className="font-medium text-gray-900 flex-1">{opponent}</div>
               {isFinished ? (
                 <div className={`text-sm font-semibold tabular-nums ${won ? 'text-green-600' : 'text-red-600'}`}>
