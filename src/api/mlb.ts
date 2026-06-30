@@ -60,3 +60,50 @@ export interface Game {
     away: { team: { id: number; name: string }; score?: number; isWinner?: boolean }
   }
 }
+
+interface OddsOutcome {
+  name: string
+  price: number
+  point?: number
+}
+
+interface OddsMarket {
+  key: 'h2h' | 'spreads'
+  outcomes: OddsOutcome[]
+}
+
+interface OddsBookmaker {
+  key: string
+  markets: OddsMarket[]
+}
+
+export interface OddsGame {
+  id: string
+  home_team: string
+  away_team: string
+  bookmakers: OddsBookmaker[]
+}
+
+export function formatOdds(price: number): string {
+  return price > 0 ? `+${price}` : `${price}`
+}
+
+const ODDS_CACHE_KEY = 'phillies_odds_cache'
+const ODDS_CACHE_TTL = 30 * 60 * 1000
+
+export async function fetchOdds(): Promise<OddsGame[]> {
+  const raw = localStorage.getItem(ODDS_CACHE_KEY)
+  if (raw) {
+    const cached: { timestamp: number; data: OddsGame[] } = JSON.parse(raw)
+    if (Date.now() - cached.timestamp < ODDS_CACHE_TTL) return cached.data
+  }
+  const key = import.meta.env.VITE_ODDS_API_KEY as string
+  const url =
+    `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/` +
+    `?apiKey=${key}&regions=us&markets=h2h,spreads&bookmakers=draftkings`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Odds API ${res.status}`)
+  const data: OddsGame[] = await res.json()
+  localStorage.setItem(ODDS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }))
+  return data
+}
