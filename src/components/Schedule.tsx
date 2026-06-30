@@ -19,7 +19,7 @@ export default function Schedule() {
     start.setDate(now.getDate() - 14)
     const end = new Date(now)
     end.setDate(now.getDate() + 14)
-    const fmt = (d: Date) => d.toISOString().split('T')[0]
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     fetchSchedule(fmt(start), fmt(end))
       .then(setDates)
       .catch(e => setError(e.message))
@@ -30,7 +30,8 @@ export default function Schedule() {
   if (error) return <div className="p-8 text-center text-red-600">{error}</div>
   if (!dates.length) return <div className="p-8 text-center text-gray-500">No games found.</div>
 
-  const today = new Date().toISOString().split('T')[0]
+  const _d = new Date()
+  const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
 
   return (
     <div className="max-w-2xl space-y-2">
