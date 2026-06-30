@@ -5,7 +5,7 @@ import type { Game } from '../api/mlb'
 const PHILLIES_ID = 143
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
 }
 
 export default function Schedule() {
