@@ -11,7 +11,7 @@ export default function PitchingTable() {
   const [splits, setSplits] = useState<Split[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<keyof PitchingStats>('era')
+  const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
 
   useEffect(() => {
     fetchPitchingStats()
@@ -26,26 +26,24 @@ export default function PitchingTable() {
   const sorted = [...splits]
     .filter(s => parseFloat(s.stat.inningsPitched) > 0)
     .sort((a, b) => {
-      const av = parseFloat(String(a.stat[sortKey])) || 0
-      const bv = parseFloat(String(b.stat[sortKey])) || 0
-      // For ERA/WHIP lower is better; for everything else higher is better
-      const lowerIsBetter = sortKey === 'era' || sortKey === 'whip'
-      return lowerIsBetter ? av - bv : bv - av
+      const av = parseFloat(String(a.stat[sort.key])) || 0
+      const bv = parseFloat(String(b.stat[sort.key])) || 0
+      return sort.dir === 'asc' ? av - bv : bv - av
     })
 
-  const cols: { key: keyof PitchingStats; label: string }[] = [
-    { key: 'gamesPlayed', label: 'G' },
-    { key: 'gamesStarted', label: 'GS' },
-    { key: 'wins', label: 'W' },
-    { key: 'losses', label: 'L' },
-    { key: 'saves', label: 'SV' },
-    { key: 'inningsPitched', label: 'IP' },
-    { key: 'hits', label: 'H' },
-    { key: 'homeRuns', label: 'HR' },
-    { key: 'baseOnBalls', label: 'BB' },
-    { key: 'strikeOuts', label: 'K' },
-    { key: 'era', label: 'ERA' },
-    { key: 'whip', label: 'WHIP' },
+  const cols: { key: keyof PitchingStats; label: string; defaultDir: 'asc' | 'desc' }[] = [
+    { key: 'gamesPlayed', label: 'G', defaultDir: 'desc' },
+    { key: 'gamesStarted', label: 'GS', defaultDir: 'desc' },
+    { key: 'wins', label: 'W', defaultDir: 'desc' },
+    { key: 'losses', label: 'L', defaultDir: 'desc' },
+    { key: 'saves', label: 'SV', defaultDir: 'desc' },
+    { key: 'inningsPitched', label: 'IP', defaultDir: 'desc' },
+    { key: 'hits', label: 'H', defaultDir: 'desc' },
+    { key: 'homeRuns', label: 'HR', defaultDir: 'desc' },
+    { key: 'baseOnBalls', label: 'BB', defaultDir: 'desc' },
+    { key: 'strikeOuts', label: 'K', defaultDir: 'desc' },
+    { key: 'era', label: 'ERA', defaultDir: 'asc' },
+    { key: 'whip', label: 'WHIP', defaultDir: 'asc' },
   ]
 
   return (
@@ -57,8 +55,14 @@ export default function PitchingTable() {
             {cols.map(c => (
               <th
                 key={c.key}
-                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sortKey === c.key ? 'text-[#E81828] ' : ''}`}
-                onClick={() => setSortKey(c.key)}
+                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sort.key === c.key ? 'text-[#E81828]' : ''}`}
+                onClick={() =>
+                  setSort(prev =>
+                    prev.key === c.key
+                      ? { key: c.key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+                      : { key: c.key, dir: c.defaultDir }
+                  )
+                }
               >
                 {c.label}
               </th>
@@ -70,7 +74,7 @@ export default function PitchingTable() {
             <tr key={player.id} className="hover:bg-red-50 transition-colors">
               <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
               {cols.map(c => (
-                <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sortKey === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                   {stat[c.key]}
                 </td>
               ))}
