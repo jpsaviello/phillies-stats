@@ -29,3 +29,7 @@ This is a single-page React 19 + TypeScript app (Vite, Tailwind v4) that display
 **Styling** uses Tailwind v4 (CSS-first, no `tailwind.config.js`). Phillies red is used inline as `text-[#E81828]` / `bg-[#E81828]`.
 
 **Linting** uses Oxlint (not ESLint) with React and TypeScript plugins. Config is in `.oxlintrc.json`.
+
+## Testing
+
+No automated test runner is configured. Whenever a feature is complete, use the webapp-testing skill to verify it manually in the browser before considering the work done.
