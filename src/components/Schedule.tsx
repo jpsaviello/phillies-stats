@@ -73,7 +73,7 @@ export default function Schedule() {
 
           const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
           const oddsGame = oddsMap.get(oddsKey)
-          const philliesOdds = !isFinished && oddsGame ? getPhilliesOdds(oddsGame) : null
+          const philliesOdds = !isFinished && isToday && oddsGame ? getPhilliesOdds(oddsGame) : null
 
           return (
             <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-[#E81828]' : ''}`}>
