@@ -15,3 +15,15 @@ All tasks complete.
 Task 1: complete (uncommitted working-tree diff, base a7ff632, review clean — Approved, 2 Minor nits only)
 Task 2: complete (uncommitted working-tree diff, CLAUDE.md, review clean — Approved, no issues)
 All tasks complete.
+# Progress Ledger: player-game-log
+
+Plan: docs/superpowers/plans/2026-07-07-player-game-log.md
+Base: 860dd54
+
+Task 1: complete (uncommitted working-tree changes, review clean)
+Task 2: complete (uncommitted working-tree changes, review clean)
+  - Note: fixed a Task-1 bug found during verification -- GameLogOpponent shape (types/mlb.ts) was nested {team:{id,name}}, live API returns flat {id,name}. Verified via grep, only consumer updated (GameLogModal.tsx). Reviewer confirmed fix is correct and complete.
+  - Minor carried to Task 3: GameLogModal.tsx colSpan={9} on empty-state row is hitting-only (9 cols); pitching has 8 cols. Inert until Task 3 wires group="pitching". Fix as part of Task 3.
+Task 3: complete (uncommitted working-tree changes, review clean -- colSpan fix verified correct: 9 for hitting, 8 for pitching)
+All tasks complete.
+Final whole-branch review: Ready to merge = Yes. No Critical/Important issues; 5 Minor notes (all accepted, none blocking).
