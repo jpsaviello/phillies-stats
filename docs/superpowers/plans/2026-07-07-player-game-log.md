@@ -425,3 +425,13 @@ Open the app, go to the Pitching tab, and verify:
 git add src/components/PitchingTable.tsx
 git commit -m "feat: wire player game log modal into PitchingTable"
 ```
+
+---
+
+## Post-Implementation Notes
+
+Three corrections surfaced after this plan was written, all verified against the live MLB Stats API and applied to the working tree:
+
+1. **`GameLogOpponent` shape (Task 1 → fixed in Task 2).** The plan assumed `opponent` came back as `{ team: { id, name } }`. The live API returns it flat: `{ id, name }`. Fixed in `src/types/mlb.ts` and the one consumer in `GameLogModal.tsx`.
+2. **Empty-state `colSpan` (fixed in Task 3).** `GameLogModal`'s "No recent games." row hardcoded `colSpan={9}` (correct for the 9 batting columns), which under-spanned the 8 pitching columns. Now `colSpan={group === 'hitting' ? 9 : 8}`.
+3. **Game log ordering (found post-review, fixed directly).** This plan's Global Constraints assumed the `gameLog` endpoint returns "full season in reverse-chronological order" — it does not. It returns splits **oldest-first**. The original `fetchGameLog` (`.slice(0, 10)`) was silently returning the first 10 games of the season instead of the most recent 10. Fixed to `.slice(-10).reverse()` in `src/api/mlb.ts`, with an inline comment recording the API's actual ordering for future reference.
