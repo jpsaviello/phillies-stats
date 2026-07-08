@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchPitchingStats } from '../api/mlb'
 import type { PitchingStats, Player } from '../types/mlb'
+import GameLogModal from './GameLogModal'
 
 interface Split {
   player: Player
@@ -12,6 +13,7 @@ export default function PitchingTable() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null)
 
   useEffect(() => {
     fetchPitchingStats()
@@ -47,6 +49,7 @@ export default function PitchingTable() {
   ]
 
   return (
+    <>
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -71,7 +74,11 @@ export default function PitchingTable() {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {sorted.map(({ player, stat }) => (
-            <tr key={player.id} className="hover:bg-red-50 transition-colors">
+            <tr
+              key={player.id}
+              className="hover:bg-red-50 transition-colors cursor-pointer"
+              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName })}
+            >
               <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
               {cols.map(c => (
                 <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
@@ -83,5 +90,14 @@ export default function PitchingTable() {
         </tbody>
       </table>
     </div>
+    {selectedPlayer && (
+      <GameLogModal
+        personId={selectedPlayer.id}
+        playerName={selectedPlayer.name}
+        group="pitching"
+        onClose={() => setSelectedPlayer(null)}
+      />
+    )}
+    </>
   )
 }

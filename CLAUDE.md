@@ -19,10 +19,10 @@ This is a single-page React 19 + TypeScript app (Vite, Tailwind v4) that display
 
 **Data flow:** `src/api/mlb.ts` → component → render. There is no state management library; each tab component owns its own fetch lifecycle via `useEffect` + `useState`.
 
-- **`src/api/mlb.ts`** — all MLB API calls. Constants at the top: `PHILLIES_ID = 143`, `SEASON = 2026`. Each export maps to one API endpoint.
-- **`src/types/mlb.ts`** — TypeScript interfaces for API response shapes (`Player`, `BattingStats`, `PitchingStats`, `RosterEntry`, `StandingsRecord`).
+- **`src/api/mlb.ts`** — all MLB API calls. Constants at the top: `PHILLIES_ID = 143`, `SEASON = 2026`. Each export maps to one API endpoint. Note: the `gameLog` stats endpoint (`fetchGameLog`) returns a player's full-season splits in **chronological** order (oldest first) — `fetchGameLog` takes the last 10 and reverses them to get most-recent-first. Don't assume MLB Stats API endpoints are reverse-chronological by default; this one isn't.
+- **`src/types/mlb.ts`** — TypeScript interfaces for API response shapes (`Player`, `BattingStats`, `PitchingStats`, `RosterEntry`, `StandingsRecord`, `GameLogSplit`, `BattingGameStat`, `PitchingGameStat`).
 - **`src/App.tsx`** — root component; holds the active tab state and conditionally renders the four tab components.
-- **`src/components/`** — one file per tab: `BattingTable`, `PitchingTable`, `Standings`, `Schedule`, plus `Header` and `Nav`.
+- **`src/components/`** — one file per tab: `BattingTable`, `PitchingTable`, `Standings`, `Schedule`, plus `Header`, `Nav`, `AllStarBanner`, and `GameLogModal` (shared modal opened from a row click in `BattingTable`/`PitchingTable`, showing a player's last 10 games).
 
 **Tab routing** is handled by a simple `useState<Tab>` string in `App.tsx` — no router.
 

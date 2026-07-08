@@ -58,3 +58,34 @@ export interface StandingsRecord {
   gamesBack: string
   divisionRank: string
 }
+
+export interface GameLogOpponent {
+  id: number
+  name: string
+}
+
+export interface BattingGameStat {
+  atBats: number
+  runs: number
+  hits: number
+  homeRuns: number
+  rbi: number
+  baseOnBalls: number
+  strikeOuts: number
+}
+
+export interface PitchingGameStat {
+  inningsPitched: string
+  hits: number
+  runs: number
+  earnedRuns: number
+  baseOnBalls: number
+  strikeOuts: number
+}
+
+export interface GameLogSplit {
+  date: string
+  opponent: GameLogOpponent
+  isHome: boolean
+  stat: BattingGameStat | PitchingGameStat
+}

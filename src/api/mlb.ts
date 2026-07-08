@@ -1,3 +1,5 @@
+import type { GameLogSplit } from '../types/mlb'
+
 const BASE = 'https://statsapi.mlb.com/api/v1'
 const PHILLIES_ID = 143
 const SEASON = 2026
@@ -45,6 +47,15 @@ export async function fetchSchedule(startDate: string, endDate: string) {
     `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore`
   )
   return data.dates
+}
+
+export async function fetchGameLog(personId: number, group: 'hitting' | 'pitching') {
+  const data = await get<{ stats: { splits: GameLogSplit[] }[] }>(
+    `/people/${personId}/stats?stats=gameLog&group=${group}&season=${SEASON}&sportId=1`
+  )
+  // API returns the season's splits oldest-first, so take the tail and reverse
+  // to get the 10 most recent games, most recent first.
+  return (data.stats[0]?.splits ?? []).slice(-10).reverse()
 }
 
 export function teamLogoUrl(teamId: number): string {
