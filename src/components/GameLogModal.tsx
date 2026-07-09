@@ -1,6 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchGameLog, playerHeadshotUrl } from '../api/mlb'
 import type { GameLogSplit, BattingGameStat, PitchingGameStat } from '../types/mlb'
+import { rollingAvg, cumulativeHomeRuns, eraProgression, strikeoutsPerGame } from '../utils/trends'
+import TrendChart from './TrendChart'
+
+const TREND_STATS = {
+  hitting: [
+    { label: 'Rolling AVG', compute: rollingAvg, format: (v: number) => v.toFixed(3).replace(/^0/, '') },
+    { label: 'HR Pace', compute: cumulativeHomeRuns, format: (v: number) => String(Math.round(v)) },
+  ],
+  pitching: [
+    { label: 'ERA', compute: eraProgression, format: (v: number) => v.toFixed(2) },
+    { label: "K's / Game", compute: strikeoutsPerGame, format: (v: number) => String(Math.round(v)) },
+  ],
+} as const
 
 interface Props {
   personId: number
@@ -14,14 +27,19 @@ function formatDate(iso: string) {
 }
 
 export default function GameLogModal({ personId, playerName, group, onClose }: Props) {
-  const [games, setGames] = useState<GameLogSplit[]>([])
+  const [season, setSeason] = useState<GameLogSplit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [statIndex, setStatIndex] = useState(0)
+  const games = [...season].slice(-10).reverse()
+
+  const stats = TREND_STATS[group]
+  const trendPoints = useMemo(() => stats[statIndex].compute(season), [stats, statIndex, season])
 
   useEffect(() => {
     setLoading(true)
     fetchGameLog(personId, group)
-      .then(setGames)
+      .then(setSeason)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [personId, group])
@@ -48,7 +66,7 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
               className="w-10 h-10 rounded-full object-cover bg-gray-100 shrink-0"
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
             />
-            <h2 className="font-semibold text-gray-900">{playerName} — Last 10 Games</h2>
+            <h2 className="font-semibold text-gray-900">{playerName}</h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none px-2">
             &times;
@@ -57,6 +75,34 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
         <div className="p-4">
           {loading && <div className="text-center text-gray-500 py-6">Loading…</div>}
           {error && <div className="text-center text-red-600 py-6">{error}</div>}
+          {!loading && !error && (
+            <div className="mb-4">
+              <div className="flex gap-2 mb-2">
+                {stats.map((s, i) => (
+                  <button
+                    key={s.label}
+                    onClick={() => setStatIndex(i)}
+                    className={
+                      'text-xs font-medium rounded-full px-3 py-1 transition-colors ' +
+                      (i === statIndex
+                        ? 'bg-[#E81828] text-white'
+                        : 'text-gray-600 border border-gray-300 hover:border-gray-400')
+                    }
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {trendPoints.length >= 2 ? (
+                <TrendChart points={trendPoints} yFormat={stats[statIndex].format} />
+              ) : (
+                <div className="text-center text-gray-400 text-sm py-8">Not enough games yet.</div>
+              )}
+            </div>
+          )}
+          {!loading && !error && (
+            <div className="text-xs font-medium uppercase text-gray-500 mb-1">Last 10 Games</div>
+          )}
           {!loading && !error && (
             <table className="w-full text-sm">
               <thead>

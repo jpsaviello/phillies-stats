@@ -53,9 +53,9 @@ export async function fetchGameLog(personId: number, group: 'hitting' | 'pitchin
   const data = await get<{ stats: { splits: GameLogSplit[] }[] }>(
     `/people/${personId}/stats?stats=gameLog&group=${group}&season=${SEASON}&sportId=1`
   )
-  // API returns the season's splits oldest-first, so take the tail and reverse
-  // to get the 10 most recent games, most recent first.
-  return (data.stats[0]?.splits ?? []).slice(-10).reverse()
+  // API returns the season's splits oldest-first (chronological). Callers that
+  // want "last N, most recent first" slice/reverse themselves.
+  return data.stats[0]?.splits ?? []
 }
 
 export function teamLogoUrl(teamId: number): string {
