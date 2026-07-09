@@ -62,6 +62,10 @@ export function teamLogoUrl(teamId: number): string {
   return `https://www.mlbstatic.com/team-logos/${teamId}.svg`
 }
 
+export function playerHeadshotUrl(personId: number): string {
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png,q_auto:best,f_auto/v1/people/${personId}/headshot/67/current`
+}
+
 export interface Game {
   gamePk: number
   gameDate: string

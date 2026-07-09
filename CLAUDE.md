@@ -49,4 +49,8 @@ Past examples of this pattern: `odds`, `schedule-team-logos`, `sortable-columns`
 
 ## Testing
 
-No automated test runner is configured. To verify a feature manually, use this project's `start-app` skill (`.claude/skills/start-app/SKILL.md`) to launch the dev server, then check the change in the browser before considering the work done.
+No automated test runner is configured. Instead, this repo uses the `webapp-testing` skill (`.claude/skills/webapp-testing/SKILL.md`) — a Playwright-based toolkit for driving the app in a real headless browser (navigate, click, screenshot, read console output).
+
+**Every finished feature must be verified with `webapp-testing` before being considered done** — not just lint/typecheck. Use `scripts/with_server.py` to manage the `npm run dev` lifecycle, write a small Playwright script that exercises the actual user flow (click through to the changed UI, screenshot it, check for console errors), and confirm the result visually rather than assuming it works from source review alone.
+
+Requires the `playwright` Python package and its Chromium browser binary to be installed locally (`pip install playwright && playwright install chromium`) — already set up in this environment as of 2026-07-08.

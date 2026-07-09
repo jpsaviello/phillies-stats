@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchGameLog } from '../api/mlb'
+import { fetchGameLog, playerHeadshotUrl } from '../api/mlb'
 import type { GameLogSplit, BattingGameStat, PitchingGameStat } from '../types/mlb'
 
 interface Props {
@@ -41,7 +41,15 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{playerName} — Last 10 Games</h2>
+          <div className="flex items-center gap-3">
+            <img
+              src={playerHeadshotUrl(personId)}
+              alt={playerName}
+              className="w-10 h-10 rounded-full object-cover bg-gray-100 shrink-0"
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+            <h2 className="font-semibold text-gray-900">{playerName} — Last 10 Games</h2>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none px-2">
             &times;
           </button>
