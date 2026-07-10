@@ -1,6 +1,6 @@
-# This is a fun personal project for creating a stats site for the Phillies. I use it for batting and pitching stats, schedule and upcoming game odds. As of right now it's running locally but next step is containerizing it and running it in a cluster (on local machine). Leveraging Claude code to develop this.
+# This is a fun personal project for creating a stats site for the Phillies. I use it for batting and pitching stats, schedule and upcoming game odds. The app is running locally in a container on a single node kubernetes cluster. Leveraging Claude code to develop this.
 
-<img width="1542" height="1112" alt="image" src="https://github.com/user-attachments/assets/52971d40-0098-4e58-af38-36d2205b3690" />
+<img width="1679" height="916" alt="image" src="https://github.com/user-attachments/assets/2c09636c-0ced-4d9f-8701-79a8c81afee3" />
 
 
 # React + TypeScript + Vite
