@@ -49,7 +49,24 @@ kubectl apply -k k8s/overlays/local
 To add another environment later, create
 `k8s/overlays/<env>/kustomization.yaml` referencing `../../base` plus
 whatever patches differ (image tag, ingress host, replicas, etc.) — leave
-`base/` untouched.
+`base/` untouched. Example — a hypothetical `prod` overlay running 4
+replicas instead of base's 1 (not created; no real prod target exists for
+this app, which deploys to Vercel per CLAUDE.md):
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+      name: phillies-stats
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 4
+```
 
 ## 3. Ingress controller (one-time per cluster)
 
@@ -65,8 +82,7 @@ exposes on `localhost:80`/`:443`.
 
 **Note:** right after installing, the admission webhook pod takes a few
 seconds to come up. If `kubectl apply -k k8s/overlays/local` (or any
-`Ingress` apply)
-fails with something like:
+`Ingress` apply) fails with something like:
 
 ```
 Internal error occurred: failed calling webhook "validate.nginx.ingress.kubernetes.io": ... connect: connection refused
