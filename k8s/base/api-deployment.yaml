@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phillies-stats-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phillies-stats-api
+  template:
+    metadata:
+      labels:
+        app: phillies-stats-api
+    spec:
+      containers:
+        - name: phillies-stats-api
+          image: phillies-stats-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ODDS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: phillies-stats-odds
+                  key: ODDS_API_KEY
+                  # Pod starts without the secret; /api/odds returns 503 and
+                  # the client fails soft (odds just don't render).
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
