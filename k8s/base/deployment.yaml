@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phillies-stats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phillies-stats
+  template:
+    metadata:
+      labels:
+        app: phillies-stats
+    spec:
+      containers:
+        - name: phillies-stats
+          image: phillies-stats:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
