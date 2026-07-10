@@ -8,6 +8,13 @@ spec:
     - host: phillies-stats.com
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: phillies-stats-api
+                port:
+                  number: 8080
           - path: /
             pathType: Prefix
             backend:

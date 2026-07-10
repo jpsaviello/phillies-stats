@@ -1,6 +1,6 @@
 import type { GameLogSplit } from '../types/mlb'
 
-const BASE = 'https://statsapi.mlb.com/api/v1'
+const BASE = '/api/mlb'
 const PHILLIES_ID = 143
 const SEASON = 2026
 
@@ -103,28 +103,10 @@ export function formatOdds(price: number): string {
   return price > 0 ? `+${price}` : `${price}`
 }
 
-// v2: prices switched from decimal to American format; new key so stale
-// decimal entries are never read.
-const ODDS_CACHE_KEY = 'phillies_odds_cache_v2'
-const ODDS_CACHE_TTL = 30 * 60 * 1000
-
+// The backend holds the Odds API key and a shared 30-min cache; a 503 here
+// means the server has no key configured (callers already fail soft).
 export async function fetchOdds(): Promise<OddsGame[]> {
-  const raw = localStorage.getItem(ODDS_CACHE_KEY)
-  if (raw) {
-    try {
-      const cached: { timestamp: number; data: OddsGame[] } = JSON.parse(raw)
-      if (Date.now() - cached.timestamp < ODDS_CACHE_TTL) return cached.data
-    } catch {
-      localStorage.removeItem(ODDS_CACHE_KEY)
-    }
-  }
-  const key = import.meta.env.VITE_ODDS_API_KEY as string
-  const url =
-    `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/` +
-    `?apiKey=${key}&regions=us&markets=h2h,spreads&bookmakers=draftkings&oddsFormat=american`
-  const res = await fetch(url)
+  const res = await fetch('/api/odds')
   if (!res.ok) throw new Error(`Odds API ${res.status}`)
-  const data: OddsGame[] = await res.json()
-  localStorage.setItem(ODDS_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }))
-  return data
+  return res.json()
 }
