@@ -103,7 +103,9 @@ export function formatOdds(price: number): string {
   return price > 0 ? `+${price}` : `${price}`
 }
 
-const ODDS_CACHE_KEY = 'phillies_odds_cache'
+// v2: prices switched from decimal to American format; new key so stale
+// decimal entries are never read.
+const ODDS_CACHE_KEY = 'phillies_odds_cache_v2'
 const ODDS_CACHE_TTL = 30 * 60 * 1000
 
 export async function fetchOdds(): Promise<OddsGame[]> {
@@ -119,7 +121,7 @@ export async function fetchOdds(): Promise<OddsGame[]> {
   const key = import.meta.env.VITE_ODDS_API_KEY as string
   const url =
     `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/` +
-    `?apiKey=${key}&regions=us&markets=h2h,spreads&bookmakers=draftkings`
+    `?apiKey=${key}&regions=us&markets=h2h,spreads&bookmakers=draftkings&oddsFormat=american`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Odds API ${res.status}`)
   const data: OddsGame[] = await res.json()
