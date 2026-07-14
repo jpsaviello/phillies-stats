@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchGameLog, playerHeadshotUrl } from '../api/mlb'
 import type { GameLogSplit, BattingGameStat, PitchingGameStat } from '../types/mlb'
-import { rollingAvg, cumulativeHomeRuns, eraProgression, strikeoutsPerGame } from '../utils/trends'
+import { rollingAvg, cumulativeHomeRuns, opsProgression, eraProgression, strikeoutsPerGame } from '../utils/trends'
 import TrendChart from './TrendChart'
 
 const TREND_STATS = {
   hitting: [
     { label: 'Rolling AVG', compute: rollingAvg, format: (v: number) => v.toFixed(3).replace(/^0/, '') },
     { label: 'HR Pace', compute: cumulativeHomeRuns, format: (v: number) => String(Math.round(v)) },
+    { label: 'OPS', compute: opsProgression, format: (v: number) => (v < 1 ? v.toFixed(3).replace(/^0/, '') : v.toFixed(3)) },
   ],
   pitching: [
     { label: 'ERA', compute: eraProgression, format: (v: number) => v.toFixed(2) },
