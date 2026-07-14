@@ -1,0 +1,22 @@
+# Standalone manifest for the kube-prometheus-stack Grafana release, which
+# lives in the `monitoring` namespace and is unrelated to the phillies-stats
+# app kustomization. Apply directly (not part of `k8s/base` or the app's
+# overlay): kubectl apply -f k8s/monitoring/grafana-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: grafana.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 3000

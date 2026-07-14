@@ -22,7 +22,7 @@ spec:
             # Feature flag for the All-Star banner. Defaults to on; set to
             # "false" to hide it, then `kubectl rollout restart deploy/phillies-stats-api`.
             - name: SHOW_ALLSTAR_BANNER
-              value: "true"
+              value: "false"
             - name: ODDS_API_KEY
               valueFrom:
                 secretKeyRef:
