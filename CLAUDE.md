@@ -58,3 +58,7 @@ No automated test runner is configured. Instead, this repo uses the `webapp-test
 **Every finished feature must be verified with `webapp-testing` before being considered done** — not just lint/typecheck. Use `scripts/with_server.py` to manage the `npm run dev` lifecycle, write a small Playwright script that exercises the actual user flow (click through to the changed UI, screenshot it, check for console errors), and confirm the result visually rather than assuming it works from source review alone.
 
 Requires the `playwright` Python package and its Chromium browser binary to be installed locally (`pip install playwright && playwright install chromium`) — already set up in this environment as of 2026-07-08.
+
+## Automated routines
+
+**auto-merge-branches routine** (finds unmerged branches, opens/merges PRs into `develop`): only send a push notification when there's something actionable — a branch merged, a PR blocked on failing checks, a merge conflict, or an error running the routine. If the run finds no candidate branches or nothing to do, end the run silently; do not notify just to report a no-op.
