@@ -2,6 +2,10 @@
 
 <img width="1679" height="916" alt="image" src="https://github.com/user-attachments/assets/2c09636c-0ced-4d9f-8701-79a8c81afee3" />
 
+# React + TypeScript + Vite
+The services are currently monitored using Prometheus and Grafana locally
+<img width="1695" height="938" alt="image" src="https://github.com/user-attachments/assets/a6453710-8d45-464a-8574-951526dd1014" />
+
 
 # React + TypeScript + Vite
 
