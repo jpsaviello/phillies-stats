@@ -5,6 +5,15 @@ const app = new Hono().basePath('/api')
 
 app.get('/health', c => c.json({ ok: true }))
 
+// Runtime feature flags read from env each request so they can be flipped by
+// redeploying the backend (or editing the k8s Deployment env) without a
+// frontend rebuild. Defaults to on; set SHOW_ALLSTAR_BANNER=false to hide.
+app.get('/config', c =>
+  c.json({
+    allStarBanner: process.env.SHOW_ALLSTAR_BANNER !== 'false',
+  })
+)
+
 const MLB_BASE = 'https://statsapi.mlb.com/api/v1'
 // Path prefixes the frontend actually uses; anything else is rejected so
 // this can't be used as an open relay.

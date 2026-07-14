@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
 import Nav, { type Tab } from './components/Nav'
@@ -6,14 +6,24 @@ import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
 import Standings from './components/Standings'
 import Schedule from './components/Schedule'
+import { fetchConfig } from './api/mlb'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('batting')
+  // Gated on the backend feature flag; starts hidden so a disabled or
+  // unreachable flag never flashes the banner before config resolves.
+  const [showAllStarBanner, setShowAllStarBanner] = useState(false)
+
+  useEffect(() => {
+    fetchConfig()
+      .then(cfg => setShowAllStarBanner(cfg.allStarBanner))
+      .catch(() => setShowAllStarBanner(false))
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <AllStarBanner />
+      {showAllStarBanner && <AllStarBanner />}
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && <BattingTable />}

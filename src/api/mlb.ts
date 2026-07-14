@@ -58,6 +58,19 @@ export async function fetchGameLog(personId: number, group: 'hitting' | 'pitchin
   return data.stats[0]?.splits ?? []
 }
 
+export interface AppConfig {
+  allStarBanner: boolean
+}
+
+// Runtime feature flags from the backend (/api/config). Fails soft to
+// everything-off so a missing/unreachable backend hides gated UI rather than
+// flashing it; callers gate rendering on the resolved value.
+export async function fetchConfig(): Promise<AppConfig> {
+  const res = await fetch('/api/config')
+  if (!res.ok) throw new Error(`Config API ${res.status}`)
+  return res.json()
+}
+
 export function teamLogoUrl(teamId: number): string {
   return `https://www.mlbstatic.com/team-logos/${teamId}.svg`
 }
