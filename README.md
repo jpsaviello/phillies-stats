@@ -4,7 +4,8 @@
 
 # Monitoring
 The services are currently monitored using Prometheus and Grafana locally
-<img width="1695" height="938" alt="image" src="https://github.com/user-attachments/assets/a6453710-8d45-464a-8574-951526dd1014" />
+<img width="1677" height="977" alt="image" src="https://github.com/user-attachments/assets/676a5926-06a2-4159-be96-43b003284404" />
+
 
 
 # React + TypeScript + Vite
