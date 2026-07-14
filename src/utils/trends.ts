@@ -30,6 +30,22 @@ export function rollingAvg(splits: GameLogSplit[], window = 10): TrendPoint[] {
   return points
 }
 
+// The gameLog API's per-game `ops` is already season-to-date, so this just
+// parses it. The first games are skipped: early season-to-date OPS spikes
+// (a homer on opening day alone is 4.000+) would flatten the y-scale, and
+// starting at game `minGames` aligns with where the rolling AVG line begins.
+// Deliberately full-season: for a midseason acquisition the gameLog (and its
+// cumulative ops) spans their previous team too, so the chart can differ from
+// the Phillies-only OPS in the batting table. Same scope as the other trends.
+export function opsProgression(splits: GameLogSplit[], minGames = 10): TrendPoint[] {
+  const points: TrendPoint[] = []
+  for (let i = minGames - 1; i < splits.length; i++) {
+    const value = Number((splits[i].stat as BattingGameStat).ops)
+    if (Number.isFinite(value)) points.push({ date: splits[i].date, value })
+  }
+  return points
+}
+
 export function cumulativeHomeRuns(splits: GameLogSplit[]): TrendPoint[] {
   let total = 0
   return splits.map(s => {

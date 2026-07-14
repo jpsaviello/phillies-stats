@@ -52,3 +52,14 @@ Task 5: complete (server/Dockerfile two-stage + .dockerignore; root Dockerfile V
 Task 6: complete (manifests kustomize-validated; user restarted Docker Desktop k8s, created secret phillies-stats-odds with rotated key, and deployed — both pods Running)
 Task 7: complete (key rotated by user; ingress curls all pass: health 200, roster JSON, odds 200 cached 0.27s->0.005s, /api/mlb/evil 403, / serves index.html; served bundle contains no key/upstream hosts; browser check via Playwright at phillies-stats.com — all 4 tabs render, odds line live for today's Tigers game, zero console errors)
 All tasks complete.
+# Progress Ledger: ops-trend
+
+Plan: docs/superpowers/plans/2026-07-14-ops-trend.md
+Spec: docs/superpowers/specs/2026-07-14-ops-trend-design.md (approved — user chose trend pill over table column)
+
+Key finding from spec research: gameLog per-game stat.ops is season-to-date (verified vs official formula, .001 rounding), so the helper parses it rather than recomputing.
+
+Task 1: complete (uncommitted working-tree changes; ops on BattingGameStat + opsProgression in trends.ts; build+lint clean; spot-check vs live API — last point .862 equals Harper's season OPS .862, 88 points starting 2026-04-06)
+Task 2: complete (OPS pill in TREND_STATS.hitting; build+lint clean; webapp-testing verified — batting modal shows 3 pills, OPS chart end label .862 matches Harper's OPS column in the table, hover tooltip works, pitching modal still exactly 2 pills, zero console errors; screenshots reviewed)
+Post-ship finding (accepted as designed): traded players' chart OPS is full-season (gameLog spans prior team; endpoint ignores teamId) and can differ from the table's Phillies-only OPS — e.g. Derek Hill .749 vs .890. User decided to keep full-season scope; documented in spec + trends.ts comment. Same scope as all other trends and the last-10 table.
+All tasks complete.

@@ -72,6 +72,8 @@ export interface BattingGameStat {
   rbi: number
   baseOnBalls: number
   strikeOuts: number
+  // Season-to-date through this game, not single-game (gameLog rate stats are cumulative).
+  ops: string
 }
 
 export interface PitchingGameStat {
