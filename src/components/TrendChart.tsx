@@ -11,7 +11,7 @@ const VIEW_H = 200
 const MARGIN = { top: 14, right: 56, bottom: 24, left: 44 }
 const PLOT_W = VIEW_W - MARGIN.left - MARGIN.right
 const PLOT_H = VIEW_H - MARGIN.top - MARGIN.bottom
-const RED = '#E81828'
+const RED = '#E81828' // SVG attribute literal; canonical token is --color-phillies-red in src/index.css
 
 function niceTicks(min: number, max: number): number[] {
   if (min === max) {

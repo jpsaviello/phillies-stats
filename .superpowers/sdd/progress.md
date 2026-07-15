@@ -52,6 +52,7 @@ Task 5: complete (server/Dockerfile two-stage + .dockerignore; root Dockerfile V
 Task 6: complete (manifests kustomize-validated; user restarted Docker Desktop k8s, created secret phillies-stats-odds with rotated key, and deployed — both pods Running)
 Task 7: complete (key rotated by user; ingress curls all pass: health 200, roster JSON, odds 200 cached 0.27s->0.005s, /api/mlb/evil 403, / serves index.html; served bundle contains no key/upstream hosts; browser check via Playwright at phillies-stats.com — all 4 tabs render, odds line live for today's Tigers game, zero console errors)
 All tasks complete.
+<<<<<<< HEAD
 # Progress Ledger: ops-trend
 
 Plan: docs/superpowers/plans/2026-07-14-ops-trend.md
@@ -63,3 +64,18 @@ Task 1: complete (uncommitted working-tree changes; ops on BattingGameStat + ops
 Task 2: complete (OPS pill in TREND_STATS.hitting; build+lint clean; webapp-testing verified — batting modal shows 3 pills, OPS chart end label .862 matches Harper's OPS column in the table, hover tooltip works, pitching modal still exactly 2 pills, zero console errors; screenshots reviewed)
 Post-ship finding (accepted as designed): traded players' chart OPS is full-season (gameLog spans prior team; endpoint ignores teamId) and can differ from the table's Phillies-only OPS — e.g. Derek Hill .749 vs .890. User decided to keep full-season scope; documented in spec + trends.ts comment. Same scope as all other trends and the last-10 table.
 All tasks complete.
+=======
+# Progress Ledger: visual-refresh
+
+Plan: docs/superpowers/plans/2026-07-15-visual-refresh.md
+Base: 07c66e4
+Execution mode: multi-agent (implementation subagents per task, separate review + webapp-testing agents)
+
+Task 1: complete (subagent; uncommitted working-tree changes — @fontsource/barlow-condensed installed, @theme tokens + .bg-pinstripe in index.css, font imports in main.tsx, 7 components migrated to token utilities, TrendChart keeps SVG hex literal w/ comment; build+lint clean; grep E81828 hits only index.css + TrendChart)
+Task 2: complete (subagent, ran parallel w/ Task 3; navy pinstriped Header + red accent + display font, Nav tab restyle, App bg-phillies-cream; build+lint clean, no deviations)
+Task 3: complete (subagent, ran parallel w/ Task 2; getPhilliesOdds moved verbatim to src/utils/odds.ts, Schedule.tsx imports it; build+lint clean, no deviations)
+Task 4: complete (subagent; HeroStrip.tsx + App.tsx wiring; build+lint clean. Accepted deviation: pre-game detection via ['Scheduled','Pre-Game','Warmup'] list so Delayed/Postponed/Suspended show state text instead of a misleading time)
+Review: complete (separate review agent; verdict no Critical/Important code issues. Verified: token migration pure rename, restyles match plan, odds extraction verbatim, fail-to-null airtight, date/edge cases clean. 2 Minor findings fixed by Task-4 agent: nextGame now prefers first non-Final dated today+ (stale postponed game can't hog the card), leader thresholds floored at 1 AB / 1 IP for teamGames=0; build+lint re-verified clean)
+Task 5: complete (verification agent; webapp-testing PASS on all 7 checks — computed styles confirm navy #002D72 pinstriped header + #E81828 accent + Barlow Condensed + cream bg; hero cards cross-checked vs tabs: record 54-43/2nd NL East 2.0 GB matches Standings, last W 5-0 @ Tigers Jul 12 and next vs Mets Thu 7:10 PM match Schedule, leaders qualification-correct (AVG .301 Marsh 339 AB — correctly skips Hill .327@52 AB; HR 32 Schwarber; ERA 2.62 Sánchez 127.1 IP — correctly skips 0/low-IP arms); tab underline follows clicks, GameLogModal opens/Escape-closes; no game today so no odds row (today-gate confirmed working, Odds API had the Mets line); standings-blocked failure path renders no strip + tabs fine; zero uncaught console errors. Screenshots in job tmp dir. CLAUDE.md updated: HeroStrip in components list, theme-token styling section, getPhilliesOdds moved to src/utils/odds.ts)
+All tasks complete. Uncommitted working tree on base 07c66e4; user stages/commits.
+>>>>>>> 032cfc9 (updates for revamped UI)

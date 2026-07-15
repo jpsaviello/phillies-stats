@@ -1,22 +1,12 @@
 import { useEffect, useState } from 'react'
 import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
+import { getPhilliesOdds } from '../utils/odds'
 
 const PHILLIES_ID = 143
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
-}
-
-function getPhilliesOdds(oddsGame: OddsGame) {
-  const dk = oddsGame.bookmakers[0]
-  if (!dk) return null
-  const h2h = dk.markets.find(m => m.key === 'h2h')
-  const spreads = dk.markets.find(m => m.key === 'spreads')
-  const ml = h2h?.outcomes.find(o => o.name === 'Philadelphia Phillies')?.price
-  const rl = spreads?.outcomes.find(o => o.name === 'Philadelphia Phillies')
-  if (ml === undefined || !rl) return null
-  return { ml, rlPoint: rl.point ?? -1.5, rlJuice: rl.price }
 }
 
 export default function Schedule() {
@@ -76,10 +66,10 @@ export default function Schedule() {
           const philliesOdds = !isFinished && isToday && oddsGame ? getPhilliesOdds(oddsGame) : null
 
           return (
-            <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-[#E81828]' : ''}`}>
+            <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''}`}>
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date)}
-                {isToday && <span className="ml-2 text-xs font-bold text-[#E81828] uppercase">Today</span>}
+                {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
               </div>
               <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
               <img

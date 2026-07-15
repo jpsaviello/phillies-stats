@@ -86,7 +86,7 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
                     className={
                       'text-xs font-medium rounded-full px-3 py-1 transition-colors ' +
                       (i === statIndex
-                        ? 'bg-[#E81828] text-white'
+                        ? 'bg-phillies-red text-white'
                         : 'text-gray-600 border border-gray-300 hover:border-gray-400')
                     }
                   >

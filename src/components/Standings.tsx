@@ -41,7 +41,7 @@ export default function Standings() {
                 className={isPhillies ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}
               >
                 <td className="px-4 py-3 text-gray-900 flex items-center gap-2">
-                  {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-[#E81828] inline-block" />}
+                  {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
                   {r.team.name}
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums">{r.wins}</td>

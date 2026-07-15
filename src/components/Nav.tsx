@@ -20,10 +20,10 @@ export default function Nav({ active, onChange }: NavProps) {
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-5 py-3 font-display text-base font-semibold uppercase tracking-wide border-b-2 transition-colors ${
               active === tab.id
-                ? 'border-[#E81828] text-[#E81828]'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-phillies-red text-phillies-navy'
+                : 'border-transparent text-gray-500 hover:text-phillies-navy'
             }`}
           >
             {tab.label}

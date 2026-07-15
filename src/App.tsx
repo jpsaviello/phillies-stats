@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
+import HeroStrip from './components/HeroStrip'
 import Nav, { type Tab } from './components/Nav'
 import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
@@ -21,9 +22,10 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-phillies-cream">
       <Header />
       {showAllStarBanner && <AllStarBanner />}
+      <HeroStrip />
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && <BattingTable />}

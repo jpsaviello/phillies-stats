@@ -62,7 +62,7 @@ export default function BattingTable() {
             {cols.map(c => (
               <th
                 key={c.key}
-                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sort.key === c.key ? 'text-[#E81828]' : ''}`}
+                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sort.key === c.key ? 'text-phillies-red' : ''}`}
                 onClick={() =>
                   setSort(prev =>
                     prev.key === c.key
