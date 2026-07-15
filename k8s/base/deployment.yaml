@@ -12,9 +12,11 @@ spec:
       labels:
         app: phillies-stats
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: phillies-stats
-          image: phillies-stats:latest
-          imagePullPolicy: Never
+          image: jsaviello1/phillies-stats:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
