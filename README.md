@@ -1,6 +1,7 @@
 # This is a fun personal project for creating a stats site for the Phillies. I use it for batting and pitching stats, schedule and upcoming game odds. The app is running locally in multiple containers on a single node kubernetes cluster. Leveraging Claude code to develop this.
 
-<img width="1679" height="916" alt="image" src="https://github.com/user-attachments/assets/2c09636c-0ced-4d9f-8701-79a8c81afee3" />
+<img width="1686" height="1002" alt="image" src="https://github.com/user-attachments/assets/0f62af44-dad8-4b2e-b56a-273650de7c74" />
+
 
 # Monitoring
 The services are currently monitored using Prometheus and Grafana locally
