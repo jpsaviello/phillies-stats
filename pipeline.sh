@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #build fresh docker images for both the front-end and back-end; running locally and not publishing to docker hub/image repository
 
 docker build -t phillies-stats:latest .
