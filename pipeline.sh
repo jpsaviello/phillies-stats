@@ -1,8 +1,15 @@
 #!/bin/bash
 
-#build fresh docker images for both the front-end and back-end; running locally and not publishing to docker hub/image repository
+# Build fresh docker images for both the front-end and back-end.
+# Front-end is pushed to Docker Hub (jsaviello1/phillies-stats) and the
+# cluster pulls it from there. Back-end stays local-only (imagePullPolicy:
+# Never) — free Docker Hub account only allows publishing one image.
 
-docker build -t phillies-stats:latest .
+set -e
+
+docker build -t jsaviello1/phillies-stats:latest .
+docker push jsaviello1/phillies-stats:latest
+
 docker build -t phillies-stats-api:latest server/
 
 # restart front-end

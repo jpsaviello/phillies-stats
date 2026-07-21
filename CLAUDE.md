@@ -39,7 +39,13 @@ This is a single-page React 19 + TypeScript app (Vite, Tailwind v4) that display
 
 **Linting** uses Oxlint (not ESLint) with React and TypeScript plugins. Config is in `.oxlintrc.json`.
 
-**Deploy** target is the local Docker Desktop k8s cluster (kustomize manifests in `k8s/`, ingress host `phillies-stats.com`). Two images built locally (`imagePullPolicy: Never`): `phillies-stats:latest` (root `Dockerfile`, nginx static) and `phillies-stats-api:latest` (`server/Dockerfile`). The ingress routes `/api` to the backend Service and `/` to nginx — direct NodePort access (`localhost:30080`) bypasses the ingress, so `/api` 404s there and no data loads; use the ingress host. `vercel.json` is a leftover from the earlier Vercel target (security headers only).
+**Deploy** target is the local Docker Desktop k8s cluster (kustomize manifests in `k8s/`, ingress host `phillies-stats.com`). The ingress routes `/api` to the backend Service and `/` to nginx — direct NodePort access (`localhost:30080`) bypasses the ingress, so `/api` 404s there and no data loads; use the ingress host. `vercel.json` is a leftover from the earlier Vercel target (security headers only).
+
+The two images are deployed differently, permanently — not a migration in progress. The user's Docker Hub account is free-tier and can only publish one image, so only the frontend is registry-backed:
+- **Frontend** (`phillies-stats`, root `Dockerfile`, nginx static) — pulled from Docker Hub. `k8s/base/deployment.yaml` uses `jsaviello1/phillies-stats:latest` with `imagePullPolicy: IfNotPresent` and `imagePullSecrets: dockerhub-creds`.
+- **Backend** (`phillies-stats-api`, `server/Dockerfile`) — stays local-only by design. `k8s/base/api-deployment.yaml` uses the locally-built `phillies-stats-api:latest` with `imagePullPolicy: Never`.
+
+`pipeline.sh` builds+pushes the frontend image to Docker Hub then builds the backend image locally (no push), restarting both Deployments after.
 
 ## Feature workflow (Spec-Driven Development)
 

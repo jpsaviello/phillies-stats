@@ -31,8 +31,13 @@ the Dockerfile comment; omitting it just means odds silently don't show.)
 Structured as Kustomize base + overlays so future environments (staging,
 etc.) can patch the base without duplicating it:
 
-- `k8s/base/deployment.yaml` — Deployment, `imagePullPolicy: Never` (image
-  is local, not in a registry).
+- `k8s/base/deployment.yaml` (frontend) — pulls `jsaviello1/phillies-stats:latest`
+  from Docker Hub, `imagePullPolicy: IfNotPresent`, with
+  `imagePullSecrets: dockerhub-creds`.
+- `k8s/base/api-deployment.yaml` (backend) — `phillies-stats-api:latest`
+  built locally, `imagePullPolicy: Never`. Stays local-only permanently — the
+  free Docker Hub account only allows publishing one image, so the backend
+  isn't going to the registry.
 - `k8s/base/service.yaml` — NodePort service, `nodePort: 30080`.
 - `k8s/base/ingress.yaml` — Ingress routing host `phillies-stats.com` → the
   service, `ingressClassName: nginx`.
@@ -105,16 +110,32 @@ sudo sh -c 'echo "127.0.0.1 phillies-stats.com" >> /etc/hosts'
 
 ## 6. Re-deploy workflow after a code change
 
-`imagePullPolicy: Never` means the cluster won't notice a rebuilt image
-with the same tag on its own:
+**Backend (`phillies-stats-api`)** is still local-only. `imagePullPolicy: Never`
+means the cluster won't notice a rebuilt image with the same tag on its own:
 
 ```bash
-docker build -t phillies-stats:latest .
-kubectl rollout restart deployment/phillies-stats
+docker build -t phillies-stats-api:latest server/
+kubectl rollout restart deployment/phillies-stats-api
 ```
 
 No image transfer step needed (unlike the k3s/Multipass plan) since the
 image store is shared with the cluster.
+
+**Frontend (`phillies-stats`)** pulls from Docker Hub
+(`jsaviello1/phillies-stats:latest`) with `imagePullPolicy: IfNotPresent`, so
+a rebuild has to be pushed to the registry before a rollout restart will pick
+it up — a same-tag image already present in Docker Desktop's local store is
+not enough:
+
+```bash
+docker build -t jsaviello1/phillies-stats:latest .
+docker push jsaviello1/phillies-stats:latest
+kubectl rollout restart deployment/phillies-stats
+```
+
+`pipeline.sh` does both of the above for the frontend, then builds (but does
+not push) the backend image before restarting both Deployments — that's the
+one-shot way to redeploy after touching either service.
 
 ## Useful checks
 
