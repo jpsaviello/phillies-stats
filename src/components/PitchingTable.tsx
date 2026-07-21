@@ -13,7 +13,7 @@ export default function PitchingTable() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
-  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null)
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: PitchingStats } | null>(null)
 
   useEffect(() => {
     fetchPitchingStats()
@@ -77,7 +77,7 @@ export default function PitchingTable() {
             <tr
               key={player.id}
               className="hover:bg-red-50 transition-colors cursor-pointer"
-              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName })}
+              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
             >
               <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
               {cols.map(c => (
@@ -95,6 +95,7 @@ export default function PitchingTable() {
         personId={selectedPlayer.id}
         playerName={selectedPlayer.name}
         group="pitching"
+        seasonStat={selectedPlayer.stat}
         onClose={() => setSelectedPlayer(null)}
       />
     )}

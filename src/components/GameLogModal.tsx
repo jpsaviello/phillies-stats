@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchGameLog, playerHeadshotUrl } from '../api/mlb'
-import type { GameLogSplit, BattingGameStat, PitchingGameStat } from '../types/mlb'
+import { fetchGameLog, fetchSplits, playerHeadshotUrl } from '../api/mlb'
+import type {
+  GameLogSplit,
+  BattingGameStat,
+  PitchingGameStat,
+  BattingStats,
+  PitchingStats,
+  StatSplit,
+} from '../types/mlb'
 import { rollingAvg, cumulativeHomeRuns, opsProgression, eraProgression, strikeoutsPerGame } from '../utils/trends'
 import TrendChart from './TrendChart'
 
@@ -20,22 +27,46 @@ interface Props {
   personId: number
   playerName: string
   group: 'hitting' | 'pitching'
+  seasonStat: BattingStats | PitchingStats
   onClose: () => void
 }
+
+// Order + display labels for the situational sitCodes we request.
+const SPLIT_ORDER = ['vl', 'vr', 'h', 'a'] as const
+const SPLIT_LABELS: Record<string, string> = { vl: 'vs LHP', vr: 'vs RHP', h: 'Home', a: 'Away' }
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function GameLogModal({ personId, playerName, group, onClose }: Props) {
+function StatTile({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <div className="font-display text-xs uppercase tracking-wider text-gray-400">{label}</div>
+      <div className="font-display text-2xl font-bold text-phillies-navy tabular-nums mt-0.5">{value}</div>
+    </div>
+  )
+}
+
+export default function GameLogModal({ personId, playerName, group, seasonStat, onClose }: Props) {
   const [season, setSeason] = useState<GameLogSplit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statIndex, setStatIndex] = useState(0)
+  const [splits, setSplits] = useState<StatSplit[]>([])
   const games = [...season].slice(-10).reverse()
 
   const stats = TREND_STATS[group]
   const trendPoints = useMemo(() => stats[statIndex].compute(season), [stats, statIndex, season])
+
+  // Order splits by our requested sitCodes; the API may omit some for small samples.
+  const orderedSplits = useMemo(
+    () =>
+      SPLIT_ORDER.map(code => splits.find(s => s.split.code === code)).filter(
+        (s): s is StatSplit => s != null
+      ),
+    [splits]
+  )
 
   useEffect(() => {
     setLoading(true)
@@ -43,6 +74,14 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
       .then(setSeason)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
+  }, [personId, group])
+
+  // Splits load independently so a failure here never blanks the trend/table.
+  useEffect(() => {
+    setSplits([])
+    fetchSplits(personId, group)
+      .then(setSplits)
+      .catch(() => setSplits([]))
   }, [personId, group])
 
   useEffect(() => {
@@ -56,7 +95,7 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -74,6 +113,103 @@ export default function GameLogModal({ personId, playerName, group, onClose }: P
           </button>
         </div>
         <div className="p-4">
+          {/* Season line — comes from the table row, so it renders immediately. */}
+          {group === 'hitting'
+            ? (() => {
+                const s = seasonStat as BattingStats
+                return (
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 mb-5">
+                    <StatTile label="AVG" value={s.avg} />
+                    <StatTile label="OBP" value={s.obp} />
+                    <StatTile label="SLG" value={s.slg} />
+                    <StatTile label="OPS" value={s.ops} />
+                    <StatTile label="HR" value={s.homeRuns} />
+                    <StatTile label="RBI" value={s.rbi} />
+                    <StatTile label="SB" value={s.stolenBases} />
+                  </div>
+                )
+              })()
+            : (() => {
+                const s = seasonStat as PitchingStats
+                return (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-5">
+                    <StatTile label="ERA" value={s.era} />
+                    <StatTile label="W-L" value={`${s.wins}-${s.losses}`} />
+                    <StatTile label="IP" value={s.inningsPitched} />
+                    <StatTile label="K" value={s.strikeOuts} />
+                    <StatTile label="WHIP" value={s.whip} />
+                    <StatTile label="SV" value={s.saves} />
+                  </div>
+                )
+              })()}
+
+          {/* Situational splits — independent of the game-log fetch. */}
+          {orderedSplits.length > 0 && (
+            <div className="mb-5">
+              <div className="text-xs font-medium uppercase text-gray-500 mb-1">Splits</div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-500 text-xs uppercase">
+                    <th className="text-left font-medium py-2">Split</th>
+                    {group === 'hitting' ? (
+                      <>
+                        <th className="text-center font-medium py-2">AVG</th>
+                        <th className="text-center font-medium py-2">OBP</th>
+                        <th className="text-center font-medium py-2">SLG</th>
+                        <th className="text-center font-medium py-2">OPS</th>
+                        <th className="text-center font-medium py-2">HR</th>
+                        <th className="text-center font-medium py-2">RBI</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="text-center font-medium py-2">ERA</th>
+                        <th className="text-center font-medium py-2">WHIP</th>
+                        <th className="text-center font-medium py-2">IP</th>
+                        <th className="text-center font-medium py-2">K</th>
+                        <th className="text-center font-medium py-2">BB</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orderedSplits.map(sp => (
+                    <tr key={sp.split.code}>
+                      <td className="py-2 text-gray-700 whitespace-nowrap font-medium">
+                        {SPLIT_LABELS[sp.split.code] ?? sp.split.description}
+                      </td>
+                      {group === 'hitting'
+                        ? (() => {
+                            const s = sp.stat as BattingStats
+                            return (
+                              <>
+                                <td className="text-center tabular-nums">{s.avg}</td>
+                                <td className="text-center tabular-nums">{s.obp}</td>
+                                <td className="text-center tabular-nums">{s.slg}</td>
+                                <td className="text-center tabular-nums">{s.ops}</td>
+                                <td className="text-center tabular-nums">{s.homeRuns}</td>
+                                <td className="text-center tabular-nums">{s.rbi}</td>
+                              </>
+                            )
+                          })()
+                        : (() => {
+                            const s = sp.stat as PitchingStats
+                            return (
+                              <>
+                                <td className="text-center tabular-nums">{s.era}</td>
+                                <td className="text-center tabular-nums">{s.whip}</td>
+                                <td className="text-center tabular-nums">{s.inningsPitched}</td>
+                                <td className="text-center tabular-nums">{s.strikeOuts}</td>
+                                <td className="text-center tabular-nums">{s.baseOnBalls}</td>
+                              </>
+                            )
+                          })()}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {loading && <div className="text-center text-gray-500 py-6">Loading…</div>}
           {error && <div className="text-center text-red-600 py-6">{error}</div>}
           {!loading && !error && (

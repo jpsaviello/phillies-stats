@@ -1,4 +1,4 @@
-import type { GameLogSplit } from '../types/mlb'
+import type { GameLogSplit, StatSplit } from '../types/mlb'
 
 const BASE = '/api/mlb'
 const PHILLIES_ID = 143
@@ -55,6 +55,16 @@ export async function fetchGameLog(personId: number, group: 'hitting' | 'pitchin
   )
   // API returns the season's splits oldest-first (chronological). Callers that
   // want "last N, most recent first" slice/reverse themselves.
+  return data.stats[0]?.splits ?? []
+}
+
+// Situational splits for one player: vs LHP/RHP (vl/vr) and home/away (h/a).
+// Same /people/{id}/stats shape as gameLog; each split carries the full
+// season-stat object under `stat`. Some sitCodes may be absent for small samples.
+export async function fetchSplits(personId: number, group: 'hitting' | 'pitching') {
+  const data = await get<{ stats: { splits: StatSplit[] }[] }>(
+    `/people/${personId}/stats?stats=statSplits&sitCodes=vl,vr,h,a&group=${group}&season=${SEASON}&sportId=1`
+  )
   return data.stats[0]?.splits ?? []
 }
 

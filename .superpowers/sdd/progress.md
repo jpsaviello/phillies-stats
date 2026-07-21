@@ -79,3 +79,16 @@ Review: complete (separate review agent; verdict no Critical/Important code issu
 Task 5: complete (verification agent; webapp-testing PASS on all 7 checks — computed styles confirm navy #002D72 pinstriped header + #E81828 accent + Barlow Condensed + cream bg; hero cards cross-checked vs tabs: record 54-43/2nd NL East 2.0 GB matches Standings, last W 5-0 @ Tigers Jul 12 and next vs Mets Thu 7:10 PM match Schedule, leaders qualification-correct (AVG .301 Marsh 339 AB — correctly skips Hill .327@52 AB; HR 32 Schwarber; ERA 2.62 Sánchez 127.1 IP — correctly skips 0/low-IP arms); tab underline follows clicks, GameLogModal opens/Escape-closes; no game today so no odds row (today-gate confirmed working, Odds API had the Mets line); standings-blocked failure path renders no strip + tabs fine; zero uncaught console errors. Screenshots in job tmp dir. CLAUDE.md updated: HeroStrip in components list, theme-token styling section, getPhilliesOdds moved to src/utils/odds.ts)
 All tasks complete. Uncommitted working tree on base 07c66e4; user stages/commits.
 >>>>>>> 032cfc9 (updates for revamped UI)
+# Progress Ledger: player-detail
+
+Plan: docs/superpowers/plans/2026-07-20-player-detail.md
+Spec: docs/superpowers/specs/2026-07-20-player-detail-design.md (approved — expanded modal, splits + season line)
+Execution mode: plan mode (single-session), retroactively documented
+
+Task 1: complete (uncommitted working-tree changes; StatSplit in types/mlb.ts + fetchSplits in api/mlb.ts, same /people/ path — no proxy change; build+lint clean)
+Task 2: complete (GameLogModal: seasonStat prop, StatTile + season-line grid, independent splits useEffect + orderedSplits memo, splits table, panel max-w-2xl->3xl; build+lint clean)
+Task 3: complete (BattingTable + PitchingTable: selectedPlayer widened to {id,name,stat}, seasonStat passed; build+lint clean)
+Task 4: complete (webapp-testing PASS both tabs — batting modal shows AVG/OBP/SLG/OPS/HR/RBI/SB header + vs LHP/RHP/Home/Away splits + trend + last-10; pitching modal shows ERA/W-L/IP/K/WHIP/SV + ERA/WHIP splits; zero console errors; screenshots reviewed; CLAUDE.md updated)
+  - Graceful-degradation confirmed live: Bryse Wilson 0.1 IP vs LHP returned no ERA; cell rendered blank, no NaN/crash. Two fetches are independent so a splits failure never blanks trend/table.
+  - Known caveat (accepted, same as ops-trend): season line is Phillies-only table stat; can differ from full-season splits/chart for traded players since gameLog/statSplits span prior team.
+All tasks complete. Uncommitted working tree; user stages/commits.

@@ -91,3 +91,8 @@ export interface GameLogSplit {
   isHome: boolean
   stat: BattingGameStat | PitchingGameStat
 }
+
+export interface StatSplit {
+  split: { code: string; description: string } // vl, vr, h, a
+  stat: BattingStats | PitchingStats
+}

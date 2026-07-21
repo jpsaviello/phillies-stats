@@ -13,7 +13,7 @@ export default function BattingTable() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof BattingStats; dir: 'asc' | 'desc' }>({ key: 'avg', dir: 'desc' })
-  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string } | null>(null)
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: BattingStats } | null>(null)
 
   useEffect(() => {
     fetchBattingStats()
@@ -81,7 +81,7 @@ export default function BattingTable() {
             <tr
               key={player.id}
               className="hover:bg-red-50 transition-colors cursor-pointer"
-              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName })}
+              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
             >
               <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
               <td className="px-3 py-2.5 text-center text-gray-500">{player.primaryPosition?.abbreviation}</td>
@@ -100,6 +100,7 @@ export default function BattingTable() {
         personId={selectedPlayer.id}
         playerName={selectedPlayer.name}
         group="hitting"
+        seasonStat={selectedPlayer.stat}
         onClose={() => setSelectedPlayer(null)}
       />
     )}
