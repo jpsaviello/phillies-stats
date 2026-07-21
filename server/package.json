@@ -8,12 +8,13 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "hono": "^4",
-    "@hono/node-server": "^1"
+    "@anthropic-ai/sdk": "^0.112.4",
+    "@hono/node-server": "^1",
+    "hono": "^4"
   },
   "devDependencies": {
+    "@types/node": "^24",
     "tsx": "^4",
-    "typescript": "~6.0.2",
-    "@types/node": "^24"
+    "typescript": "~6.0.2"
   }
 }

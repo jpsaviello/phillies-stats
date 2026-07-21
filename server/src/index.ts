@@ -1,7 +1,10 @@
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
+import { chatHandler } from './chat.js'
 
 const app = new Hono().basePath('/api')
+
+app.post('/chat', chatHandler)
 
 app.get('/health', c => c.json({ ok: true }))
 

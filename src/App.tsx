@@ -7,6 +7,7 @@ import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
 import Standings from './components/Standings'
 import Schedule from './components/Schedule'
+import ChatWidget from './components/ChatWidget'
 import { fetchConfig } from './api/mlb'
 
 export default function App() {
@@ -33,6 +34,8 @@ export default function App() {
         {tab === 'standings' && <Standings />}
         {tab === 'schedule' && <Schedule />}
       </main>
+      {/* Mounted once, outside the tab conditionals, so chat history survives tab switches. */}
+      <ChatWidget />
     </div>
   )
 }

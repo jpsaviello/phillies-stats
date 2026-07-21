@@ -31,6 +31,14 @@ spec:
                   # Pod starts without the secret; /api/odds returns 503 and
                   # the client fails soft (odds just don't render).
                   optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: phillies-stats-anthropic
+                  key: ANTHROPIC_API_KEY
+                  # Pod starts without the secret; /api/chat returns 503 and
+                  # the widget shows a friendly not-configured message.
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health

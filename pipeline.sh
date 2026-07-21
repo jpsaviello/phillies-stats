@@ -19,3 +19,7 @@ sleep 10
 
 #restart back-end
 kubectl rollout restart deploy/phillies-stats-api
+
+sleep 10
+
+kubectl apply -k k8s/overlays/local
