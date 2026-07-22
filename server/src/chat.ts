@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema'
-import type { Context } from 'hono'
+import type { RouteResult } from './core.js'
 
 const PHILLIES_ID = 143
 const SEASON = 2026
@@ -268,19 +268,16 @@ function buildSystemPrompt(): string {
   )
 }
 
-export async function chatHandler(c: Context) {
+// Takes an already-parsed request body (parsing/malformed-JSON handling is
+// the caller's job, since that's framework-specific) and returns a plain
+// { status, body } result — no Hono/Vercel types here, see core.ts for why.
+export async function handleChat(requestBody: unknown): Promise<RouteResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return c.json({ error: 'chat not configured' }, 503)
+  if (!apiKey) return { status: 503, body: { error: 'chat not configured' } }
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: 'invalid JSON body' }, 400)
-  }
-  const messages = (body as { messages?: unknown } | null)?.messages
+  const messages = (requestBody as { messages?: unknown } | null)?.messages
   const problem = validateMessages(messages)
-  if (problem !== null) return c.json({ error: problem }, 400)
+  if (problem !== null) return { status: 400, body: { error: problem } }
 
   // Rebuild the messages so only the validated shape reaches the API — any
   // extra keys the client sent would otherwise surface as a 502.
@@ -306,9 +303,9 @@ export async function chatHandler(c: Context) {
         .filter(b => b.type === 'text')
         .map(b => b.text)
         .join('\n') || "Sorry — I couldn't finish that one. Try asking again."
-    return c.json({ reply })
+    return { status: 200, body: { reply } }
   } catch (err) {
     console.error('chat request failed', err)
-    return c.json({ error: 'chat request failed' }, 502)
+    return { status: 502, body: { error: 'chat request failed' } }
   }
 }
