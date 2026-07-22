@@ -2,8 +2,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { handleChat } from '../server/src/chat.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
 
-// Catch-all for /api/* on Vercel (file name is Vercel's own optional
-// catch-all convention — works for any framework, not just Next.js).
+// Catch-all for /api/* on Vercel. `[...route]` (single brackets) is Vercel's
+// own generic catch-all-route filename convention, works for any framework —
+// NOT the double-bracket `[[...route]]` "optional" catch-all, which is a
+// Next.js-only routing convention that the plain Vercel Functions router
+// doesn't recognize (that mistake 404'd every /api/* route on a first deploy
+// here). Single brackets require at least one path segment, which is fine —
+// every real request is /api/<something>, never bare /api.
 // Deliberately reimplements the routing that server/src/app.ts does with
 // Hono, calling the same framework-agnostic core.ts/chat.ts functions —
 // see core.ts for why this doesn't just reuse the Hono app directly.
