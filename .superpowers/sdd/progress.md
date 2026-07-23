@@ -146,3 +146,22 @@ Verification:
 
 Note: This session also started Docker Desktop and ran the chat-rate-limit k8s rollout earlier in the same session; both k8s Deployments are now on images that include both the rate limiter AND the odds tool.
 All implementation + testing complete. Uncommitted working tree; user stages/commits.
+# Progress Ledger: chat-web-search-odds-fallback
+
+Feature: add Anthropic hosted web_search as the chatbot's odds fallback so the LLM can answer odds questions get_odds can't (no game priced, or futures/division/championship odds the statsapi data doesn't cover). Follow-on to chat-odds-tool.
+Base: after chat-odds-tool (uncommitted working tree).
+Execution mode: single-session, direct implementation. Loaded the claude-api skill first to ground the exact server-tool spec.
+
+Implementation (server/src/chat.ts):
+  - Added the web_search server tool: `{type:'web_search_20260209', name:'web_search', max_uses:3}` (WEB_SEARCH_MAX_USES const). `_20260209` is the current variant for Opus 4.8 (per claude-api skill); it has built-in dynamic filtering, so code_execution is NOT separately declared. No local run handler — Anthropic executes it.
+  - System prompt: call get_odds first; fall back to web_search when it has no line or the question is futures/division/championship odds get_odds doesn't cover; cite findings; if web_search also finds nothing, say odds aren't available. Scoped: only use web_search for Phillies/MLB questions the other tools can't answer, never unrelated topics (keeps the decline boundary + bounds abuse surface).
+  - CRITICAL pause_turn fix: converted the toolRunner from a direct `await client.beta.messages.toolRunner(...)` into a `for await (const message of runner)` loop that calls `runner.pushMessages({role:'assistant', content: message.content})` on `stop_reason === 'pause_turn'`. The claude-api skill flags that the beta toolRunner does NOT auto-resume pause_turn (which a server tool can emit when its internal loop hits its cap) — awaiting directly would silently return a truncated web-search answer. Final non-paused message's text becomes the reply.
+
+Verification:
+  - Builds: server build + root build + api/index.ts standalone typecheck + oxlint all clean. The server tool typed fine mixed with the betaTool custom tools in the runner's tools array; pushMessages/stop_reason compiled.
+  - End-to-end PAID test (user approved; web search is billed per query ON TOP of tokens): asked "What are the Phillies' current World Series championship odds?" through the local widget — futures aren't in statsapi get_odds at all. The model said verbatim "The odds tool only covers upcoming game lines, not futures, so let me search online.", ran web_search, and answered with cited real futures odds (~+1200 to +1300, DraftKings/BetMGM, framed vs the NL board). Zero JS errors; screenshot reviewed. Proves get_odds-empty -> web_search fallback -> cited answer, and the pause_turn loop handles a real multi-step server-tool turn.
+  - Deploy: both targets (user chose both). k8s via pipeline.sh (Docker already running from the earlier odds/rate-limit rollouts; rebuild+rollout clean, both Deployments fresh pods). Vercel prod via `npx vercel --prod`. Post-deploy FREE checks on http://phillies-stats.com and https://phillies-stats.vercel.app: index 200, health 200, odds 200, chat invalid-body -> 400 (redeployed chat route runs; zero paid). Web search itself proven locally on byte-identical source, so prod wasn't re-tested with a paid+web-search request.
+  - Docs: CLAUDE.md Chat bot section updated ("Six tools" -> six custom tools + the web_search server tool, the get_odds-first/web_search-fallback flow, the pause_turn iterate-not-await requirement, and the per-query cost note).
+
+Note: k8s Deployments now carry rate limiter + get_odds tool + web_search fallback (three features shipped this session).
+All implementation + testing complete. Uncommitted working tree; user stages/commits.

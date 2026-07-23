@@ -11,6 +11,18 @@ const MAX_ITERATIONS = 8
 // Answers are prompted to be a few sentences; a small cap bounds the
 // worst-case cost of every abuse path at no UX cost.
 const MAX_TOKENS = 1024
+// Web search is billed per query; cap the searches one request can run.
+const WEB_SEARCH_MAX_USES = 3
+
+// Anthropic-hosted web search (server tool — runs on Anthropic's side, no local
+// `run`). Used as the odds fallback: when get_odds has no line for the asked
+// matchup, or the question is about odds statsapi doesn't cover, the model can
+// look it up online. `_20260209` is the current variant for Opus 4.8.
+const webSearch = {
+  type: 'web_search_20260209' as const,
+  name: 'web_search' as const,
+  max_uses: WEB_SEARCH_MAX_USES,
+}
 
 const MLB_BASE = 'https://statsapi.mlb.com/api/v1'
 
@@ -327,7 +339,8 @@ function buildSystemPrompt(): string {
     `You are a Philadelphia Phillies (team id ${PHILLIES_ID}, ${SEASON} season) stats assistant embedded in a Phillies stats website. ` +
     `Today's date is ${today}. ` +
     `You MUST use your tools for any factual claim about games, stats, pitchers, standings, or betting odds — never answer those from memory. ` +
-    `When asked about betting lines or odds, use get_odds; if it returns no game for the matchup asked about, say odds aren't posted yet rather than guessing. ` +
+    `When asked about betting lines or odds, call get_odds first. If it has no line for the matchup asked about — or the question is about futures, division, or championship odds it doesn't cover — use web_search to look it up online and cite what you found. If web_search also turns up nothing, say the odds aren't available rather than guessing. ` +
+    `Only use web_search for Phillies or MLB questions your other tools can't answer (odds, recent news) — never for unrelated topics. ` +
     `Keep answers short and conversational: a few sentences at most; small inline lists are fine. ` +
     `Politely decline questions unrelated to the Phillies or MLB. ` +
     `Reply in plain text only — no markdown headings or tables.`
@@ -360,22 +373,44 @@ export async function handleChat(requestBody: unknown, clientIp: string): Promis
 
   try {
     const client = new Anthropic({ apiKey })
-    const finalMessage = await client.beta.messages.toolRunner({
+    const runner = client.beta.messages.toolRunner({
       model: 'claude-opus-4-8',
       max_tokens: MAX_TOKENS,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
       system: buildSystemPrompt(),
-      tools: [getSchedule, getStandings, getBattingStats, getPitchingStats, getPlayerGameLog, getGameOdds],
+      tools: [
+        getSchedule,
+        getStandings,
+        getBattingStats,
+        getPitchingStats,
+        getPlayerGameLog,
+        getGameOdds,
+        webSearch,
+      ],
       messages: cleanMessages,
       max_iterations: MAX_ITERATIONS,
     })
-    const reply =
-      finalMessage.content
+    // Iterate rather than awaiting the runner directly: the web_search server
+    // tool can end a turn with stop_reason "pause_turn" (its internal loop hit
+    // its cap), and toolRunner does NOT auto-resume that — it just yields the
+    // paused message. Push the paused turn back so the search continues; the
+    // final (non-paused) message carries the answer text.
+    let reply = ''
+    for await (const message of runner) {
+      if (message.stop_reason === 'pause_turn') {
+        runner.pushMessages({ role: 'assistant', content: message.content })
+        continue
+      }
+      reply = message.content
         .filter(b => b.type === 'text')
         .map(b => b.text)
-        .join('\n') || "Sorry — I couldn't finish that one. Try asking again."
-    return { status: 200, body: { reply } }
+        .join('\n')
+    }
+    return {
+      status: 200,
+      body: { reply: reply || "Sorry — I couldn't finish that one. Try asking again." },
+    }
   } catch (err) {
     console.error('chat request failed', err)
     return { status: 502, body: { error: 'chat request failed' } }
