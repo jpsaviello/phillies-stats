@@ -128,3 +128,21 @@ Task 4: partially complete — Vercel prod deploy DONE (below); the two remainin
 Open:
   - Task 4 user steps outstanding: (a) set a monthly spend limit on the Anthropic key in console.anthropic.com; (b) k8s backend image rebuild + rollout via pipeline.sh so the in-cluster backend gets the limiter (Vercel is already live with it). No manifest/env changes needed.
 Uncommitted working tree; user stages/commits.
+# Progress Ledger: chat-odds-tool
+
+Feature: add a get_odds tool to the chatbot so the LLM can answer betting-line questions.
+Base: after chat-rate-limit (uncommitted working tree).
+Execution mode: single-session, direct implementation (one-tool addition, no separate spec/plan).
+
+Implementation: server/src/chat.ts — new betaTool `get_odds` (empty input schema). Reuses `getOdds()` from core.ts rather than re-fetching, so the Odds API key and the shared 30-min cache stay in one place and it works identically on the k8s and Vercel paths (both call the same handleChat). Trims each game to home/away, commenceTime, bookmaker (DraftKings), and homeOdds/awayOdds = {moneyline, runLine:{point,price}} from the h2h + spreads markets. Non-200 from getOdds (keyless 503 or upstream fail) throws inside runTool -> tool returns {"error":"odds unavailable (<status>)"}. Registered in the tools array; system prompt updated to require the tool for odds/betting claims and to say "not posted yet" when the asked matchup isn't priced.
+
+Verification:
+  - Builds: server build + root build + api/index.ts standalone typecheck + oxlint all clean.
+  - Transformation logic validated for FREE against live cached odds (5 games): mapping yields the intended compact shape (~1260 bytes/5 games); sample Braves -850 / Padres +491, run lines correct.
+  - Keyless fallback validated for FREE via the compiled getOdds with ODDS_API_KEY unset: returns 503 -> tool would surface {"error":"odds unavailable (503)"}. No crash.
+  - End-to-end PAID test (user approved 1, used 2 — first re-run was only a bad transcript selector, server-side reply succeeded both times): asked via the local widget "Is there a Phillies game with odds posted right now? If not, who's the biggest favorite tonight and their moneyline?" -> LLM called get_odds, correctly answered no Phillies game is priced AND named the real biggest favorite "Atlanta Braves ... -850" matching live DraftKings data. Zero JS errors; screenshot reviewed. Proves both the empty-matchup graceful path and real-line rendering in one answer. (No Phillies game was on the current odds slate at test time — expected, odds only cover ~next day.)
+  - Deploy: both targets (user chose both). k8s via pipeline.sh (Docker Desktop had to be started first — daemon+cluster came up, rebuild+rollout clean, both Deployments fresh pods). Vercel prod via `npx vercel --prod`. Post-deploy free checks on both http://phillies-stats.com and https://phillies-stats.vercel.app: index 200, health 200, odds 200, chat invalid-body -> 400 (proves redeployed chat route runs; zero paid). The odds tool itself was proven locally on byte-identical source, so prod wasn't re-tested with a paid request.
+  - Docs: CLAUDE.md Chat bot section updated ("Five tools" -> "Six tools", describing get_odds + its getOdds reuse + graceful fallback).
+
+Note: This session also started Docker Desktop and ran the chat-rate-limit k8s rollout earlier in the same session; both k8s Deployments are now on images that include both the rate limiter AND the odds tool.
+All implementation + testing complete. Uncommitted working tree; user stages/commits.

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema'
-import type { RouteResult } from './core.js'
+import { getOdds, type RouteResult } from './core.js'
 import { checkChatLimit } from './rateLimit.js'
 
 const PHILLIES_ID = 143
@@ -223,6 +223,67 @@ const getPlayerGameLog = betaTool({
     }),
 })
 
+interface OddsOutcome {
+  name?: string
+  price?: number
+  point?: number
+}
+
+interface OddsMarket {
+  key?: string
+  outcomes?: OddsOutcome[]
+}
+
+interface OddsBookmaker {
+  key?: string
+  title?: string
+  markets?: OddsMarket[]
+}
+
+interface OddsApiGame {
+  commence_time?: string
+  home_team?: string
+  away_team?: string
+  bookmakers?: OddsBookmaker[]
+}
+
+const getGameOdds = betaTool({
+  name: 'get_odds',
+  description:
+    'Current betting odds (DraftKings moneyline and run line) for upcoming MLB games on the near-term slate, including any Phillies game. Use for questions about betting lines, spreads, favorites, or who is favored. Odds cover only the next day or so, so a game may not have lines posted yet — an empty result means no games are currently priced.',
+  inputSchema: { type: 'object', properties: {} },
+  run: () =>
+    runTool(async () => {
+      // Reuse the shared odds path so the key and 30-min cache stay in one
+      // place; a non-200 means keyless (503) or an upstream failure.
+      const result = await getOdds()
+      if (result.status !== 200) {
+        throw new Error(`odds unavailable (${result.status})`)
+      }
+      const games = (result.body as OddsApiGame[] | null) ?? []
+      return games.map(g => {
+        const dk = g.bookmakers?.find(b => b.key === 'draftkings') ?? g.bookmakers?.[0]
+        const h2h = dk?.markets?.find(m => m.key === 'h2h')
+        const spreads = dk?.markets?.find(m => m.key === 'spreads')
+        const line = (team?: string) => {
+          const rl = spreads?.outcomes?.find(o => o.name === team)
+          return {
+            moneyline: h2h?.outcomes?.find(o => o.name === team)?.price,
+            runLine: rl ? { point: rl.point, price: rl.price } : undefined,
+          }
+        }
+        return {
+          commenceTime: g.commence_time,
+          home: g.home_team,
+          away: g.away_team,
+          bookmaker: dk?.title,
+          homeOdds: line(g.home_team),
+          awayOdds: line(g.away_team),
+        }
+      })
+    }),
+})
+
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -265,7 +326,8 @@ function buildSystemPrompt(): string {
   return (
     `You are a Philadelphia Phillies (team id ${PHILLIES_ID}, ${SEASON} season) stats assistant embedded in a Phillies stats website. ` +
     `Today's date is ${today}. ` +
-    `You MUST use your tools for any factual claim about games, stats, pitchers, or standings — never answer those from memory. ` +
+    `You MUST use your tools for any factual claim about games, stats, pitchers, standings, or betting odds — never answer those from memory. ` +
+    `When asked about betting lines or odds, use get_odds; if it returns no game for the matchup asked about, say odds aren't posted yet rather than guessing. ` +
     `Keep answers short and conversational: a few sentences at most; small inline lists are fine. ` +
     `Politely decline questions unrelated to the Phillies or MLB. ` +
     `Reply in plain text only — no markdown headings or tables.`
@@ -304,7 +366,7 @@ export async function handleChat(requestBody: unknown, clientIp: string): Promis
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
       system: buildSystemPrompt(),
-      tools: [getSchedule, getStandings, getBattingStats, getPitchingStats, getPlayerGameLog],
+      tools: [getSchedule, getStandings, getBattingStats, getPitchingStats, getPlayerGameLog, getGameOdds],
       messages: cleanMessages,
       max_iterations: MAX_ITERATIONS,
     })
