@@ -147,66 +147,68 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
           {orderedSplits.length > 0 && (
             <div className="mb-5">
               <div className="text-xs font-medium uppercase text-gray-500 mb-1">Splits</div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-500 text-xs uppercase">
-                    <th className="text-left font-medium py-2">Split</th>
-                    {group === 'hitting' ? (
-                      <>
-                        <th className="text-center font-medium py-2">AVG</th>
-                        <th className="text-center font-medium py-2">OBP</th>
-                        <th className="text-center font-medium py-2">SLG</th>
-                        <th className="text-center font-medium py-2">OPS</th>
-                        <th className="text-center font-medium py-2">HR</th>
-                        <th className="text-center font-medium py-2">RBI</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="text-center font-medium py-2">ERA</th>
-                        <th className="text-center font-medium py-2">WHIP</th>
-                        <th className="text-center font-medium py-2">IP</th>
-                        <th className="text-center font-medium py-2">K</th>
-                        <th className="text-center font-medium py-2">BB</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {orderedSplits.map(sp => (
-                    <tr key={sp.split.code}>
-                      <td className="py-2 text-gray-700 whitespace-nowrap font-medium">
-                        {SPLIT_LABELS[sp.split.code] ?? sp.split.description}
-                      </td>
-                      {group === 'hitting'
-                        ? (() => {
-                            const s = sp.stat as BattingStats
-                            return (
-                              <>
-                                <td className="text-center tabular-nums">{s.avg}</td>
-                                <td className="text-center tabular-nums">{s.obp}</td>
-                                <td className="text-center tabular-nums">{s.slg}</td>
-                                <td className="text-center tabular-nums">{s.ops}</td>
-                                <td className="text-center tabular-nums">{s.homeRuns}</td>
-                                <td className="text-center tabular-nums">{s.rbi}</td>
-                              </>
-                            )
-                          })()
-                        : (() => {
-                            const s = sp.stat as PitchingStats
-                            return (
-                              <>
-                                <td className="text-center tabular-nums">{s.era}</td>
-                                <td className="text-center tabular-nums">{s.whip}</td>
-                                <td className="text-center tabular-nums">{s.inningsPitched}</td>
-                                <td className="text-center tabular-nums">{s.strikeOuts}</td>
-                                <td className="text-center tabular-nums">{s.baseOnBalls}</td>
-                              </>
-                            )
-                          })()}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm whitespace-nowrap">
+                  <thead>
+                    <tr className="text-gray-500 text-xs uppercase">
+                      <th className="text-left font-medium py-2">Split</th>
+                      {group === 'hitting' ? (
+                        <>
+                          <th className="text-center font-medium py-2">AVG</th>
+                          <th className="text-center font-medium py-2">OBP</th>
+                          <th className="text-center font-medium py-2">SLG</th>
+                          <th className="text-center font-medium py-2">OPS</th>
+                          <th className="text-center font-medium py-2">HR</th>
+                          <th className="text-center font-medium py-2">RBI</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="text-center font-medium py-2">ERA</th>
+                          <th className="text-center font-medium py-2">WHIP</th>
+                          <th className="text-center font-medium py-2">IP</th>
+                          <th className="text-center font-medium py-2">K</th>
+                          <th className="text-center font-medium py-2">BB</th>
+                        </>
+                      )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {orderedSplits.map(sp => (
+                      <tr key={sp.split.code}>
+                        <td className="py-2 text-gray-700 whitespace-nowrap font-medium">
+                          {SPLIT_LABELS[sp.split.code] ?? sp.split.description}
+                        </td>
+                        {group === 'hitting'
+                          ? (() => {
+                              const s = sp.stat as BattingStats
+                              return (
+                                <>
+                                  <td className="text-center tabular-nums">{s.avg}</td>
+                                  <td className="text-center tabular-nums">{s.obp}</td>
+                                  <td className="text-center tabular-nums">{s.slg}</td>
+                                  <td className="text-center tabular-nums">{s.ops}</td>
+                                  <td className="text-center tabular-nums">{s.homeRuns}</td>
+                                  <td className="text-center tabular-nums">{s.rbi}</td>
+                                </>
+                              )
+                            })()
+                          : (() => {
+                              const s = sp.stat as PitchingStats
+                              return (
+                                <>
+                                  <td className="text-center tabular-nums">{s.era}</td>
+                                  <td className="text-center tabular-nums">{s.whip}</td>
+                                  <td className="text-center tabular-nums">{s.inningsPitched}</td>
+                                  <td className="text-center tabular-nums">{s.strikeOuts}</td>
+                                  <td className="text-center tabular-nums">{s.baseOnBalls}</td>
+                                </>
+                              )
+                            })()}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -241,79 +243,81 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
             <div className="text-xs font-medium uppercase text-gray-500 mb-1">Last 10 Games</div>
           )}
           {!loading && !error && (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-500 text-xs uppercase">
-                  <th className="text-left font-medium py-2">Date</th>
-                  <th className="text-left font-medium py-2">Opp</th>
-                  {group === 'hitting' ? (
-                    <>
-                      <th className="text-center font-medium py-2">AB</th>
-                      <th className="text-center font-medium py-2">R</th>
-                      <th className="text-center font-medium py-2">H</th>
-                      <th className="text-center font-medium py-2">HR</th>
-                      <th className="text-center font-medium py-2">RBI</th>
-                      <th className="text-center font-medium py-2">BB</th>
-                      <th className="text-center font-medium py-2">K</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="text-center font-medium py-2">IP</th>
-                      <th className="text-center font-medium py-2">H</th>
-                      <th className="text-center font-medium py-2">R</th>
-                      <th className="text-center font-medium py-2">ER</th>
-                      <th className="text-center font-medium py-2">BB</th>
-                      <th className="text-center font-medium py-2">K</th>
-                    </>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm whitespace-nowrap">
+                <thead>
+                  <tr className="text-gray-500 text-xs uppercase">
+                    <th className="text-left font-medium py-2">Date</th>
+                    <th className="text-left font-medium py-2">Opp</th>
+                    {group === 'hitting' ? (
+                      <>
+                        <th className="text-center font-medium py-2">AB</th>
+                        <th className="text-center font-medium py-2">R</th>
+                        <th className="text-center font-medium py-2">H</th>
+                        <th className="text-center font-medium py-2">HR</th>
+                        <th className="text-center font-medium py-2">RBI</th>
+                        <th className="text-center font-medium py-2">BB</th>
+                        <th className="text-center font-medium py-2">K</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="text-center font-medium py-2">IP</th>
+                        <th className="text-center font-medium py-2">H</th>
+                        <th className="text-center font-medium py-2">R</th>
+                        <th className="text-center font-medium py-2">ER</th>
+                        <th className="text-center font-medium py-2">BB</th>
+                        <th className="text-center font-medium py-2">K</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {games.map((g, i) => (
+                    <tr key={i}>
+                      <td className="py-2 text-gray-700 whitespace-nowrap">{formatDate(g.date)}</td>
+                      <td className="py-2 text-gray-700 whitespace-nowrap">
+                        {(g.isHome ? 'vs ' : '@ ') + g.opponent.name}
+                      </td>
+                      {group === 'hitting'
+                        ? (() => {
+                            const s = g.stat as BattingGameStat
+                            return (
+                              <>
+                                <td className="text-center tabular-nums">{s.atBats}</td>
+                                <td className="text-center tabular-nums">{s.runs}</td>
+                                <td className="text-center tabular-nums">{s.hits}</td>
+                                <td className="text-center tabular-nums">{s.homeRuns}</td>
+                                <td className="text-center tabular-nums">{s.rbi}</td>
+                                <td className="text-center tabular-nums">{s.baseOnBalls}</td>
+                                <td className="text-center tabular-nums">{s.strikeOuts}</td>
+                              </>
+                            )
+                          })()
+                        : (() => {
+                            const s = g.stat as PitchingGameStat
+                            return (
+                              <>
+                                <td className="text-center tabular-nums">{s.inningsPitched}</td>
+                                <td className="text-center tabular-nums">{s.hits}</td>
+                                <td className="text-center tabular-nums">{s.runs}</td>
+                                <td className="text-center tabular-nums">{s.earnedRuns}</td>
+                                <td className="text-center tabular-nums">{s.baseOnBalls}</td>
+                                <td className="text-center tabular-nums">{s.strikeOuts}</td>
+                              </>
+                            )
+                          })()}
+                    </tr>
+                  ))}
+                  {games.length === 0 && (
+                    <tr>
+                      <td colSpan={group === 'hitting' ? 9 : 8} className="text-center text-gray-400 py-6">
+                        No recent games.
+                      </td>
+                    </tr>
                   )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {games.map((g, i) => (
-                  <tr key={i}>
-                    <td className="py-2 text-gray-700 whitespace-nowrap">{formatDate(g.date)}</td>
-                    <td className="py-2 text-gray-700 whitespace-nowrap">
-                      {(g.isHome ? 'vs ' : '@ ') + g.opponent.name}
-                    </td>
-                    {group === 'hitting'
-                      ? (() => {
-                          const s = g.stat as BattingGameStat
-                          return (
-                            <>
-                              <td className="text-center tabular-nums">{s.atBats}</td>
-                              <td className="text-center tabular-nums">{s.runs}</td>
-                              <td className="text-center tabular-nums">{s.hits}</td>
-                              <td className="text-center tabular-nums">{s.homeRuns}</td>
-                              <td className="text-center tabular-nums">{s.rbi}</td>
-                              <td className="text-center tabular-nums">{s.baseOnBalls}</td>
-                              <td className="text-center tabular-nums">{s.strikeOuts}</td>
-                            </>
-                          )
-                        })()
-                      : (() => {
-                          const s = g.stat as PitchingGameStat
-                          return (
-                            <>
-                              <td className="text-center tabular-nums">{s.inningsPitched}</td>
-                              <td className="text-center tabular-nums">{s.hits}</td>
-                              <td className="text-center tabular-nums">{s.runs}</td>
-                              <td className="text-center tabular-nums">{s.earnedRuns}</td>
-                              <td className="text-center tabular-nums">{s.baseOnBalls}</td>
-                              <td className="text-center tabular-nums">{s.strikeOuts}</td>
-                            </>
-                          )
-                        })()}
-                  </tr>
-                ))}
-                {games.length === 0 && (
-                  <tr>
-                    <td colSpan={group === 'hitting' ? 9 : 8} className="text-center text-gray-400 py-6">
-                      No recent games.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

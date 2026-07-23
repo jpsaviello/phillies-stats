@@ -15,12 +15,12 @@ const tabs: { id: Tab; label: string }[] = [
 export default function Nav({ active, onChange }: NavProps) {
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="max-w-7xl mx-auto px-4 flex gap-1">
+      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`px-5 py-3 font-display text-base font-semibold uppercase tracking-wide border-b-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 sm:px-5 py-3 font-display text-sm sm:text-base font-semibold uppercase tracking-wide border-b-2 transition-colors ${
               active === tab.id
                 ? 'border-phillies-red text-phillies-navy'
                 : 'border-transparent text-gray-500 hover:text-phillies-navy'
