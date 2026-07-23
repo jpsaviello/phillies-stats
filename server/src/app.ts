@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { handleChat } from './chat.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from './core.js'
+import { clientIpFrom } from './rateLimit.js'
 
 export const app = new Hono().basePath('/api')
 
@@ -16,7 +17,7 @@ app.post('/chat', async c => {
   } catch {
     return c.json({ error: 'invalid JSON body' }, 400)
   }
-  return reply(c, await handleChat(body))
+  return reply(c, await handleChat(body, clientIpFrom(c.req.header('x-forwarded-for'))))
 })
 
 app.get('/health', c => c.json({ ok: true }))

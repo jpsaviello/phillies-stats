@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { handleChat } from '../server/src/chat.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
+import { clientIpFrom } from '../server/src/rateLimit.js'
 
 // Single static function handling all of /api/* — see vercel.json's
 // rewrites, which forward every /api/:path* request here with the matched
@@ -51,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return send(res, await getOdds())
     }
     if (req.method === 'POST' && first === 'chat') {
-      return send(res, await handleChat(req.body))
+      return send(res, await handleChat(req.body, clientIpFrom(req.headers['x-forwarded-for'])))
     }
     return send(res, { status: 404, body: { error: 'not found' } })
   } catch (err) {

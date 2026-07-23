@@ -55,4 +55,6 @@ ChatWidget.tsx ──POST /api/chat {messages}──▶ server/src/chat.ts (Hono
 - No streaming — perceived latency covered by the typing indicator. SSE is future work.
 - Conversation history is in-memory component state only; a reload clears it.
 - Claude's answers are grounded via tools but can still occasionally misread the data; the system prompt requires tool use for factual claims about games/stats.
-- `/api/chat` has no auth/rate limiting beyond history-size caps — acceptable for a local-cluster deployment; revisit before any public exposure.
+- ~~`/api/chat` has no auth/rate limiting beyond history-size caps~~ — **closed** by docs/superpowers/plans/2026-07-21-chat-rate-limit.md: per-IP 10 req / 15 min plus a global 200 req/day cap, both 429. Still no auth/login; the limits bound spend rather than identify callers.
+- The rate-limit counters are in-memory, so they're a hard guarantee only on k8s (single long-running replica). On Vercel they're per-instance and reset on cold start — best-effort, same tradeoff as the odds cache. The monthly spend limit on the Anthropic key is the backstop that holds everywhere.
+- `x-forwarded-for` is spoofable when the backend is reached directly (k8s NodePort bypass), so the per-IP bucket can be evaded there; the global daily cap can't be. Not an issue behind Vercel, which prepends the real client IP as the first XFF entry — verified in production: a request with a forged `x-forwarded-for` still landed in the caller's real bucket and got the 429.

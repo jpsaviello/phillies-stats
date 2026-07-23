@@ -1,12 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema'
 import type { RouteResult } from './core.js'
+import { checkChatLimit } from './rateLimit.js'
 
 const PHILLIES_ID = 143
 const SEASON = 2026
 const MAX_HISTORY = 20
 const MAX_MESSAGE_CHARS = 2000
 const MAX_ITERATIONS = 8
+// Answers are prompted to be a few sentences; a small cap bounds the
+// worst-case cost of every abuse path at no UX cost.
+const MAX_TOKENS = 1024
 
 const MLB_BASE = 'https://statsapi.mlb.com/api/v1'
 
@@ -271,7 +275,13 @@ function buildSystemPrompt(): string {
 // Takes an already-parsed request body (parsing/malformed-JSON handling is
 // the caller's job, since that's framework-specific) and returns a plain
 // { status, body } result — no Hono/Vercel types here, see core.ts for why.
-export async function handleChat(requestBody: unknown): Promise<RouteResult> {
+export async function handleChat(requestBody: unknown, clientIp: string): Promise<RouteResult> {
+  // Rate limit first, ahead of the key check and validation: the 429 paths
+  // stay verifiable without a key (no paid requests), a misconfigured deploy
+  // is still protected, and hammering invalid bodies is capped too.
+  const limited = checkChatLimit(clientIp)
+  if (limited !== null) return limited
+
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return { status: 503, body: { error: 'chat not configured' } }
 
@@ -290,7 +300,7 @@ export async function handleChat(requestBody: unknown): Promise<RouteResult> {
     const client = new Anthropic({ apiKey })
     const finalMessage = await client.beta.messages.toolRunner({
       model: 'claude-opus-4-8',
-      max_tokens: 4096,
+      max_tokens: MAX_TOKENS,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
       system: buildSystemPrompt(),
