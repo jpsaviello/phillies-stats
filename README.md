@@ -1,4 +1,4 @@
-# This is a fun personal project for creating a stats site for the Phillies. I use it for batting and pitching stats, schedule and upcoming game odds. The app is running locally in multiple containers on a single node kubernetes cluster. Leveraging Claude code to develop this.
+# This is a fun personal project for creating a stats site for the Phillies. I use it for batting and pitching stats, schedule and upcoming game odds. The app is running locally in multiple containers on a single node kubernetes cluster & also on Vercel (see link below). Leveraging Claude code to develop this.
 
 # Please use https://phillies-stats.vercel.app/ to access the site from your browser.
 
