@@ -31,9 +31,13 @@ interface Props {
   onClose: () => void
 }
 
-// Order + display labels for the situational sitCodes we request.
+// Order + display labels for the situational sitCodes we request. For pitchers,
+// vl/vr are batter-handedness splits (vs LHB/RHB), not opposing-pitcher splits.
 const SPLIT_ORDER = ['vl', 'vr', 'h', 'a'] as const
-const SPLIT_LABELS: Record<string, string> = { vl: 'vs LHP', vr: 'vs RHP', h: 'Home', a: 'Away' }
+const SPLIT_LABELS: Record<'hitting' | 'pitching', Record<string, string>> = {
+  hitting: { vl: 'vs LHP', vr: 'vs RHP', h: 'Home', a: 'Away' },
+  pitching: { vl: 'vs LHB', vr: 'vs RHB', h: 'Home', a: 'Away' },
+}
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -163,7 +167,7 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                         </>
                       ) : (
                         <>
-                          <th className="text-center font-medium py-2">ERA</th>
+                          <th className="text-center font-medium py-2">AVG</th>
                           <th className="text-center font-medium py-2">WHIP</th>
                           <th className="text-center font-medium py-2">IP</th>
                           <th className="text-center font-medium py-2">K</th>
@@ -176,7 +180,7 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                     {orderedSplits.map(sp => (
                       <tr key={sp.split.code}>
                         <td className="py-2 text-gray-700 whitespace-nowrap font-medium">
-                          {SPLIT_LABELS[sp.split.code] ?? sp.split.description}
+                          {SPLIT_LABELS[group][sp.split.code] ?? sp.split.description}
                         </td>
                         {group === 'hitting'
                           ? (() => {
@@ -196,7 +200,7 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                               const s = sp.stat as PitchingStats
                               return (
                                 <>
-                                  <td className="text-center tabular-nums">{s.era}</td>
+                                  <td className="text-center tabular-nums">{s.avg}</td>
                                   <td className="text-center tabular-nums">{s.whip}</td>
                                   <td className="text-center tabular-nums">{s.inningsPitched}</td>
                                   <td className="text-center tabular-nums">{s.strikeOuts}</td>

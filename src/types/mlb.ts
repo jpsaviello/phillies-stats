@@ -36,6 +36,9 @@ export interface PitchingStats {
   homeRuns: number
   whip: string
   saves: number
+  // Opponent batting average — present in statSplits responses (the API omits
+  // era for a pitcher's vl/vr splits, but avg exists for all four).
+  avg?: string
 }
 
 export interface PlayerWithStats {
