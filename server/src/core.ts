@@ -11,16 +11,25 @@ export interface RouteResult {
   body: unknown
 }
 
-const MLB_BASE = 'https://statsapi.mlb.com/api/v1'
-// Path prefixes the frontend actually uses; anything else is rejected so
-// this can't be used as an open relay.
-const MLB_ALLOWED = ['/teams/', '/stats', '/standings', '/schedule', '/people/']
+const MLB_V1 = 'https://statsapi.mlb.com/api/v1'
+// Path prefixes the frontend actually uses, each mapped to its API base;
+// anything else is rejected so this can't be used as an open relay. The live
+// game feed is the one endpoint that lives under v1.1 instead of v1.
+const MLB_ALLOWED: [prefix: string, base: string][] = [
+  ['/teams/', MLB_V1],
+  ['/stats', MLB_V1],
+  ['/standings', MLB_V1],
+  ['/schedule', MLB_V1],
+  ['/people/', MLB_V1],
+  ['/game/', 'https://statsapi.mlb.com/api/v1.1'],
+]
 
 export async function mlbProxy(path: string, search: string): Promise<RouteResult> {
-  if (!MLB_ALLOWED.some(p => path.startsWith(p))) {
+  const match = MLB_ALLOWED.find(([p]) => path.startsWith(p))
+  if (!match) {
     return { status: 403, body: { error: 'path not allowed' } }
   }
-  const res = await fetch(`${MLB_BASE}${path}${search}`)
+  const res = await fetch(`${match[1]}${path}${search}`)
   if (!res.ok) return { status: 502, body: { error: `MLB API ${res.status}` } }
   return { status: 200, body: await res.json() }
 }

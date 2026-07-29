@@ -92,11 +92,50 @@ export function playerHeadshotUrl(personId: number): string {
 export interface Game {
   gamePk: number
   gameDate: string
-  status: { detailedState: string }
+  status: { abstractGameState: string; detailedState: string }
   teams: {
     home: { team: { id: number; name: string }; score?: number; isWinner?: boolean }
     away: { team: { id: number; name: string }; score?: number; isWinner?: boolean }
   }
+}
+
+// Trimmed shape of the v1.1 live feed. Pre-game feeds omit linescore and
+// currentPlay entirely, and matchup can be absent between innings.
+export interface LiveFeed {
+  gameData: {
+    status: { abstractGameState: string; detailedState: string }
+    teams: { home: { id: number }; away: { id: number } }
+  }
+  liveData: {
+    linescore?: {
+      currentInning?: number
+      inningState?: string
+      isTopInning?: boolean
+      balls?: number
+      strikes?: number
+      outs?: number
+      teams: { home: { runs?: number }; away: { runs?: number } }
+    }
+    plays: {
+      currentPlay?: {
+        matchup?: {
+          batter: { id: number; fullName: string }
+          pitcher: { id: number; fullName: string }
+        }
+      }
+    }
+  }
+}
+
+// The raw feed is ~1MB; MLB's fields param (matches names at any depth)
+// trims it to a few hundred bytes containing just what LiveFeed models.
+const LIVE_FEED_FIELDS =
+  'gameData,status,abstractGameState,detailedState,liveData,linescore,' +
+  'currentInning,inningState,isTopInning,balls,strikes,outs,teams,home,away,runs,' +
+  'plays,currentPlay,matchup,batter,pitcher,id,fullName'
+
+export async function fetchLiveFeed(gamePk: number): Promise<LiveFeed> {
+  return get(`/game/${gamePk}/feed/live?fields=${LIVE_FEED_FIELDS}`)
 }
 
 interface OddsOutcome {
