@@ -239,3 +239,19 @@ Chose `vercel deploy --prod` over `vercel promote` deliberately: per the Vercel 
 Changed: docs/routines/daily-beat-reporter.md (new Prerequisites section with exact env values and allowlist; new step 6 deploy with post-deploy curl verification; step 7 commit with the claude/ fallback; steps renumbered to 9; Deployment behavior section rewritten). Routine prompt updated via RemoteTrigger (invariant 3 previously said "nothing auto-deploys from this push", now the deploy is the point; added the independent-failure invariant). CLAUDE.md Daily briefing + Automated routines paragraphs updated.
 
 STILL BLOCKED ON THE USER, and now on two things, not one: (a) commit+push the implementation so the cloud checkout has the spec, and (b) configure the environment's Custom network allowlist and the three env vars. Until (b) the routine fails at the first fetch. Nothing about the deploy path has been executed or verified — no cloud run has happened yet.
+
+## Amendment 2 (same day): Vercel production branch set to develop
+
+User changed the Vercel project's production branch to `develop`, so a push to develop now auto-deploys production. This is strictly better than Amendment 1's design and reverses most of it:
+
+  - REMOVED the `npx vercel deploy --prod` step and the VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID environment variables. No credential is stored anywhere, which matters because cloud environments have no secrets store. Also dropped api.vercel.com / *.vercel.com from the required network allowlist.
+  - The environment now needs only Network access -> Custom with `statsapi.mlb.com` and `phillies-stats.vercel.app` (defaults still included). The statsapi blocker from Amendment 1 stands and is still the one thing that must be configured before the routine can work at all.
+  - The push became load-bearing again: it is now the publish mechanism, so a rejected push means nothing reached users. Reversed Amendment 1's rule that a rejected push is tolerable — it is now a FAILED run: save the commit to claude/briefing-YYYY-MM-DD so the work survives, and report that the briefing was not published.
+  - Verified the two push-rejection conditions we can check: the repo is public, `develop` is NOT branch-protected, and there are no open PRs (so no PR from develop). The remaining unknown is whether a cloud session's push protection counts develop's `Claude <noreply@anthropic.com>` commits as "commits authored by someone other than you". That is the only untested leg of the pipeline.
+  - Step 7 is now "confirm production picked it up" — the push triggers a Vercel build, so it polls https://phillies-stats.vercel.app/briefing.json for up to ~3 minutes and reports "pushed but not yet rebuilt" rather than claiming success.
+
+Also noted, because it affects the user beyond this feature: production now follows the integration branch, so ANY push to develop goes live, including unfinished work. Documented in CLAUDE.md's Deploy section.
+
+Changed: docs/routines/daily-beat-reporter.md (Prerequisites simplified to one network setting, deploy step replaced by commit+push as the publish step, new production-confirmation step, Deployment behavior rewritten), routine prompt via RemoteTrigger (invariant 3 is now "the push is the deploy, do not invoke the Vercel CLI"; invariant 4 inverted to "a rejected push is a failed run"), CLAUDE.md (Deploy section, Daily briefing, Automated routines), memory (vercel_deploy_is_manual.md renamed to vercel_production_tracks_develop.md — the old note was now actively wrong).
+
+Still blocked on the user: (a) commit+push so the cloud checkout has the spec, (b) set the environment's Custom network allowlist. No cloud run has executed yet.

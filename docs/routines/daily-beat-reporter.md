@@ -26,36 +26,25 @@ The routine **cannot work in the stock Default environment.** Both items below a
 set in the environment dialog: on the routine's page click the pencil icon, click
 the cloud icon showing the environment name, then the settings icon on hover.
 
-**1. Network access → Custom.** `statsapi.mlb.com` is *not* in the Trusted
-allowlist (it lists package registries, GitHub, and cloud SDKs — no third-party
-REST APIs), so every data fetch would fail with `403 host_not_allowed`. Add, with
-**"Also include default list of common package managers" checked** so `npx` can
-still reach the npm registry:
+**Network access → Custom.** `statsapi.mlb.com` is *not* in the Trusted allowlist
+(it lists package registries, GitHub, and cloud SDKs — no third-party REST APIs),
+so every data fetch would fail with `403 host_not_allowed`. Add these two, leaving
+**"Also include default list of common package managers" checked**:
 
 ```
 statsapi.mlb.com
-api.vercel.com
-*.vercel.com
 phillies-stats.vercel.app
 ```
 
-**2. Environment variables** (`.env` format, one per line):
+`phillies-stats.vercel.app` is for the optional odds lookup and the post-push
+production check.
 
-```
-VERCEL_TOKEN=<a Vercel token scoped to this project>
-VERCEL_ORG_ID=team_dwcpMVXafZurT7ButbANP6XY
-VERCEL_PROJECT_ID=prj_tf2D9AbMpo3rVApPbzjwwfkPw15X
-```
-
-The two IDs are needed because `.vercel/` is gitignored, so the cloud checkout has
-no project link and the CLI would otherwise try to create a new project. They are
-identifiers, not secrets.
-
-`VERCEL_TOKEN` **is** a secret, and cloud environments have **no secrets store** —
-the dialog warns that anyone who uses the environment can read its variables. For a
-personal environment that means only you, which is why this is acceptable here.
-Scope the token to this one project and rotate it if the environment is ever
-shared. Create one at <https://vercel.com/account/settings/tokens>.
+**No environment variables and no credentials are needed.** Vercel's production
+branch is `develop`, so the git push publishes production on its own — there is no
+Vercel token to store, which matters because cloud environments have **no secrets
+store** (the dialog warns that anyone using the environment can read its variables).
+Keep it that way: if publishing ever needs a token again, prefer fixing the git path
+over adding a credential here.
 
 ---
 
@@ -136,39 +125,10 @@ Overwrite `public/briefing.json` with exactly this shape:
 - `generatedAt` — ISO 8601 UTC with a `Z` suffix.
 - `recap` — array of paragraph strings, at least one.
 
-### 6. Deploy to production
+### 6. Commit and push — this is what publishes
 
-**This step is what actually puts the briefing in front of users** — the git push
-in step 7 does not deploy anything. Deploy the working directory, which now
-contains the new `public/briefing.json`, straight to Vercel production:
-
-```
-npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
-```
-
-`VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` from the environment tell the CLI which
-project this is, so it links non-interactively instead of creating a new one.
-`--yes` skips the confirmation prompt; there is no TTY.
-
-This is a fresh production build, the same thing `npx vercel --prod` does by hand,
-so it picks up the project's **production** environment variables (the Anthropic
-and odds keys). Do not use `vercel promote` on a preview deployment instead: that
-publishes a build made with preview-scoped variables.
-
-Note this deploys whatever is on `develop` at run time, not just the briefing. That
-is the same branch the project is deployed from by hand, so it is expected — but if
-the build fails, report it and do not treat the run as successful.
-
-Verify afterwards that production is serving the new file:
-
-```
-curl -s https://phillies-stats.vercel.app/briefing.json | head -5
-```
-
-The `date` in the response must be today's. If the deploy succeeded but the file is
-stale, say so in the notification rather than reporting success.
-
-### 7. Commit for durability
+Vercel's production branch is `develop`, so **the push is the deploy.** No CLI
+deploy step, no token.
 
 ```
 git add public/briefing.json
@@ -179,13 +139,28 @@ git push origin develop
 `public/briefing.json` is the only file this routine may touch. Never modify
 anything else, and never open a PR.
 
-Cloud sessions guard pushes to branches outside `claude/`: a push to `develop` is
-rejected if the branch is protected, someone else has an open PR from it, or it
-carries commits authored by someone other than you (it does carry
-`Claude <noreply@anthropic.com>` commits). **If the push is rejected, that is not a
-run failure** — production is already updated by step 6. Push to
-`claude/briefing-YYYY-MM-DD` instead and note it in the notification so the commit
-can be picked up by hand.
+Because the push publishes, a rejected push means **nothing reached users** — treat
+it as a failed run, not a warning. Cloud sessions guard pushes to branches outside
+`claude/`: a push is rejected if the branch is protected, someone else has an open
+PR from it, or it carries commits authored by someone other than you. As of
+2026-07-29 `develop` is unprotected with no open PRs, but it does carry
+`Claude <noreply@anthropic.com>` commits, so this is the one part of the pipeline
+that has never been exercised. If the push is rejected: push the commit to
+`claude/briefing-YYYY-MM-DD` so the work isn't lost, then report in the
+notification that the briefing was NOT published and why.
+
+### 7. Confirm production picked it up
+
+The deploy is a Vercel build triggered by the push, so it takes a minute or two.
+Wait, then check:
+
+```
+curl -s https://phillies-stats.vercel.app/briefing.json | head -5
+```
+
+The `date` must be today's. Retry for up to about three minutes; if it is still the
+old date, report that the push landed but production had not rebuilt yet rather
+than claiming success. Do not try to force a deploy another way.
 
 ### 8. Notify
 
@@ -196,31 +171,31 @@ Send one push notification per run: the headline plus a one-line score (for exam
 ### 9. When something goes wrong
 
 If statsapi is unreachable, the boxscore is missing, or the data is too
-incomplete to write an accurate briefing: **write nothing, deploy nothing, commit
+incomplete to write an accurate briefing: **write nothing, commit nothing, push
 nothing.** A missing briefing is better than a wrong one — the card hides itself
-once the file ages out. Never deploy a briefing you could not verify against the
-boxscore.
+once the file ages out. Since the push publishes, never push a briefing you could
+not check against the boxscore.
 
-Do not deploy on a failed build or a failed data fetch, and do not retry a failing
-deploy more than once. Notify to report the failure, matching the
-auto-merge-branches convention of never notifying about a no-op.
+A `403` with `x-deny-reason: host_not_allowed` on statsapi means the environment's
+network allowlist is missing `statsapi.mlb.com` (see Prerequisites). Report that
+plainly; don't try to route around it.
+
+Notify to report the failure, matching the auto-merge-branches convention of never
+notifying about a no-op.
 
 ---
 
 ## Deployment behavior (read this before wondering why the card is missing)
 
-- **Vercel production** (`phillies-stats.vercel.app`) is updated by the routine
-  itself, in step 6, with `npx vercel deploy --prod`. The git push does **not**
-  deploy: a push to `develop` only refreshes the *preview* URL, because Vercel's
-  production branch is not `develop`. So production is as fresh as the last
-  successful routine run, and the card's 48h staleness cutoff should never hide it
-  in production unless runs have been failing.
+- **Vercel production** (`phillies-stats.vercel.app`) tracks the `develop` branch
+  (changed 2026-07-29), so the routine's push deploys production automatically.
+  Production is therefore as fresh as the last successful run, and the card's 48h
+  staleness cutoff should never hide it there unless runs have been failing. This
+  also applies to every other push to `develop` — production now follows the
+  integration branch, so an unfinished change pushed to `develop` goes live.
 - **k8s** (`phillies-stats.com`) serves a baked nginx image, so it shows the
   briefing only after `pipeline.sh` rebuilds the frontend — same as any other
   frontend change. k8s will therefore lag behind Vercel, and past 48h the card
   disappears there rather than showing an old briefing. That is intended.
 - **Local dev** picks up `public/briefing.json` immediately; Vite serves
   `public/` live.
-
-Because step 6 deploys the working directory, production stays current even if the
-step 7 push is rejected. The two steps fail independently on purpose.
