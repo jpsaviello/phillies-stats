@@ -165,3 +165,26 @@ Verification:
 
 Note: k8s Deployments now carry rate limiter + get_odds tool + web_search fallback (three features shipped this session).
 All implementation + testing complete. Uncommitted working tree; user stages/commits.
+
+# Progress Ledger: chat-boxscore-tool
+
+Feature: fix the chatbot fabricating single-game player lines. Bug report (2026-07-29): asked who led the team in hits in the 8-6 loss at Miami, it answered "Justin Crawford and Kyle Schwarber tied with 2 hits each... Schwarber went 2-for-5 with a home run and an RBI" — Schwarber did not play. That 2-for-5/HR/RBI line is Trea Turner's, verified against `/api/v1/game/823837/boxscore`.
+Base: after chat-web-search-odds-fallback (uncommitted working tree).
+Execution mode: single-session, direct implementation (bug fix, no separate spec/plan doc; plan file only).
+
+Root cause: no tool returned a per-game boxscore. get_schedule gave team scores only, get_player_game_log gave one player's last 10 games. With no ground truth for "who did what in game X", the model produced real numbers attached to the wrong player.
+
+Implementation (server/src/chat.ts only — no client changes):
+  - New `get_game_boxscore` tool: input `{game_pk}`, fetches `/game/{pk}/boxscore` off the existing MLB_BASE (`api/v1`) via the shared mlbGet + runTool helpers. Returns `{away, home}`, each `{team, batters[], pitchers[]}`. Batting fields: atBats, hits, homeRuns, rbi, baseOnBalls, runs, strikeOuts. Pitching: inningsPitched, hits, runs, earnedRuns, baseOnBalls, strikeOuts. ~3.4KB trimmed for a full game.
+  - Non-participant filter: `teams.{away,home}.players` holds the whole 26-man roster with EMPTY stats.batting/stats.pitching objects for anyone who didn't appear, so the trim keeps only entries where `Object.keys(...).length > 0`. Without this, Schwarber (and 13 others) would still show up with blank lines and invite the same mistake.
+  - get_schedule now emits `gamePk` per game (added to the ScheduleGame interface + the trim), which is how the model gets from a date to a boxscore. Its description mentions the gamePk is for get_game_boxscore.
+  - System prompt hardening: single-game player questions must go schedule -> get_game_boxscore, never inferred from season stats / game logs / web search; a player absent from the boxscore did not play; game-log entries carry dates so the newest is not necessarily today's game.
+  - Note: chat.ts calls statsapi directly, so the `/game/` -> `api/v1.1` mapping in core.ts MLB_ALLOWED does not apply here — the boxscore endpoint is v1 (v1.1 is the live-feed version).
+
+Verification:
+  - `npm --prefix server run build` clean.
+  - FREE tool-level check first: replayed the exact trim logic in python against the real game 823837 JSON — 26 away roster entries reduce to 9 batters + 3 pitchers, Schwarber correctly dropped (0-key batting object), sample lines match the real box score, 3450 bytes.
+  - End-to-end PAID test (1 request, user approved): local widget asked "Who led the Phillies in hits today?" -> "Justin Crawford and Trea Turner tied for the team lead with 2 hits each in today's 8-6 loss to the Marlins. Turner's two hits included a home run." Correct, no Schwarber, HR attributed right. Zero console errors; screenshot reviewed.
+  - Docs: CLAUDE.md Chat bot section updated (six -> seven custom tools, why get_game_boxscore exists, the empty-stat-object roster gotcha, the v1-not-v1.1 note) plus a new Testing paragraph on the cost of verifying chat changes and how to drive the widget from Playwright.
+
+Deploy: NOT deployed. Needs the backend image rebuild via pipeline.sh for k8s (same-tag images need rebuild+rollout); Vercel picks it up on push. Uncommitted working tree; user stages/commits.

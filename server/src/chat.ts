@@ -52,6 +52,7 @@ interface ScheduleTeamSide {
 }
 
 interface ScheduleGame {
+  gamePk?: number
   gameDate?: string
   status?: { detailedState?: string }
   teams?: { home?: ScheduleTeamSide; away?: ScheduleTeamSide }
@@ -65,7 +66,7 @@ interface ScheduleGame {
 const getSchedule = betaTool({
   name: 'get_schedule',
   description:
-    'Phillies schedule/results between two dates (YYYY-MM-DD), including scores, game status, and probable pitchers. Call this for any question about past game results, upcoming games, or who is pitching.',
+    'Phillies schedule/results between two dates (YYYY-MM-DD), including scores, game status, probable pitchers, and each game\'s gamePk (for use with get_game_boxscore). Call this for any question about past game results, upcoming games, or who is pitching.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -87,6 +88,7 @@ const getSchedule = betaTool({
       })
       return (data.dates ?? []).flatMap(d =>
         (d.games ?? []).map(g => ({
+          gamePk: g.gamePk,
           date: d.date,
           status: g.status?.detailedState,
           home: side(g.teams?.home),
@@ -235,6 +237,56 @@ const getPlayerGameLog = betaTool({
     }),
 })
 
+interface BoxscorePlayer {
+  person?: { fullName?: string }
+  stats?: { batting?: Record<string, unknown>; pitching?: Record<string, unknown> }
+}
+
+interface BoxscoreTeam {
+  team?: { name?: string }
+  players?: Record<string, BoxscorePlayer>
+}
+
+const BOX_BATTING_FIELDS = ['atBats', 'hits', 'homeRuns', 'rbi', 'baseOnBalls', 'runs', 'strikeOuts']
+const BOX_PITCHING_FIELDS = ['inningsPitched', 'hits', 'runs', 'earnedRuns', 'baseOnBalls', 'strikeOuts']
+
+const getGameBoxscore = betaTool({
+  name: 'get_game_boxscore',
+  description:
+    'Per-player batting and pitching lines for one finished or in-progress game. Get the game_pk from get_schedule. Players not listed did not play in that game.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      game_pk: { type: 'integer', description: 'gamePk of the game, from get_schedule' },
+    },
+    required: ['game_pk'],
+  },
+  run: input =>
+    runTool(async () => {
+      const data = (await mlbGet(
+        `/game/${encodeURIComponent(String(input.game_pk))}/boxscore`
+      )) as { teams?: { away?: BoxscoreTeam; home?: BoxscoreTeam } }
+      // Non-participants appear in `players` with empty stat objects; keep
+      // only players with an actual batting or pitching line.
+      const lines = (players: BoxscorePlayer[], key: 'batting' | 'pitching', fields: string[]) =>
+        players
+          .filter(p => Object.keys(p.stats?.[key] ?? {}).length > 0)
+          .map(p => ({
+            name: p.person?.fullName,
+            ...Object.fromEntries(fields.map(f => [f, p.stats?.[key]?.[f]])),
+          }))
+      const side = (t?: BoxscoreTeam) => {
+        const players = Object.values(t?.players ?? {})
+        return {
+          team: t?.team?.name,
+          batters: lines(players, 'batting', BOX_BATTING_FIELDS),
+          pitchers: lines(players, 'pitching', BOX_PITCHING_FIELDS),
+        }
+      }
+      return { away: side(data.teams?.away), home: side(data.teams?.home) }
+    }),
+})
+
 interface OddsOutcome {
   name?: string
   price?: number
@@ -339,6 +391,8 @@ function buildSystemPrompt(): string {
     `You are a Philadelphia Phillies (team id ${PHILLIES_ID}, ${SEASON} season) stats assistant embedded in a Phillies stats website. ` +
     `Today's date is ${today}. ` +
     `You MUST use your tools for any factual claim about games, stats, pitchers, standings, or betting odds — never answer those from memory. ` +
+    `For what specific players did in a particular game (hits, home runs, pitching lines), get the gamePk from get_schedule and call get_game_boxscore — never infer a player's single-game line from season stats, game logs, or web search. A player absent from the boxscore did not play in that game. ` +
+    `Game log entries carry dates — never assume the most recent entry is from today's game. ` +
     `When asked about betting lines or odds, call get_odds first. If it has no line for the matchup asked about — or the question is about futures, division, or championship odds it doesn't cover — use web_search to look it up online and cite what you found. If web_search also turns up nothing, say the odds aren't available rather than guessing. ` +
     `Only use web_search for Phillies or MLB questions your other tools can't answer (odds, recent news) — never for unrelated topics. ` +
     `Keep answers short and conversational: a few sentences at most; small inline lists are fine. ` +
@@ -385,6 +439,7 @@ export async function handleChat(requestBody: unknown, clientIp: string): Promis
         getBattingStats,
         getPitchingStats,
         getPlayerGameLog,
+        getGameBoxscore,
         getGameOdds,
         webSearch,
       ],
