@@ -188,3 +188,54 @@ Verification:
   - Docs: CLAUDE.md Chat bot section updated (six -> seven custom tools, why get_game_boxscore exists, the empty-stat-object roster gotcha, the v1-not-v1.1 note) plus a new Testing paragraph on the cost of verifying chat changes and how to drive the widget from Playwright.
 
 Deploy: NOT deployed. Needs the backend image rebuild via pipeline.sh for k8s (same-tag images need rebuild+rollout); Vercel picks it up on push. Uncommitted working tree; user stages/commits.
+
+# Progress Ledger: daily-beat-reporter
+
+Feature: a Daily Beat Reporter agent — a scheduled Claude cloud routine that each morning writes a short Phillies briefing (most recent game from the boxscore, standings, next matchup) and publishes it into the app as a collapsible card under the HeroStrip.
+Plan: docs/superpowers/plans/2026-07-29-daily-beat-reporter.md
+Base: after chat-boxscore-tool (committed as 63d8116).
+Execution mode: single-session, direct implementation.
+
+Decisions made with the user during planning:
+  - Runtime: Claude Code scheduled cloud routine (plan credits, no Anthropic key spend, no new infra) over an Agent SDK service or a backend cron.
+  - Delivery: push notification only. Gmail was dropped — the connector can only create drafts, not send.
+  - UI: collapsible card under HeroStrip (not a fifth tab).
+  - Publish path: the routine commits public/briefing.json to develop and pushes. NOTHING AUTO-DEPLOYS — see the finding below.
+
+MID-IMPLEMENTATION FINDING (changed the plan): the plan assumed a push to develop auto-deploys Vercel production. It does not. The develop-tagged deploy at 18:27 today was target=preview; production (phillies-stats.vercel.app) is a separate manual `npx vercel --prod`, matching CLAUDE.md's documented flow. Offered the user three fixes (flip Vercel's production branch to develop / store a VERCEL_TOKEN so the routine deploys / push-only). User chose PUSH-ONLY: production shows a briefing only after their next manual deploy, and since the card hides briefings older than 48h, a late deploy shows nothing. Accepted deliberately to avoid storing a token; documented in CLAUDE.md and the routine doc.
+
+Implementation:
+  - public/briefing.json — seeded with a real hand-written briefing built from live statsapi data (game 823837), so the contract has a committed example and the UI was verifiable immediately. Ships in dist/ (verified), so it is baked into the nginx image like any other static asset.
+  - src/components/DailyBriefing.tsx (new) — fetches /briefing.json with cache:'no-cache' (a cached copy would mask the morning push), validates the shape, and renders a collapsible card. Fail-soft like HeroStrip: missing file, malformed JSON, or wrong shape all render nothing. Staleness: hides briefings whose date is >2 days behind today's America/New_York date (same ET idiom as buildSystemPrompt in chat.ts) so a skipped run degrades to an absent card. Recap prose capped at max-w-3xl — unconstrained it ran ~150 characters a line on desktop.
+  - src/App.tsx — mounted between <HeroStrip /> and <Nav>, outside the tab conditionals.
+  - docs/routines/daily-beat-reporter.md (new, new docs/routines/ dir) — the routine's LIVE instructions, not just a record: the stored prompt is a thin wrapper that tells the agent to read this file from the checkout and follow it, so behavior changes by editing the doc and pushing. Encodes the endpoints, the accuracy rules, the JSON contract, the commit, the notification, and the failure rule.
+  - Routine created: trig_01NEVfwEVHov4qXy2D7Wh4j8, cron `0 12 * * *` (≈8 AM ET), claude-sonnet-5, repo jpsaviello/phillies-stats, tools Bash/Read/Write/Edit/Glob/Grep/PushNotification. First run 2026-07-30T12:02Z.
+  - Accuracy design carried over from the chat-boxscore-tool bug: the doc and the routine prompt both state that every single-game stat must come from that game's boxscore, that an empty stats.batting/stats.pitching object means the player did not play, and that the game narrative must come from the linescore rather than intuition. Incomplete data => commit nothing.
+
+Verification:
+  - npm run build + npm run lint clean. briefing.json confirmed present in dist/.
+  - webapp-testing, 8 assertions, zero console errors: card renders collapsed with recap hidden; DOM order HeroStrip -> DailyBriefing -> Nav; expands showing all 3 paragraphs with aria-expanded=true; collapses again; still present after switching to the Standings tab; a 3-day-old date hides the card; a 2-day-old date still shows it (boundary); malformed JSON hides the card without breaking the rest of the page. Test restores the seed in a finally block.
+  - Note for future runs: Tailwind's `uppercase` class means innerText returns "DAILY BRIEFING", so substring assertions must be case-insensitive — a case-sensitive `not in` check passes vacuously and looks like a green test.
+  - Responsive: 375px and 1280px both render with 0px horizontal overflow; recap paragraph measures 309px / 736px.
+  - Routine spec dry-run (free, no cloud session): executed the doc's data-gathering steps against live statsapi and cross-checked the seed. Most recent Final correctly resolved to gamePk 823837; 26 roster entries reduced to 9 batters + 3 pitchers with 14 non-participants excluded; linescore (2+1+3 through five vs 3 in the 5th, 3 in the 7th, 2 in the 8th) matches the seed's narrative exactly; standings 57-52 / 2nd / 6.0 GB / L3 matches; Turner's 15 HR matches the "15th home run" claim; odds returned 21 priced games with none involving PHI, corroborating the seed's "no line posted this far out". No player named in the seed is in the did-not-play set.
+
+NOT YET VERIFIED (blocked on the user's commit): the cloud plumbing — checkout, reading the doc, git push permission, and push-notification delivery. A dry run was deliberately NOT triggered because docs/routines/daily-beat-reporter.md is not yet on origin/develop, so the run would either report the spec missing or improvise a push to develop. Push the implementation first, then trigger one manual run from the routine URL (or let the 8 AM run do it) and confirm a `briefing: YYYY-MM-DD` commit lands with valid JSON naming only players who actually appeared.
+
+Deploy: nothing deployed. Vercel production needs a manual `npx vercel --prod`; k8s needs pipeline.sh to rebuild the frontend image. Uncommitted working tree; user stages/commits.
+
+## Amendment (same day): routine deploys production itself
+
+User asked for the briefing to reach Vercel production daily rather than waiting on a manual deploy — reversing the push-only decision recorded above. Researched the routines/cloud-environments docs before changing anything, which turned up two blockers that would have broken the routine as originally created:
+
+1. NETWORK. Cloud environments default to "Trusted" network access, whose allowlist covers package registries, GitHub, and cloud SDKs — `statsapi.mlb.com` is NOT on it, so every data fetch would have failed with `403 host_not_allowed`. The routine as created yesterday could never have worked in the Default environment, independent of the deploy question. Requires Network access → Custom with statsapi.mlb.com + the Vercel hosts, "also include defaults" checked so npx still reaches npm.
+2. SECRETS. Cloud environments have NO secrets store; env vars are readable by anyone using the environment (the dialog says so outright). Acceptable here only because it is a personal environment. VERCEL_TOKEN must be project-scoped.
+
+Also found: `.vercel/` is gitignored, so the cloud checkout has no project link — `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` must be set or the CLI would try to create a NEW Vercel project. And `develop` carries `Claude <noreply@anthropic.com>` commits, which a cloud session's push protection may treat as "commits authored by someone other than you" and reject.
+
+Design change that falls out of this: `vercel deploy --prod` publishes the working DIRECTORY, so production no longer depends on the git push succeeding at all. Steps reordered to deploy first (step 6), then commit for durability (step 7), and the two are documented to fail independently — a rejected push falls back to a `claude/` branch and the run still counts as a success because production is already updated. This also retires the "production is usually stale" caveat: production is now as fresh as the last successful run.
+
+Chose `vercel deploy --prod` over `vercel promote` deliberately: per the Vercel docs, promoting a preview deployment creates a new production deployment from a build made with PREVIEW-scoped environment variables, which would leave production's /api/chat and /api/odds without their keys. `deploy --prod` is a fresh production build, identical to the user's manual `npx vercel --prod`.
+
+Changed: docs/routines/daily-beat-reporter.md (new Prerequisites section with exact env values and allowlist; new step 6 deploy with post-deploy curl verification; step 7 commit with the claude/ fallback; steps renumbered to 9; Deployment behavior section rewritten). Routine prompt updated via RemoteTrigger (invariant 3 previously said "nothing auto-deploys from this push", now the deploy is the point; added the independent-failure invariant). CLAUDE.md Daily briefing + Automated routines paragraphs updated.
+
+STILL BLOCKED ON THE USER, and now on two things, not one: (a) commit+push the implementation so the cloud checkout has the spec, and (b) configure the environment's Custom network allowlist and the three env vars. Until (b) the routine fails at the first fetch. Nothing about the deploy path has been executed or verified — no cloud run has happened yet.

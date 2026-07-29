@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
 import HeroStrip from './components/HeroStrip'
+import DailyBriefing from './components/DailyBriefing'
 import LiveGameStrip from './components/LiveGameStrip'
 import Nav, { type Tab } from './components/Nav'
 import BattingTable from './components/BattingTable'
@@ -31,6 +32,9 @@ export default function App() {
           conditionals so its polling survives tab switches. */}
       <LiveGameStrip />
       <HeroStrip />
+      {/* Self-hides when no fresh briefing exists; mounted outside the tab
+          conditionals so it reads the same on every tab. */}
+      <DailyBriefing />
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && <BattingTable />}
