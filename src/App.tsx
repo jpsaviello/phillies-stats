@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useFlags } from 'launchdarkly-react-client-sdk'
 import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
 import LaunchDarklyDemoBanner from './components/LaunchDarklyDemoBanner'
@@ -18,6 +19,10 @@ export default function App() {
   // Gated on the backend feature flag; starts hidden so a disabled or
   // unreachable flag never flashes the banner before config resolves.
   const [showAllStarBanner, setShowAllStarBanner] = useState(false)
+  // Manual kill switch, independent of DailyBriefing's own self-hide logic.
+  // Defaults true so an unreachable LD client preserves today's behavior
+  // (briefing shows) rather than silently hiding it.
+  const { enableDailyBriefing = true } = useFlags()
 
   useEffect(() => {
     fetchConfig()
@@ -35,8 +40,9 @@ export default function App() {
       <LiveGameStrip />
       <HeroStrip />
       {/* Self-hides when no fresh briefing exists; mounted outside the tab
-          conditionals so it reads the same on every tab. */}
-      <DailyBriefing />
+          conditionals so it reads the same on every tab. Also gated by the
+          enable-daily-briefing flag as a manual kill switch. */}
+      {enableDailyBriefing && <DailyBriefing />}
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && <BattingTable />}
