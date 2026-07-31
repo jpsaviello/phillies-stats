@@ -7,6 +7,13 @@ RUN npm ci
 
 COPY . .
 
+# Vite inlines VITE_-prefixed vars at build time, so it must be passed in
+# as a build-arg here -- it's not read at container runtime like the
+# backend's env vars are. Not a secret: LaunchDarkly client-side IDs are
+# meant to be public, they ship in the browser bundle either way.
+ARG VITE_LAUNCHDARKLY_CLIENT_SIDE_ID
+ENV VITE_LAUNCHDARKLY_CLIENT_SIDE_ID=$VITE_LAUNCHDARKLY_CLIENT_SIDE_ID
+
 RUN npm run build
 
 # Stage 2: serve dist/ with nginx

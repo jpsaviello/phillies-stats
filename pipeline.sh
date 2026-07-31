@@ -7,7 +7,14 @@
 
 set -e
 
-docker build -t jsaviello1/phillies-stats:latest .
+# Not a secret -- LaunchDarkly client-side IDs are meant to be public, they
+# ship in the browser bundle. Read from .env.local since Vite needs it as a
+# build-arg (build-time inline), not a container runtime env var.
+VITE_LAUNCHDARKLY_CLIENT_SIDE_ID=$(grep -E '^VITE_LAUNCHDARKLY_CLIENT_SIDE_ID=' .env.local | cut -d '=' -f2-)
+
+docker build \
+  --build-arg VITE_LAUNCHDARKLY_CLIENT_SIDE_ID="$VITE_LAUNCHDARKLY_CLIENT_SIDE_ID" \
+  -t jsaviello1/phillies-stats:latest .
 docker push jsaviello1/phillies-stats:latest
 
 docker build -t phillies-stats-api:latest server/

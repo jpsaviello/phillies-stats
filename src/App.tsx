@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
+import LaunchDarklyDemoBanner from './components/LaunchDarklyDemoBanner'
 import HeroStrip from './components/HeroStrip'
 import DailyBriefing from './components/DailyBriefing'
 import LiveGameStrip from './components/LiveGameStrip'
@@ -27,6 +28,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-phillies-cream">
       <Header />
+      <LaunchDarklyDemoBanner />
       {showAllStarBanner && <AllStarBanner />}
       {/* Self-hides unless a Phillies game is live; mounted outside the tab
           conditionals so its polling survives tab switches. */}
