@@ -273,3 +273,45 @@ GAME-FLOW NARRATIVE BUG FOUND (currently live in production, not yet fixed): the
 Root cause: docs/routines/daily-beat-reporter.md step 3 (Accuracy rules) says "Describe how the game turned from the linescore, not from intuition" but doesn't explicitly warn about the case where both teams score in the same inning -- the model appears to have attributed the Phillies' 5th-inning runs and the Marlins' 5th-inning runs as sequential events (lead built, then answered) rather than reading them as simultaneous per-inning totals. The player-stat guardrails (empty stats object = did not play) don't cover this narrative-sequencing failure mode; it's a new gap, not a recurrence of the original chat-boxscore-tool bug.
 
 NOT YET FIXED: this entry documents the finding for the next session. Candidate fix: tighten step 3 to require restating the linescore's per-inning columns explicitly before narrating, and to warn that both teams can score in the same inning (a lead described as "through N innings" must be the score at the END of inning N, after both halves). Left as a known issue rather than patched immediately since the user is done for the day; production is currently serving the inaccurate framing until the next successful run (2026-07-30 12:00 UTC) or a manual fix.
+
+# Progress Ledger: schedule-wildcard-standings
+
+Plan: docs/superpowers/plans/2026-08-04-schedule-wildcard-standings.md
+Spec: docs/superpowers/specs/2026-08-04-schedule-wildcard-standings-design.md
+Base: 6021239 (develop)
+
+Task 1 (WildCardRecord type): complete — uncommitted working-tree change
+Task 2 (fetchWildCardStandings): complete — uncommitted
+Task 3 (WildCardStandings component): complete — uncommitted
+Task 4 (wire into Schedule.tsx): complete — uncommitted
+Task 5 (CLAUDE.md docs): complete — uncommitted
+
+Verified with webapp-testing (Playwright, both servers up): heading renders, 7 team
+rows + cutoff divider, Phillies row highlighted w/ red dot at WC rank 3, cutoff row
+lands directly after them, 26 game rows still render below, zero console errors,
+375px mobile has no horizontal overflow. tsc/oxlint/vite build all clean.
+Row data matched a live curl of the wildCard endpoint exactly.
+
+Two deliberate deviations from the plan's sample code (both improvements):
+  - Cutoff marker is a labeled "Playoff cutoff" row rather than the plan's bare
+    aria-hidden dashed <td>. Matches the design doc's own sketch and is readable
+    by screen readers instead of hidden from them.
+  - Skipped the spec's optional bg-green-50 tint on the top-3 rows: it collides
+    with the Phillies' bg-red-50 highlight whenever they hold a wild card spot
+    (which they do right now, rank 3). Spec offered the tint as an "or", and the
+    labeled divider already communicates the line.
+
+Also restructured Schedule.tsx's three early returns (loading/error/!dates.length)
+into one nested ternary so <WildCardStandings /> sits ABOVE them and still renders
+while the schedule fetch is in flight or has failed. The plan's Step 2 note asked
+for that independence but its placement instruction (inside the final return only)
+would not have delivered it — the widget would have vanished on any schedule error.
+
+KNOWN BEHAVIOR (not a bug, documented in CLAUDE.md): standingsTypes=wildCard
+excludes division leaders, so the Phillies disappear from this table entirely if
+they take over the NL East. Component handles philliesIndex === -1 by falling back
+to the plain 7-row cutoff. Currently untriggered (Phillies are 2nd, 7.5 GB), so
+this path is unexercised at runtime — worth a look if they climb to 1st.
+
+All tasks complete. NOT committed: the user stages/commits themselves, and develop
+auto-deploys Vercel production, so this is deliberately left in the working tree.

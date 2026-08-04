@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
+import WildCardStandings from './WildCardStandings'
 
 const PHILLIES_ID = 143
 
@@ -35,10 +36,6 @@ export default function Schedule() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading schedule…</div>
-  if (error) return <div className="p-8 text-center text-red-600">{error}</div>
-  if (!dates.length) return <div className="p-8 text-center text-gray-500">No games found.</div>
-
   const _d = new Date()
   const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
 
@@ -48,54 +45,67 @@ export default function Schedule() {
     if (!oddsMap.has(key)) oddsMap.set(key, game)
   }
 
+  // The wild card table owns its own fetch and fails silently, so it renders
+  // above the schedule's own loading/error/empty states rather than inside them.
   return (
-    <div className="max-w-2xl space-y-2">
-      {dates.map(({ date, games }) =>
-        games.map(game => {
-          const isHome = game.teams.home.team.id === PHILLIES_ID
-          const opponent = isHome ? game.teams.away.team.name : game.teams.home.team.name
-          const philliesScore = isHome ? game.teams.home.score : game.teams.away.score
-          const oppScore = isHome ? game.teams.away.score : game.teams.home.score
-          const isFinished = game.status.detailedState === 'Final'
-          const won = isHome ? game.teams.home.isWinner : game.teams.away.isWinner
-          const opponentId = isHome ? game.teams.away.team.id : game.teams.home.team.id
-          const isToday = date === today
+    <div className="max-w-2xl">
+      <WildCardStandings />
+      {loading ? (
+        <div className="p-8 text-center text-gray-500">Loading schedule…</div>
+      ) : error ? (
+        <div className="p-8 text-center text-red-600">{error}</div>
+      ) : !dates.length ? (
+        <div className="p-8 text-center text-gray-500">No games found.</div>
+      ) : (
+        <div className="space-y-2">
+          {dates.map(({ date, games }) =>
+            games.map(game => {
+              const isHome = game.teams.home.team.id === PHILLIES_ID
+              const opponent = isHome ? game.teams.away.team.name : game.teams.home.team.name
+              const philliesScore = isHome ? game.teams.home.score : game.teams.away.score
+              const oppScore = isHome ? game.teams.away.score : game.teams.home.score
+              const isFinished = game.status.detailedState === 'Final'
+              const won = isHome ? game.teams.home.isWinner : game.teams.away.isWinner
+              const opponentId = isHome ? game.teams.away.team.id : game.teams.home.team.id
+              const isToday = date === today
 
-          const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
-          const oddsGame = oddsMap.get(oddsKey)
-          const philliesOdds = !isFinished && isToday && oddsGame ? getPhilliesOdds(oddsGame) : null
+              const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
+              const oddsGame = oddsMap.get(oddsKey)
+              const philliesOdds = !isFinished && isToday && oddsGame ? getPhilliesOdds(oddsGame) : null
 
-          return (
-            <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''}`}>
-              <div className="text-sm text-gray-500 w-24 shrink-0">
-                {formatDate(date)}
-                {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
-              </div>
-              <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
-              <img
-                src={teamLogoUrl(opponentId)}
-                alt={opponent}
-                className="w-6 h-6 shrink-0"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900">{opponent}</div>
-                {philliesOdds && (
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    ML {formatOdds(philliesOdds.ml)}{'  |  '}RL {philliesOdds.rlPoint > 0 ? '+' : ''}{philliesOdds.rlPoint} ({formatOdds(philliesOdds.rlJuice)})
+              return (
+                <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''}`}>
+                  <div className="text-sm text-gray-500 w-24 shrink-0">
+                    {formatDate(date)}
+                    {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
                   </div>
-                )}
-              </div>
-              {isFinished ? (
-                <div className={`text-sm font-semibold tabular-nums ${won ? 'text-green-600' : 'text-red-600'}`}>
-                  {won ? 'W' : 'L'} {philliesScore}–{oppScore}
+                  <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
+                  <img
+                    src={teamLogoUrl(opponentId)}
+                    alt={opponent}
+                    className="w-6 h-6 shrink-0"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900">{opponent}</div>
+                    {philliesOdds && (
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        ML {formatOdds(philliesOdds.ml)}{'  |  '}RL {philliesOdds.rlPoint > 0 ? '+' : ''}{philliesOdds.rlPoint} ({formatOdds(philliesOdds.rlJuice)})
+                      </div>
+                    )}
+                  </div>
+                  {isFinished ? (
+                    <div className={`text-sm font-semibold tabular-nums ${won ? 'text-green-600' : 'text-red-600'}`}>
+                      {won ? 'W' : 'L'} {philliesScore}–{oppScore}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">{game.status.detailedState}</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-sm text-gray-400">{game.status.detailedState}</div>
-              )}
-            </div>
-          )
-        })
+              )
+            })
+          )}
+        </div>
       )}
     </div>
   )

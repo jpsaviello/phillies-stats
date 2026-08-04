@@ -62,6 +62,18 @@ export interface StandingsRecord {
   divisionRank: string
 }
 
+// The wildCard standings type shares almost no fields with StandingsRecord
+// (rank/GB are wild-card-specific), so it's kept separate rather than making
+// StandingsRecord a bag of optionals. clinchIndicator is absent until clinched.
+export interface WildCardRecord {
+  team: { id: number; name: string }
+  wins: number
+  losses: number
+  wildCardRank: string
+  wildCardGamesBack: string
+  clinchIndicator?: string
+}
+
 export interface GameLogOpponent {
   id: number
   name: string

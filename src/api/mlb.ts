@@ -42,6 +42,17 @@ export async function fetchStandings() {
   return nlEast?.teamRecords ?? []
 }
 
+// standingsTypes=wildCard returns a SINGLE record group for the league (not one
+// per division): every non-division-leader team, already sorted by
+// wildCardRank. Don't reuse fetchStandings' find-by-Phillies logic here — the
+// Phillies drop out of this response entirely while they lead the NL East.
+export async function fetchWildCardStandings() {
+  const data = await get<{ records: { teamRecords: import('../types/mlb').WildCardRecord[] }[] }>(
+    `/standings?leagueId=104&season=${SEASON}&standingsTypes=wildCard`
+  )
+  return data.records[0]?.teamRecords ?? []
+}
+
 export async function fetchSchedule(startDate: string, endDate: string) {
   const data = await get<{ dates: { date: string; games: Game[] }[] }>(
     `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore`
