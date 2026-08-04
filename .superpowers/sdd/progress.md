@@ -315,3 +315,51 @@ this path is unexercised at runtime — worth a look if they climb to 1st.
 
 All tasks complete. NOT committed: the user stages/commits themselves, and develop
 auto-deploys Vercel production, so this is deliberately left in the working tree.
+
+## Amendment 1: moved Schedule tab -> Standings tab (2026-08-04, post-deploy)
+
+Plan/spec renamed to drop the now-wrong "schedule" prefix:
+  docs/superpowers/specs/2026-08-04-standings-wildcard-design.md
+  docs/superpowers/plans/2026-08-04-standings-wildcard.md
+(git mv, so history follows.)
+
+WHAT HAPPENED: the user committed the original work (508cec8) and pushed to develop,
+which auto-deployed Vercel production, then reported not seeing the wild card table.
+It was NOT a deploy failure — verified the deployed bundle
+(assets/index-DyQO33IG.js) contained both "standingsTypes=wildCard" and
+"NL Wild Card Race", and prod /api/mlb/standings?...standingsTypes=wildCard returned
+HTTP 200 with real teamRecords. The feature was live and working the whole time; it
+was just on the SCHEDULE tab, and the user went looking on the STANDINGS tab.
+
+Root cause is a spec-authoring miss, not an implementation bug: I chose the Schedule
+tab in the design doc without asking, and "show me the NL wildcard standings" plainly
+implies the Standings tab — that's where a standings table belongs and where anyone
+would look. Worth remembering: when a feature is "show X somewhere in the UI" and the
+repo already has an obviously-matching tab, put it there rather than picking a novel
+placement for adjacency reasons.
+
+CHANGES:
+  - Schedule.tsx fully reverted (git checkout b290d12 -- src/components/Schedule.tsx).
+    Confirmed beforehand that 508cec8's only change to that file was my wiring, so the
+    revert lost nothing. The early-return -> nested-ternary restructure is gone from
+    Schedule entirely; that file is byte-identical to its pre-feature state.
+  - Standings.tsx now renders <WildCardStandings /> below the NL East table, with the
+    same early-return restructure applied there instead (so a division-standings
+    error can't blank the wild card table).
+  - WildCardStandings root div lost its mb-4; spacing is the parent's space-y-8, which
+    collapses correctly when the component returns null.
+  - CLAUDE.md, spec, and plan Task 4 all rewritten for the new placement.
+
+RE-VERIFIED with webapp-testing after the move: Standings tab renders 2 tables in the
+right order (NL East above Wild Card, asserted via bounding_box y-comparison), Phillies
+highlighted in BOTH (2 x tr.bg-red-50), cutoff row directly after their rank-3 row,
+Schedule tab now has zero wild card markup with its 26 game rows intact, no console
+errors, 375px mobile clean. tsc/oxlint/build all pass.
+
+TESTING GOTCHA worth keeping: this app polls (LiveGameStrip), so Playwright's
+wait_for_load_state('networkidle') NEVER settles and times out at 30s. Use
+wait_until='domcontentloaded' + explicit wait_for_selector instead. Cost me one failed
+run; now recorded in the plan's Task 4 Step 5.
+
+Amendment complete. Again NOT committed — user stages/commits, and develop
+auto-deploys production.

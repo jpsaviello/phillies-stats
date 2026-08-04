@@ -1,10 +1,19 @@
-# NL Wild Card Standings on Schedule Tab
+# NL Wild Card Standings on Standings Tab
 
 **Date:** 2026-08-04
+**Amended:** 2026-08-04 — moved from the Schedule tab to the Standings tab (see Amendment 1)
 
 ## Goal
 
-Show the NL Wild Card race on the Schedule tab, so users can see the Phillies' postseason position alongside the game list without switching tabs.
+Show the NL Wild Card race on the Standings tab, directly below the NL East division table, so the division race and the postseason race read together in one place.
+
+## Amendment 1: Schedule tab -> Standings tab
+
+The feature originally shipped on the **Schedule** tab (above the game list). After deploying, the user went looking for it on the **Standings** tab — which is where a standings table actually belongs — and reported it missing. The deploy was fine; the placement was wrong.
+
+Corrected placement: `src/components/Standings.tsx`, below the existing NL East table. `Schedule.tsx` reverts to its original form with no wild card involvement and no restructuring of its early returns.
+
+Rationale: "NL Wild Card Race" is a standings table. Grouping it with the division standings means one tab answers "where do the Phillies sit?", and the Schedule tab stays a pure game list.
 
 ## Data Source
 
@@ -77,7 +86,7 @@ export interface WildCardRecord {
 
 ## New Component: `src/components/WildCardStandings.tsx`
 
-A compact, self-contained widget (owns its own fetch, same lifecycle pattern as `HeroStrip`/`DailyBriefing` — fails silently, no error banner) rendered above the game list in `Schedule.tsx`.
+A compact, self-contained widget (owns its own fetch, same lifecycle pattern as `HeroStrip`/`DailyBriefing` — fails silently, no error banner) rendered below the NL East table in `Standings.tsx`.
 
 ```
 NL Wild Card Race
@@ -101,11 +110,13 @@ NL Wild Card Race
 
 ### Truncation
 
-Showing all 12 teams keeps the Schedule tab focused on the schedule. Cap the rendered list to the top 7–8 teams (through a couple past the cutoff) unless the Phillies rank lower — in that case extend the list to include the Phillies' row so they're never scrolled off. Exact cutoff count is an implementation detail; the important constraint is: **the Phillies' row must always be visible**, even if that means showing more than 7 rows.
+Showing all 12 teams makes the tab long and buries the division table above it. Cap the rendered list to the top 7–8 teams (through a couple past the cutoff) unless the Phillies rank lower — in that case extend the list to include the Phillies' row so they're never scrolled off. Exact cutoff count is an implementation detail; the important constraint is: **the Phillies' row must always be visible**, even if that means showing more than 7 rows.
 
-## Placement in `src/components/Schedule.tsx`
+## Placement in `src/components/Standings.tsx`
 
-Render `<WildCardStandings />` once, above the existing `dates.map(...)` game list, inside the same `max-w-2xl` wrapper. It does not participate in the Schedule's own `loading`/`error` state — it manages its own loading/error/empty internally and renders nothing on failure (consistent with `HeroStrip`).
+Render `<WildCardStandings />` once, **below** the NL East table, inside the same `max-w-2xl` wrapper (which gains `space-y-8` to separate the two tables). It does not participate in the Standings component's own `loading`/`error` state — it manages its own loading/error/empty internally and renders nothing on failure (consistent with `HeroStrip`).
+
+Because the division fetch and the wild card fetch are independent, `Standings.tsx`'s two early returns are restructured into a single conditional body so the wild card table still renders when the division fetch is mid-flight or has failed. Spacing lives on the parent's `space-y-8` rather than a margin inside `WildCardStandings`, so the gap collapses cleanly when the widget renders `null`.
 
 ## Loading / Error / Empty States
 
@@ -117,12 +128,12 @@ Render `<WildCardStandings />` once, above the existing `dates.map(...)` game li
 
 ## Responsive
 
-Same table layout as `Standings.tsx` — no special mobile treatment beyond what Tailwind's default table/text sizing already gives the existing Standings table on narrow viewports.
+Same table layout as the NL East table it sits under — no special mobile treatment beyond what Tailwind's default table/text sizing already gives that table on narrow viewports. Verified at 375px: five columns fit with no horizontal overflow.
 
 ## Out of Scope
 
 - AL Wild Card standings (Phillies are NL-only relevant)
-- Adding this widget to the Standings tab (could be a future follow-up, not requested)
+- Keeping a copy on the Schedule tab (removed by Amendment 1 — it lives only on Standings)
 - Historical/past-date wild card standings (always current season, current date — same as `fetchStandings`)
 - Magic number / elimination number display
 - Any change to `server/src/core.ts` (no backend change needed)

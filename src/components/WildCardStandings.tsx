@@ -29,7 +29,7 @@ export default function WildCardStandings() {
   const visible = records.slice(0, rowCount)
 
   return (
-    <div className="mb-4">
+    <div>
       <h2 className="text-lg font-semibold text-gray-800 mb-3">NL Wild Card Race</h2>
       <table className="w-full text-sm bg-white rounded-lg border border-gray-100 overflow-hidden">
         <thead>
