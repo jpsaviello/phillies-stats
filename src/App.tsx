@@ -5,6 +5,7 @@ import AllStarBanner from './components/AllStarBanner'
 import LaunchDarklyDemoBanner from './components/LaunchDarklyDemoBanner'
 import HeroStrip from './components/HeroStrip'
 import DailyBriefing from './components/DailyBriefing'
+import OnThisDayCard from './components/OnThisDayCard'
 import LiveGameStrip from './components/LiveGameStrip'
 import Nav, { type Tab } from './components/Nav'
 import BattingTable from './components/BattingTable'
@@ -22,7 +23,7 @@ export default function App() {
   // Manual kill switch, independent of DailyBriefing's own self-hide logic.
   // Defaults true so an unreachable LD client preserves today's behavior
   // (briefing shows) rather than silently hiding it.
-  const { enableDailyBriefing = true } = useFlags()
+  const { enableDailyBriefing = true, enableOnThisDay = true } = useFlags()
 
   useEffect(() => {
     fetchConfig()
@@ -43,6 +44,9 @@ export default function App() {
           conditionals so it reads the same on every tab. Also gated by the
           enable-daily-briefing flag as a manual kill switch. */}
       {enableDailyBriefing && <DailyBriefing />}
+      {/* Stacked below the briefing, fully independent: its own fetch, its own
+          collapse state, and it self-hides the same way. */}
+      {enableOnThisDay && <OnThisDayCard />}
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && <BattingTable />}

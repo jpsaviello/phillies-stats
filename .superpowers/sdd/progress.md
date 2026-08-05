@@ -363,3 +363,82 @@ run; now recorded in the plan's Task 4 Step 5.
 
 Amendment complete. Again NOT committed — user stages/commits, and develop
 auto-deploys production.
+
+# Progress Ledger: on-this-day
+
+Plan: docs/superpowers/plans/2026-08-05-on-this-day.md
+Spec: docs/superpowers/specs/2026-08-05-on-this-day-design.md
+Base: 6aeb707
+Execution mode: plan mode (single session)
+
+Task 1: complete (src/utils/date.ts — easternToday/daysBehind extracted verbatim from
+DailyBriefing; formatDate parameterized on Intl options since OnThisDayCard needs a
+full "August 5, 2014" label vs the briefing's "Aug 5". Pure refactor, tsc clean.)
+Task 2+3: complete (OnThisDayCard.tsx — OnThisDay type + isOnThisDay guard inline,
+mirrors DailyBriefing structurally. Staleness measured against `date`, never
+`historicalDate`. Visually differentiated: 🕰️ vs 📰, "On This Day — <year>" label,
+red full-date line above the recap.)
+Task 4: complete (App.tsx — enableOnThisDay flag defaulted true, mounted stacked
+below DailyBriefing.)
+Task 5: complete (public/on-this-day.json seeded with a REAL verified game.)
+  - Ran the routine's own algorithm by hand: 60 single-day /schedule queries
+    (1966-2025 Aug 5) returned 57 Finals. No no-hitters (min hits was 2), so tier 2
+    won: 2014-08-05, PHI 2 HOU 1 in 15 innings — walk-off AND extra innings.
+  - ACCURACY FINDINGS — my first draft had three fabrications, all caught by going
+    back to the API. These are now encoded as explicit rules in the routine doc:
+    (a) wrote "bases-loaded single" — play-by-play shows 1st and 2nd, two outs.
+        RBI columns don't tell you the runner situation; only playByPlay does.
+    (b) wrote Bastardo threw "two perfect frames" — he had 0 H but 1 BB. Hitless
+        != perfect. Check walks before using either word.
+    (c) wrote "Papelbon, Giles and De Fratus finished it off" — boxscore
+        pitchers[] shows Neris actually pitched the 15th. Don't guess relief order.
+    (d) also cut "five-hour marathon": duration isn't in these endpoints at all.
+  This is exactly the failure mode the beat-reporter doc was written to prevent,
+  reproduced on the first try. Worth remembering that plausible-sounding baseball
+  prose is the default output unless every clause is traced back.
+Task 6: complete (webapp-testing PASS — both cards render stacked in correct DOM
+order, expand independently (both open simultaneously, neither collapses the other),
+historical date line renders, 375px mobile clean, zero console errors. Screenshots
+reviewed.)
+Task 7: complete (docs/routines/on-this-day-reporter.md — mirrors daily-beat-reporter
+structure; encodes the 60-year bounded search, the 5-tier notability ranking with
+most-recent tie-break, and the Task-5 accuracy findings above.)
+Task 8: complete (CLAUDE.md — component inventory, "On this day" paragraph covering
+the date vs historicalDate distinction, src/utils/date.ts, routine bullet.)
+
+All tasks complete. NOT committed — user stages/commits, and develop auto-deploys
+production.
+
+FOLLOW-UPS (deliberately out of scope, need user action):
+  - Register the cron routine via the `schedule` skill, then fill its trigger id
+    into docs/routines/on-this-day-reporter.md and CLAUDE.md.
+  - Set that routine's cloud env Network access to Custom (statsapi.mlb.com,
+    phillies-stats.vercel.app) — NOT inherited from daily-beat-reporter's env.
+  - Create the `enableOnThisDay` LaunchDarkly flag (launchdarkly-flag-create).
+    Until it exists the useFlags() default of true keeps the card visible.
+
+FOLLOW-UP STATUS (updated same session):
+  - Routine REGISTERED: trig_017HYfmZPpHAyXVde2QcQWb7, daily 13:00 UTC.
+    Scheduled at 13:00, NOT 12:00 as the plan said: daily-beat-reporter fires at
+    12:00 and ends by pushing develop. Two routines pushing the same branch
+    concurrently means one push is rejected, which both docs treat as a FAILED
+    RUN, not a retryable hiccup. Keep them an hour apart.
+  - Network allowlist: NO ACTION NEEDED after all. The new routine reuses the
+    same phillies-stats environment (env_016wMSZpYCdfkt239tXPmaHN) as the beat
+    reporter, which already has Custom network access with statsapi.mlb.com.
+    Allowlists are per-ENVIRONMENT, not per-routine. My earlier claim in
+    CLAUDE.md and the routine doc that it "needs its own allowlist" was wrong in
+    context and has been corrected in both places.
+  - LD flag CREATED: enable-on-this-day (boolean, temporary, clientSideAvailability
+    usingEnvironmentId=true so the React SDK receives it). Mirrors
+    enable-daily-briefing's naming/description conventions.
+    !! It is on:false in BOTH production and test, which INVERTS current behavior:
+    with no flag, useFlags() returns undefined and the code default of true shows
+    the card; now LD actively serves false and HIDES it. Needs toggling on in
+    production to preserve intent. Not done unilaterally — per .claude/rules/
+    launchdarkly.md, production toggles get confirmed with the user first.
+  - BLOCKER for the first run: the routine reads docs/routines/on-this-day-reporter.md
+    from the develop checkout, and nothing here is committed or pushed yet. If
+    develop doesn't have it before 2026-08-06T13:00Z, the first run does nothing
+    and reports "routine spec is missing" (the wrapper prompt handles this
+    explicitly). Push is the user's call.
