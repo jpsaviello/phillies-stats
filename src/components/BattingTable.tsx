@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
 import { fetchBattingStats } from '../api/mlb'
 import type { BattingStats, Player } from '../types/mlb'
+import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
+import StarButton from './StarButton'
 
 interface Split {
   player: Player
   stat: BattingStats
 }
 
-export default function BattingTable() {
+interface Props {
+  signedIn: boolean
+  favorites: Favorite[]
+  onToggleFavorite: (playerId: number, playerName: string) => void
+}
+
+export default function BattingTable({ signedIn, favorites, onToggleFavorite }: Props) {
   const [splits, setSplits] = useState<Split[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -51,13 +59,19 @@ export default function BattingTable() {
     { key: 'ops', label: 'OPS', defaultDir: 'desc' },
   ]
 
+  // Built once per render rather than scanning `favorites` per row.
+  const starredIds = new Set(favorites.map(f => f.playerId))
+
   return (
     <>
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <th className="px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 min-w-36">Player</th>
+            {/* Wider only when the star is rendered — it eats ~22px of the cell,
+                which wrapped most names onto two lines at 375px. Signed-out
+                stays at the original min-w-36. */}
+            <th className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
             <th className="px-3 py-3 text-center font-medium">POS</th>
             {cols.map(c => (
               <th
@@ -83,7 +97,21 @@ export default function BattingTable() {
               className="hover:bg-red-50 transition-colors cursor-pointer"
               onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
             >
-              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
+              {/* The star lives INSIDE this cell rather than in a column of its
+                  own: this cell is sticky left-0, and a column to its left would
+                  sit outside the frozen region and break the geometry. */}
+              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">
+                <span className="flex items-center gap-1.5">
+                  {signedIn && (
+                    <StarButton
+                      starred={starredIds.has(player.id)}
+                      playerName={player.fullName}
+                      onToggle={() => onToggleFavorite(player.id, player.fullName)}
+                    />
+                  )}
+                  {player.fullName}
+                </span>
+              </td>
               <td className="px-3 py-2.5 text-center text-gray-500">{player.primaryPosition?.abbreviation}</td>
               {cols.map(c => (
                 <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>

@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { getCurrentUser, login, logout, signup } from './auth.js'
 import { handleChat } from './chat.js'
 import { isHttpsFrom, sessionTokenFrom } from './cookies.js'
+import { addFavorite, listFavorites, removeFavorite } from './favorites.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from './core.js'
 import { clientIpFrom } from './rateLimit.js'
 
@@ -72,6 +73,30 @@ app.post('/logout', async c =>
 )
 
 app.get('/me', async c => reply(c, await getCurrentUser(sessionTokenFrom(c.req.header('cookie')))))
+
+app.get('/favorites', async c =>
+  reply(c, await listFavorites(sessionTokenFrom(c.req.header('cookie'))))
+)
+
+app.post('/favorites/add', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(c, await addFavorite(body, sessionTokenFrom(c.req.header('cookie'))))
+})
+
+app.post('/favorites/remove', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(c, await removeFavorite(body, sessionTokenFrom(c.req.header('cookie'))))
+})
 
 app.get('/health', c => c.json({ ok: true }))
 

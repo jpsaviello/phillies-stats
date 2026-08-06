@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { getCurrentUser, login, logout, signup } from '../server/src/auth.js'
 import { handleChat } from '../server/src/chat.js'
 import { isHttpsFrom, sessionTokenFrom } from '../server/src/cookies.js'
+import { addFavorite, listFavorites, removeFavorite } from '../server/src/favorites.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
 import { clientIpFrom } from '../server/src/rateLimit.js'
 
@@ -94,6 +95,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (req.method === 'GET' && first === 'me') {
       return send(res, await getCurrentUser(sessionTokenFrom(req.headers['cookie'])))
+    }
+    // First routes here with a second path segment that isn't an MLB passthrough,
+    // so unlike every branch above these have to look at `rest` as well as
+    // `first` — /api/favorites and /api/favorites/add are different endpoints.
+    if (first === 'favorites') {
+      const token = sessionTokenFrom(req.headers['cookie'])
+      if (req.method === 'GET' && rest.length === 0) {
+        return send(res, await listFavorites(token))
+      }
+      if (req.method === 'POST' && rest[0] === 'add') {
+        return send(res, await addFavorite(req.body, token))
+      }
+      if (req.method === 'POST' && rest[0] === 'remove') {
+        return send(res, await removeFavorite(req.body, token))
+      }
     }
     return send(res, { status: 404, body: { error: 'not found' } })
   } catch (err) {

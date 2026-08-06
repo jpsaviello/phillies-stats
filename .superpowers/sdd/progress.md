@@ -551,3 +551,112 @@ Until (a)/(b), sign-in 503s in those environments and the header just shows
 Uncommitted working tree; user stages/commits. NOTE: develop auto-deploys Vercel
 production, so pushing this ships sign-in to production -- do (b) first or the
 feature will 503 for real users.
+
+# Progress Ledger: favorite-players
+
+Plan: docs/superpowers/plans/2026-08-06-favorite-players.md
+Spec: docs/superpowers/specs/2026-08-06-favorite-players-design.md
+Base: b563b7b
+Execution mode: single-session, direct implementation
+
+Context: first feature to USE the account primitive from email-auth (which
+deliberately gated nothing). Second migration against the same Neon "Phillies"
+project; DATABASE_URL and pg were already wired for auth, so this needed no
+deploy or secret change at all.
+
+Task 1: complete (server/migrations/002_favorite_players.sql, applied with
+  `npx neon psql -- -f ...`. \d verified: all columns + both indexes. Also
+  hand-verified the resurrection path against a throwaway uuid -- insert ->
+  soft-delete -> ON CONFLICT re-insert leaves exactly ONE row, live, with the
+  name refreshed. That check is the whole reason the unique index is NOT
+  partial; a partial index wouldn't conflict against the soft-deleted row and
+  would have silently accumulated duplicates.)
+Task 2: complete (resolveSessionUser extracted from getCurrentUser in auth.ts;
+  server build clean; /api/me regression-curled with a valid cookie, no cookie,
+  and a REVOKED cookie -- all three byte-identical to pre-refactor.)
+Task 3: complete (server/src/favorites.ts; server build clean)
+Task 4: complete (three routes in app.ts, one `first === 'favorites'` block in
+  api/index.ts; server build clean + standalone `tsc --ignoreConfig` on
+  api/index.ts, which neither project build covers)
+Task 5: complete (src/types/favorites.ts + src/api/favorites.ts)
+Task 6: complete (StarButton.tsx + both tables; lint + build clean)
+Task 7: complete (FavoritesCard.tsx + App.tsx favorites state, effect keyed on
+  `user`, optimistic toggle with rollback; lint + build clean)
+Task 8 (docs): complete (CLAUDE.md -- new "Favorite players" paragraph plus
+  server/, components, and Vercel-routing inventory updates; this entry)
+
+DEVIATION FROM THE PLAN (one, found by verification): the plan said to widen the
+sticky Player column's min-w-36 "if the star crowds long names". It does --
+measured at 375px, signed-out wraps 1/12 player cells to two lines, signed-in
+wrapped most of them. Fixed by making the width CONDITIONAL (min-w-44 only when
+signedIn, min-w-36 otherwise) rather than widening it unconditionally, so the
+signed-out layout stays byte-identical, which the spec calls for explicitly.
+Re-measured after: cell height 60.5px -> 40.5px, no wrapping.
+
+Verification -- curl against dev:server, cookie jar:
+  - GET /favorites with no cookie -> 401 (NOT fail-soft; the deliberate split
+    from /api/me, which still returns {"user":null} on the same server).
+  - list empty -> add -> add again: one entry both times (idempotent upsert).
+  - remove -> empty; remove again -> 200 empty (idempotent).
+  - re-add a removed player -> present, and Neon shows exactly 1 row for that
+    (user, player) pair, not 2.
+  - 400s: playerId "abc" / 0 / -1, whitespace-only name, missing name, 101-char
+    name, malformed JSON body.
+  - Cross-account isolation: two accounts, each GET returns only its own stars.
+  - Cap: 50 accepted, 51st NEW player -> 409, but re-adding one of the existing
+    50 while AT the cap -> 200 and the name refreshes (the ordering edge case
+    the plan called out).
+  - Session revocation: logout, then add/list with the stale cookie -> 401.
+  - Fail-soft: server started without DATABASE_URL on :8099 -> all three
+    favorites routes 503, while /me 200 {"user":null}, /health, /config and
+    /mlb/standings were untouched.
+
+Verification -- Vercel path (api/index.ts gets no local typecheck, so this leg
+is load-bearing): `npx vercel dev` on :3009. Signup/list/add/idempotent-add/
+bad-id-400/remove/401-no-cookie all correct, /me and /mlb/* unregressed, and
+/api/favorites/bogus + POST /api/favorites (no sub-path) both 404 -- confirming
+the multi-segment matching works in that router, which was the one genuinely
+new routing shape here.
+  GOTCHA worth keeping: a first run showed signup 502 "getaddrinfo ENOTFOUND
+  base". That was MY shell quoting, not the code -- .env.local wraps
+  DATABASE_URL in double quotes, and `export $(grep ...)` passes them through
+  literally. Strip them: export DATABASE_URL="$(... | sed 's/^"//; s/"$//')".
+  (vercel dev still does not read .env.local at all -- known, already in
+  CLAUDE.md.)
+
+Verification -- webapp-testing (Playwright), 24/24 passing, zero console errors:
+  signed out has no stars and no card; signing up makes stars appear on every
+  row with no card until the first star; starring a hitter shows AVG/HR/RBI and
+  a pitcher shows ERA/K/W-L; star click does NOT open the game log modal while a
+  row click still does; card and stars survive a tab round trip AND a full page
+  reload (the DB round trip, not SPA state); unstar clears; a forced 502 on
+  /favorites/add rolls the optimistic star back; sign out clears both surfaces
+  and signing back in restores them; 375px has 0px horizontal overflow with the
+  sticky column intact. Screenshots reviewed visually, not just asserted on --
+  that's what surfaced the name-wrapping issue above.
+  TWO TEST-ONLY GOTCHAS, both of which cost a run:
+  (a) GameLogModal is a plain fixed-inset div with NO role="dialog" (unlike
+      AuthWidget's modal), so get_by_role("dialog") silently never matches it
+      and BOTH modal assertions were measuring nothing -- one false pass and one
+      false fail. Use the "Last 10 Games" heading instead.
+  (b) networkidle NEVER settles on this app, even on first load: LiveGameStrip
+      polls on a timer from mount. Wait on selectors, not load state.
+
+Test data: all 6 accounts created during verification (favtest1-3, favui*) plus
+their 58 favorites and 11 sessions were deleted afterwards. The one remaining
+users row is the owner's real account, left untouched; favorite_players is back
+to 0 rows.
+
+NOT DONE -- user steps, deliberately not scripted:
+  (a) k8s needs pipeline.sh to rebuild the backend image (same-tag images need
+      rebuild+rollout, not just restart).
+  (b) Nothing else: no new secret, no k8s manifest change, no Vercel env var,
+      no npm dependency, no feature flag.
+The migration is ALREADY APPLIED to the shared Neon database, which both deploy
+targets read -- so the schema is live for production right now while the code
+is not. That ordering is safe (an unused table), but note the reverse would not
+be: pushing the code before applying the migration would 502 every favorites
+call.
+
+Uncommitted working tree; user stages/commits. NOTE: develop auto-deploys Vercel
+production, so pushing this ships starring to production immediately.

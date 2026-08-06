@@ -209,16 +209,16 @@ export async function logout(
   return { status: 200, body: { ok: true }, cookies: [clearedSessionCookie(isHttps)] }
 }
 
-// Fails soft to { user: null } on every path, including a missing
-// DATABASE_URL — a deliberate deviation from the 503-when-unconfigured
-// convention. This is polled on every page load to decide whether the header
-// shows "Sign In", so it needs the same shape as fetchConfig's fail-soft
-// default rather than an error the frontend has to special-case.
-export async function getCurrentUser(sessionToken: string | undefined): Promise<RouteResult> {
-  if (sessionToken === undefined) return signedOut()
-
-  const pool = getPool()
-  if (pool === null) return signedOut()
+// Resolves a session cookie to its owner, or null for every failure mode (no
+// token, unknown/revoked/expired session, missing or soft-deleted user, DB
+// error). Shared by getCurrentUser and the favorites routes — the difference
+// between them is only what they do with a null, so the lookup itself lives
+// here rather than being duplicated with slightly different semantics.
+export async function resolveSessionUser(
+  pool: Pool,
+  sessionToken: string | undefined
+): Promise<UserRow | null> {
+  if (sessionToken === undefined) return null
 
   try {
     const session = await pool.query<SessionRow>(
@@ -226,7 +226,7 @@ export async function getCurrentUser(sessionToken: string | undefined): Promise<
       [hashSessionToken(sessionToken)]
     )
     const userId = session.rows[0]?.user_id
-    if (userId === undefined) return signedOut()
+    if (userId === undefined) return null
 
     // Separate query rather than a join: there's no FK between these tables,
     // so the user row may legitimately be gone or soft-deleted.
@@ -234,12 +234,24 @@ export async function getCurrentUser(sessionToken: string | undefined): Promise<
       'SELECT id, email FROM users WHERE id = $1 AND deleted_at IS NULL',
       [userId]
     )
-    const user = found.rows[0]
-    if (user === undefined) return signedOut()
-
-    return { status: 200, body: { user } }
+    return found.rows[0] ?? null
   } catch (err) {
     console.error('session lookup failed', err)
-    return signedOut()
+    return null
   }
+}
+
+// Fails soft to { user: null } on every path, including a missing
+// DATABASE_URL — a deliberate deviation from the 503-when-unconfigured
+// convention. This is polled on every page load to decide whether the header
+// shows "Sign In", so it needs the same shape as fetchConfig's fail-soft
+// default rather than an error the frontend has to special-case.
+export async function getCurrentUser(sessionToken: string | undefined): Promise<RouteResult> {
+  const pool = getPool()
+  if (pool === null) return signedOut()
+
+  const user = await resolveSessionUser(pool, sessionToken)
+  if (user === null) return signedOut()
+
+  return { status: 200, body: { user } }
 }

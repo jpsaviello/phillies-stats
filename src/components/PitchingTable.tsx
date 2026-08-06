@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
 import { fetchPitchingStats } from '../api/mlb'
 import type { PitchingStats, Player } from '../types/mlb'
+import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
+import StarButton from './StarButton'
 
 interface Split {
   player: Player
   stat: PitchingStats
 }
 
-export default function PitchingTable() {
+interface Props {
+  signedIn: boolean
+  favorites: Favorite[]
+  onToggleFavorite: (playerId: number, playerName: string) => void
+}
+
+export default function PitchingTable({ signedIn, favorites, onToggleFavorite }: Props) {
   const [splits, setSplits] = useState<Split[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,13 +56,17 @@ export default function PitchingTable() {
     { key: 'whip', label: 'WHIP', defaultDir: 'asc' },
   ]
 
+  // Built once per render rather than scanning `favorites` per row.
+  const starredIds = new Set(favorites.map(f => f.playerId))
+
   return (
     <>
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <th className="px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 min-w-36">Player</th>
+            {/* Wider only when the star is rendered — see BattingTable. */}
+            <th className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
             {cols.map(c => (
               <th
                 key={c.key}
@@ -79,7 +91,20 @@ export default function PitchingTable() {
               className="hover:bg-red-50 transition-colors cursor-pointer"
               onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
             >
-              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">{player.fullName}</td>
+              {/* Star inside the sticky cell, not a column of its own — see the
+                  matching comment in BattingTable. */}
+              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">
+                <span className="flex items-center gap-1.5">
+                  {signedIn && (
+                    <StarButton
+                      starred={starredIds.has(player.id)}
+                      playerName={player.fullName}
+                      onToggle={() => onToggleFavorite(player.id, player.fullName)}
+                    />
+                  )}
+                  {player.fullName}
+                </span>
+              </td>
               {cols.map(c => (
                 <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                   {stat[c.key]}
