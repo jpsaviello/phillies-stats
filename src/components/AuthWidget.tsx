@@ -116,7 +116,10 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
             role="dialog"
             aria-modal="true"
             aria-label={mode === 'signup' ? 'Create account' : 'Sign in'}
-            className="w-full max-w-sm rounded-lg bg-white p-6 shadow-2xl"
+            // text-gray-900 is load-bearing: the modal renders inside the header,
+            // which sets text-white, so anything without an explicit color would
+            // inherit white on this white panel — including input carets.
+            className="w-full max-w-sm rounded-lg bg-white p-6 text-gray-900 shadow-2xl"
             // Clicks inside the panel must not reach the backdrop's close handler.
             onClick={e => e.stopPropagation()}
           >
@@ -159,7 +162,7 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
                   autoComplete="email"
                   autoFocus
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-400 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
@@ -181,7 +184,7 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
                   maxLength={200}
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   placeholder={mode === 'signup' ? 'At least 8 characters' : ''}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-400 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
