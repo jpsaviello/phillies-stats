@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { getCurrentUser, login, logout, signup } from '../server/src/auth.js'
 import { handleChat } from '../server/src/chat.js'
+import { isHttpsFrom, sessionTokenFrom } from '../server/src/cookies.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
 import { clientIpFrom } from '../server/src/rateLimit.js'
 
@@ -27,6 +29,11 @@ interface VercelResponse extends ServerResponse {
 }
 
 function send(res: VercelResponse, result: RouteResult) {
+  // Node's ServerResponse takes an array for multi-value headers like
+  // Set-Cookie; VercelResponse extends it, so no extra typing is needed.
+  if (result.cookies !== undefined && result.cookies.length > 0) {
+    res.setHeader('Set-Cookie', result.cookies)
+  }
   res.status(result.status).json(result.body)
 }
 
@@ -53,6 +60,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (req.method === 'POST' && first === 'chat') {
       return send(res, await handleChat(req.body, clientIpFrom(req.headers['x-forwarded-for'])))
+    }
+    // Vercel has already parsed the JSON body, so unlike app.ts's Hono
+    // handlers there's no malformed-JSON try/catch to do here.
+    if (req.method === 'POST' && first === 'signup') {
+      return send(
+        res,
+        await signup(
+          req.body,
+          clientIpFrom(req.headers['x-forwarded-for']),
+          isHttpsFrom(req.headers['x-forwarded-proto'])
+        )
+      )
+    }
+    if (req.method === 'POST' && first === 'login') {
+      return send(
+        res,
+        await login(
+          req.body,
+          clientIpFrom(req.headers['x-forwarded-for']),
+          isHttpsFrom(req.headers['x-forwarded-proto'])
+        )
+      )
+    }
+    if (req.method === 'POST' && first === 'logout') {
+      return send(
+        res,
+        await logout(
+          sessionTokenFrom(req.headers['cookie']),
+          isHttpsFrom(req.headers['x-forwarded-proto'])
+        )
+      )
+    }
+    if (req.method === 'GET' && first === 'me') {
+      return send(res, await getCurrentUser(sessionTokenFrom(req.headers['cookie'])))
     }
     return send(res, { status: 404, body: { error: 'not found' } })
   } catch (err) {

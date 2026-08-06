@@ -442,3 +442,112 @@ FOLLOW-UP STATUS (updated same session):
     develop doesn't have it before 2026-08-06T13:00Z, the first run does nothing
     and reports "routine spec is missing" (the wrapper prompt handles this
     explicitly). Push is the user's call.
+
+# Progress Ledger: email-auth
+
+Plan: docs/superpowers/plans/2026-08-06-email-auth.md
+Spec: docs/superpowers/specs/2026-08-06-email-auth-design.md
+Base: 0455d93
+Execution mode: single-session, direct implementation
+
+Context: first stateful feature in the app and its first database user. Neon
+Postgres ("Phillies" project, free tier) was provisioned earlier the same
+session; DATABASE_URL/DATABASE_URL_UNPOOLED already in .env.local, pg already
+installed in server/, but zero app code touched it before this.
+
+Task 1: complete (server/migrations/001_users_and_sessions.sql; applied with
+  `npx neon psql -- -f ...` -- psql is NOT installed locally, the Neon CLI's
+  embedded TypeScript psql fallback is what makes this work. \d users and
+  \d sessions verified: all columns, the partial unique email index, and both
+  sessions indexes present.)
+Task 2: complete (RouteResult.cookies?: string[]; cookies.ts / db.ts /
+  crypto.ts; reply() appends via c.header(...,{append:true}), send() passes the
+  array to res.setHeader. Regression-curled all five pre-existing routes
+  (health/config/mlb/odds/chat-400 + mlb allowlist 403) -- byte-identical
+  behavior, confirming the shared-wrapper change is non-breaking.)
+Task 3: complete (auth.ts + authRateLimit.ts; server build clean)
+Task 4: complete (four routes in app.ts, four branches in api/index.ts;
+  server build clean + standalone `tsc --ignoreConfig` on api/index.ts clean,
+  since neither project build covers that file)
+Task 5: complete (DATABASE_URL secretKeyRef optional:true in api-deployment.yaml,
+  kustomize-validated; pg added to root package.json, npm install clean)
+Task 6: complete (src/types/auth.ts + src/api/auth.ts)
+Task 7: complete (AuthWidget.tsx modal, Header.tsx props + justify-between,
+  App.tsx user state; lint + build clean)
+Task 8 (docs): complete (CLAUDE.md -- three new paragraphs plus server/,
+  components, and Vercel-routing inventory updates; this ledger entry)
+
+DELIBERATE DEVIATION FROM THE PLAN (one, an improvement): the plan specified a
+flat "5 attempts / 15 min" login limit. Implemented that PLUS clearLoginLimit()
+on a successful password verification, which clears that IP's and that email's
+buckets. Without it a legitimate user who signs in and out a few times locks
+themselves out for 15 minutes, while a brute-force run is unaffected either way
+(it never produces a correct password, so it never reaches the clear). Scoped
+per-email deliberately: an attacker who owns one valid account can clear their
+own IP bucket but NOT the victim's email bucket, so the two-key design still
+holds. Verified explicitly (TEST C below).
+
+Verification -- curl against dev:server, cookie jar, 16 checks all passing:
+  - signup 201 + Set-Cookie with HttpOnly/SameSite=Lax/Max-Age=2592000 and
+    correctly NO Secure over plain http://localhost (proves isHttpsFrom derives
+    from x-forwarded-proto rather than hardcoding, which is what keeps the
+    cookie usable on the TLS-less k8s ingress).
+  - duplicate 409; short password 400; malformed email 400; malformed JSON 400.
+  - /api/me with cookie -> user; without -> {"user":null}.
+  - login 200 + fresh cookie; wrong password 401; unregistered email IDENTICAL
+    401 (no enumeration leak); "  UPPERCASE@... " normalizes to the same account.
+  - logout 200 {"ok":true} + Max-Age=0, and REPLAYING the revoked token then
+    returns user:null (proves server-side revocation is real, not just a cleared
+    cookie). A second, unrelated session stayed live -- logout is per-session.
+  - logout with no cookie at all still 200.
+  - TEST A (IP key): one IP, six DIFFERENT emails -> 401 x5 then 429.
+  - TEST B (email key): one email, six DIFFERENT spoofed x-forwarded-for -> 401
+    x5 then 429. This is the one that proves the email bucket catches
+    distributed credential stuffing that IP-only limiting would miss.
+  - TEST C (clear-on-success): 4 wrong, then correct -> 200, then a 6th wrong ->
+    401 NOT 429, proving the deviation above works.
+  - TEST D: signup limiter 201 x5 then 429.
+  - Fail-soft: server started with `env -u DATABASE_URL` on :8099 -> /signup and
+    /login 503 "auth not configured", /api/me 200 {"user":null} (the deliberate
+    convention break), /logout 200, /health 200. Pod would start clean.
+
+Verification -- Vercel path (api/index.ts gets no local typecheck from either
+build, so this is load-bearing): `npx vercel dev` on :3009. First run showed
+503s for BOTH auth and odds -- `vercel dev` does not load .env.local. Re-ran
+with DATABASE_URL exported into its shell: signup 201 + Set-Cookie, /me
+round-trip, login 200, wrong password 401, duplicate 409, logout 200 +
+clearing cookie, /me -> null. Pre-existing routes still 200/404 as before.
+Recorded the .env.local gap in CLAUDE.md so it isn't re-diagnosed as a bug.
+
+Verification -- webapp-testing (Playwright), 19/19 passing, zero console errors:
+  header shows "Sign In" signed out; modal opens and toggles both modes; wrong
+  credentials render the inline role="alert" error with the form still usable;
+  signup closes the modal and the header shows the email; FULL PAGE RELOAD keeps
+  the user signed in (proves the httpOnly cookie + /api/me round-trip, not just
+  SPA state); sign out reverts the header and a reload confirms it stuck (cookie
+  really cleared); log back in with the same account works; all four tabs and the
+  ChatWidget still fine under the new justify-between Header; 375px has 0px
+  horizontal overflow and the modal fits (x=16 w=343); Escape closes the modal.
+  Screenshots reviewed visually, not just asserted on.
+  TEST-ONLY GOTCHA worth keeping: the modal's close button is labelled "Close
+  sign in", which SUBSTRING-matches a get_by_role(name="Sign in") lookup and
+  makes it ambiguous with the mode-toggle link. Use exact=True (it is also
+  case-sensitive, which is what separates the "Sign in" toggle from the "Sign In"
+  submit button). Cost one failed run.
+
+Test data: all 8 accounts created during verification were deleted afterwards
+(13 sessions + 8 users); users and sessions are both back to 0 rows.
+
+NOT DONE -- user steps, deliberately not scripted:
+  (a) kubectl create secret generic phillies-stats-db \
+        --from-literal=DATABASE_URL='<Neon pooled string>'
+      then kubectl rollout restart deploy/phillies-stats-api
+  (b) add DATABASE_URL to the Vercel project dashboard
+  (c) k8s also needs pipeline.sh to rebuild the backend image (same-tag images
+      need rebuild+rollout, not just restart)
+Until (a)/(b), sign-in 503s in those environments and the header just shows
+"Sign In" -- nothing else breaks.
+
+Uncommitted working tree; user stages/commits. NOTE: develop auto-deploys Vercel
+production, so pushing this ships sign-in to production -- do (b) first or the
+feature will 503 for real users.

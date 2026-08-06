@@ -10,10 +10,12 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.4",
     "@hono/node-server": "^1",
-    "hono": "^4"
+    "hono": "^4",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "@types/node": "^24",
+    "@types/pg": "^8.20.4",
     "tsx": "^4",
     "typescript": "~6.0.2"
   }

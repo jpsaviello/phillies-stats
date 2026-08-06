@@ -14,6 +14,8 @@ import Standings from './components/Standings'
 import Schedule from './components/Schedule'
 import ChatWidget from './components/ChatWidget'
 import { fetchConfig } from './api/mlb'
+import { fetchCurrentUser } from './api/auth'
+import type { User } from './types/auth'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('batting')
@@ -24,6 +26,10 @@ export default function App() {
   // Defaults true so an unreachable LD client preserves today's behavior
   // (briefing shows) rather than silently hiding it.
   const { enableDailyBriefing = true, enableOnThisDay = true } = useFlags()
+  // Lives here rather than inside AuthWidget so features added later can gate
+  // on it. The session cookie is httpOnly, so the only way to know who's
+  // signed in is to ask the backend.
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     fetchConfig()
@@ -31,9 +37,15 @@ export default function App() {
       .catch(() => setShowAllStarBanner(false))
   }, [])
 
+  useEffect(() => {
+    // fetchCurrentUser never rejects — it resolves null when signed out or
+    // unreachable, so there's no catch to add here.
+    fetchCurrentUser().then(setUser)
+  }, [])
+
   return (
     <div className="min-h-screen bg-phillies-cream">
-      <Header />
+      <Header user={user} onAuthChange={setUser} />
       <LaunchDarklyDemoBanner />
       {showAllStarBanner && <AllStarBanner />}
       {/* Self-hides unless a Phillies game is live; mounted outside the tab

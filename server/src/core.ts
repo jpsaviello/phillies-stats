@@ -9,6 +9,10 @@
 export interface RouteResult {
   status: number
   body: unknown
+  // Fully-serialized Set-Cookie header values (built by cookies.ts). Optional
+  // and purely additive: every route that predates auth omits it, so both
+  // wrappers' cookie handling no-ops for them.
+  cookies?: string[]
 }
 
 const MLB_V1 = 'https://statsapi.mlb.com/api/v1'

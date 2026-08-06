@@ -39,6 +39,15 @@ spec:
                   # Pod starts without the secret; /api/chat returns 503 and
                   # the widget shows a friendly not-configured message.
                   optional: true
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: phillies-stats-db
+                  key: DATABASE_URL
+                  # Pod starts without the secret; /api/signup and /api/login
+                  # return 503 and /api/me falls soft to {"user": null}, so the
+                  # header just shows "Sign In" and nothing else breaks.
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health
