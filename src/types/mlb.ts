@@ -66,12 +66,29 @@ export interface StandingsRecord {
 // (rank/GB are wild-card-specific), so it's kept separate rather than making
 // StandingsRecord a bag of optionals. clinchIndicator is absent until clinched.
 export interface WildCardRecord {
-  team: { id: number; name: string }
+  team: {
+    id: number
+    name: string
+    /** Short club name ("Phillies"); present only with hydrate=team(division). */
+    teamName?: string
+    /** Present only with hydrate=team(division). Needed for the intradivision tiebreaker. */
+    division?: { id: number; name: string }
+  }
   wins: number
   losses: number
   wildCardRank: string
   wildCardGamesBack: string
   clinchIndicator?: string
+  records?: {
+    divisionRecords?: { division: { id: number }; wins: number; losses: number }[]
+    leagueRecords?: { league: { id: number }; wins: number; losses: number }[]
+  }
+}
+
+/** One completed regular-season game, reduced to what a head-to-head tally needs. */
+export interface SeasonGameResult {
+  opponentId: number
+  won: boolean
 }
 
 export interface GameLogOpponent {
