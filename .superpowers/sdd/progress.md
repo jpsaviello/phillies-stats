@@ -666,7 +666,8 @@ Plan: docs/superpowers/plans/2026-08-12-standings-tiebreakers.md
 Design: docs/superpowers/specs/2026-08-12-standings-tiebreakers-design.md
 Base: 4c97a08 (branch claude/mlb-standings-tiebreaker-xuhbef)
 
-Status: planned, not implemented.
+Status: Tasks 1-4 and 6 complete (commits a5c01ee..1467520). Task 5 (webapp-testing
+live-app verification) NOT DONE -- see below.
 
 Verified during planning (live API, 2026-08-12):
 - MLB's `standingsTypes=wildCard` orders tied clubs by ascending team ID, not by
@@ -683,6 +684,53 @@ Verified during planning (live API, 2026-08-12):
   full club name; `team.teamName` preserves the current short labels.
 - Trimmed /schedule for one club: 163 games, ~25KB, carries `isWinner`.
 
-Open item carried into implementation:
-- Re-verify the tie still exists on the day of implementation. If it has broken,
-  Task 5's expected screenshot won't match — verify the no-ties path instead.
+Re-verified at implementation time (2026-08-12, same day): live tie unchanged
+(D-backs/Padres/Phillies still 64-57), so the numbers above still hold.
+
+Task 1 (types), Task 2 (src/utils/tiebreakers.ts), Task 3 (fetchSeasonResults +
+hydrated fetchWildCardStandings), Task 4 (WildCardStandings.tsx wiring), and
+Task 6 (CLAUDE.md) implemented exactly per plan, one commit per task.
+
+Task 2's algorithm was NOT just reasoned about by hand -- it was executed. This
+session's node_modules could not be installed (see below), so `src/utils/
+tiebreakers.ts` (pure, no framework imports) was run directly via
+`node --experimental-strip-types` against live `/standings` and `/schedule`
+JSON pulled with curl. Output matched the design doc exactly: Phillies WC2
+(note "Head-to-head vs tied clubs: 7-2"), D-backs WC3 (note "Intradivision:
+26-15" -- their 2-way head-to-head vs Padres alone is a 5-5 wash, so the
+restart-the-chain logic correctly falls through to intradivision), Padres WC4.
+This also validated the multi-way-tie "remove winner, restart at criterion 1"
+recursion, which the 2-team live examples elsewhere in this codebase never
+exercise.
+
+BLOCKED, not skipped -- Task 5 and the tsc/lint/build verification steps in
+Tasks 1-4:
+This session's network egress policy does not allow registry.npmjs.org (agent
+proxy status confirms it: "Host not in allowlist"), and no local/offline npm
+cache satisfies this project's dependency tree either (`npm install --offline`
+fails on the first transitive package). node_modules could not be installed at
+all, so `npm run dev`, `npm run build`, `npm run lint`, and `npx tsc -b` are
+all unavailable in this session -- confirmed this is an environment gap, not a
+code issue, by running `tsc -b --force` against the pre-change commit and
+getting the identical "Cannot find type definition file for 'vite/client'/
+'node'" failure. (statsapi.mlb.com IS reachable -- that's a separately
+allowlisted host per the daily-beat-reporter/on-this-day-reporter setup notes
+in CLAUDE.md -- so all the live-API verification above was unaffected.)
+In place of the plan's Step 5 tsc/lint/build checks, each file was manually
+checked against tsconfig.app.json's strict settings (verbatimModuleSyntax,
+noUnusedLocals/Parameters, erasableSyntaxOnly) and against the structural
+compatibility between `WildCardRecord` and the generic `TiebreakerRecord`
+`applyTiebreakers`/`teamsNeedingTiebreak` are written against.
+Task 5's Playwright/webapp-testing run (dev server + browser screenshot of the
+corrected order, hover tooltip, and the blocked-schedule failure path) could
+not run for the same node_modules reason and is the one item genuinely left
+for a human or a session with npm registry access -- run `npm install && npm
+run dev:server` / `npm run dev` and drive the Standings tab per Task 5's
+checklist before merging.
+
+Not done, out of scope per the plan (unchanged from planning):
+- Criterion 4 (last half of intraleague games).
+- `Standings.tsx` / NL East division table ordering (same flaw, no cutoff line,
+  deliberately deferred -- `tiebreakers.ts` is written so it could adopt it).
+- No LaunchDarkly flag (correctness fix; failure path already matches today's
+  behavior).
