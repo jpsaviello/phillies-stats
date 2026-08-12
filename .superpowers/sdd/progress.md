@@ -660,3 +660,29 @@ call.
 
 Uncommitted working tree; user stages/commits. NOTE: develop auto-deploys Vercel
 production, so pushing this ships starring to production immediately.
+# Progress Ledger: standings-tiebreakers
+
+Plan: docs/superpowers/plans/2026-08-12-standings-tiebreakers.md
+Design: docs/superpowers/specs/2026-08-12-standings-tiebreakers-design.md
+Base: 4c97a08 (branch claude/mlb-standings-tiebreaker-xuhbef)
+
+Status: planned, not implemented.
+
+Verified during planning (live API, 2026-08-12):
+- MLB's `standingsTypes=wildCard` orders tied clubs by ascending team ID, not by
+  tiebreaker: ranks 2/3/4 are D-backs(109)/Padres(135)/Phillies(143), all 64-57.
+  Same pattern in `leagueRank` (5/6/7) and `sportRank` (8/9/10).
+- Head-to-head among the tied clubs (from /schedule, Final games only):
+  D-backs 5-5 Padres, D-backs 2-1 Phillies, Padres 0-6 Phillies.
+  Combined: Phillies 7-2 (.778) > D-backs 7-6 (.538) > Padres 5-11 (.313).
+  Criterion 1 alone decides it -> Phillies WC2, D-backs WC3, Padres WC4.
+- Intradivision/intraleague are already in the standings response under
+  `records.divisionRecords` / `records.leagueRecords`; head-to-head is not, at any
+  hydration level.
+- `hydrate=team(division)` supplies `team.division.id` but swaps `team.name` to the
+  full club name; `team.teamName` preserves the current short labels.
+- Trimmed /schedule for one club: 163 games, ~25KB, carries `isWinner`.
+
+Open item carried into implementation:
+- Re-verify the tie still exists on the day of implementation. If it has broken,
+  Task 5's expected screenshot won't match — verify the no-ties path instead.
