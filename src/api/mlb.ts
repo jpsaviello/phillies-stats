@@ -46,11 +46,49 @@ export async function fetchStandings() {
 // per division): every non-division-leader team, already sorted by
 // wildCardRank. Don't reuse fetchStandings' find-by-Phillies logic here — the
 // Phillies drop out of this response entirely while they lead the NL East.
+// hydrate=team(division) is required for the intradivision tiebreaker (the team
+// object is otherwise just {id,name,link}). It also swaps team.name from the short
+// club name to the full one, which is why callers display team.teamName ?? team.name.
 export async function fetchWildCardStandings() {
   const data = await get<{ records: { teamRecords: import('../types/mlb').WildCardRecord[] }[] }>(
-    `/standings?leagueId=104&season=${SEASON}&standingsTypes=wildCard`
+    `/standings?leagueId=104&season=${SEASON}&standingsTypes=wildCard&hydrate=team(division)`
   )
   return data.records[0]?.teamRecords ?? []
+}
+
+// One club's completed regular-season games, reduced to opponent + win/loss. Used
+// only to compute head-to-head records for standings tiebreakers, which the
+// /standings response does not carry at any hydration level. The fields= list keeps
+// this to ~25KB for a full season; isWinner means no score comparison is needed.
+export async function fetchSeasonResults(teamId: number) {
+  const data = await get<{
+    dates: {
+      games: {
+        status: { abstractGameState: string }
+        teams: {
+          home: { team: { id: number }; isWinner?: boolean }
+          away: { team: { id: number }; isWinner?: boolean }
+        }
+      }[]
+    }[]
+  }>(
+    `/schedule?sportId=1&season=${SEASON}&teamId=${teamId}&gameType=R` +
+      `&fields=dates,games,gameType,status,abstractGameState,teams,home,away,team,id,isWinner`
+  )
+
+  const results: import('../types/mlb').SeasonGameResult[] = []
+  for (const date of data.dates ?? []) {
+    for (const game of date.games ?? []) {
+      if (game.status.abstractGameState !== 'Final') continue
+      const { home, away } = game.teams
+      // A tie/suspended game has no isWinner on either side — count it for neither.
+      if (home.isWinner === away.isWinner) continue
+      const self = home.team.id === teamId ? home : away
+      const other = home.team.id === teamId ? away : home
+      results.push({ opponentId: other.team.id, won: self.isWinner === true })
+    }
+  }
+  return results
 }
 
 export async function fetchSchedule(startDate: string, endDate: string) {
