@@ -113,6 +113,27 @@ export interface SeasonGameResult {
   won: boolean
 }
 
+/**
+ * An announced probable starter. Present only with hydrate=probablePitcher, and
+ * MLB doesn't post one until roughly two days out — so it is absent for most of
+ * any schedule window, which is the normal case rather than an error.
+ */
+export interface ProbablePitcher {
+  id: number
+  fullName: string
+}
+
+/** A starter's recent work, aggregated across their last N starts. */
+export interface RecentForm {
+  starts: number
+  /** Formatted the way MLB does it: "18.1" is 18 innings and one out. */
+  inningsPitched: string
+  earnedRuns: number
+  strikeOuts: number
+  /** ERA across just this span, computed from outs — not averaged from game ERAs. */
+  era: string
+}
+
 export interface GameLogOpponent {
   id: number
   name: string
@@ -137,6 +158,10 @@ export interface PitchingGameStat {
   earnedRuns: number
   baseOnBalls: number
   strikeOuts: number
+  // 1 when the pitcher started that game, 0 for a relief appearance. Needed to
+  // pick out a starter's last N *starts* — a game log mixes both, and an opener
+  // or spot relief outing would otherwise distort the recent-form line.
+  gamesStarted?: number
 }
 
 export interface GameLogSplit {

@@ -3,19 +3,21 @@ import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
 import GameDetailModal from './GameDetailModal'
+import MatchupPreview from './MatchupPreview'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
 
 interface Props {
   enableGameDetail: boolean
+  enableMatchupPreview: boolean
 }
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
 }
 
-export default function Schedule({ enableGameDetail }: Props) {
+export default function Schedule({ enableGameDetail, enableMatchupPreview }: Props) {
   const [dates, setDates] = useState<{ date: string; games: Game[] }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,8 +63,32 @@ export default function Schedule({ enableGameDetail }: Props) {
     if (!oddsMap.has(key)) oddsMap.set(key, game)
   }
 
+  // The first game that hasn't started yet, for the matchup panel. Reuses the
+  // schedule and odds this tab already fetched rather than fetching its own —
+  // same arrangement as PlayoffPush taking divisionRecords from Standings.
+  // Preview-only (not merely non-Final): once first pitch is thrown the panel's
+  // job belongs to LiveGameStrip, and a stale Postponed game from the 14-day
+  // lookback can't be picked because of the date >= today check.
+  const upcoming = dates
+    .flatMap(({ date, games }) => games.map(game => ({ date, game })))
+    .find(({ date, game }) => date >= today && game.status.abstractGameState === 'Preview')
+
+  let upcomingOdds: ReturnType<typeof getPhilliesOdds> = null
+  if (upcoming && upcoming.date === today) {
+    const { home, away } = upcoming.game.teams
+    const oddsGame = oddsMap.get([home.team.name, away.team.name].sort().join('|'))
+    if (oddsGame) upcomingOdds = getPhilliesOdds(oddsGame)
+  }
+
   return (
     <>
+    {enableMatchupPreview && upcoming && (
+      <MatchupPreview
+        game={upcoming.game}
+        date={upcoming.date}
+        philliesOdds={upcomingOdds}
+      />
+    )}
     <div className="max-w-2xl space-y-2">
       {dates.map(({ date, games }) =>
         games.map(game => {

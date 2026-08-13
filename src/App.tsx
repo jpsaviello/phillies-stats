@@ -30,7 +30,13 @@ export default function App() {
   // (briefing shows) rather than silently hiding it.
   // enableGameDetail gates only the Schedule row's click affordance, so flag-off
   // leaves that tab exactly as it was before box scores existed.
-  const { enableDailyBriefing = true, enableOnThisDay = true, enableGameDetail = true } = useFlags()
+  // enableMatchupPreview likewise gates only the pregame panel above that list.
+  const {
+    enableDailyBriefing = true,
+    enableOnThisDay = true,
+    enableGameDetail = true,
+    enableMatchupPreview = true,
+  } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
   // on it. The session cookie is httpOnly, so the only way to know who's
   // signed in is to ask the backend.
@@ -116,7 +122,12 @@ export default function App() {
           />
         )}
         {tab === 'standings' && <Standings />}
-        {tab === 'schedule' && <Schedule enableGameDetail={enableGameDetail} />}
+        {tab === 'schedule' && (
+          <Schedule
+            enableGameDetail={enableGameDetail}
+            enableMatchupPreview={enableMatchupPreview}
+          />
+        )}
       </main>
       {/* Mounted once, outside the tab conditionals, so chat history survives tab switches. */}
       <ChatWidget />

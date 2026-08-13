@@ -1,4 +1,5 @@
 import type { GameLogSplit, BattingGameStat, PitchingGameStat } from '../types/mlb'
+import { inningsToFloat } from './innings'
 
 export interface TrendPoint {
   date: string
@@ -8,12 +9,6 @@ export interface TrendPoint {
 // Plotted ERA is capped so one blowup outing early in the season doesn't
 // flatten the rest of the line; running totals stay uncapped.
 const ERA_PLOT_CAP = 20
-
-// "6.1" innings pitched means 6 innings plus 1 out (a third of an inning).
-function parseInnings(ip: string): number {
-  const [whole, outs] = ip.split('.')
-  return Number(whole) + Number(outs ?? 0) / 3
-}
 
 export function rollingAvg(splits: GameLogSplit[], window = 10): TrendPoint[] {
   const points: TrendPoint[] = []
@@ -61,7 +56,7 @@ export function eraProgression(splits: GameLogSplit[]): TrendPoint[] {
   for (const s of splits) {
     const stat = s.stat as PitchingGameStat
     earnedRuns += stat.earnedRuns
-    innings += parseInnings(stat.inningsPitched)
+    innings += inningsToFloat(stat.inningsPitched)
     if (innings > 0) {
       points.push({ date: s.date, value: Math.min((9 * earnedRuns) / innings, ERA_PLOT_CAP) })
     }
