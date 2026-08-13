@@ -3,6 +3,7 @@ import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
 import GameDetailModal from './GameDetailModal'
+import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
 
@@ -20,8 +21,11 @@ export default function Schedule({ enableGameDetail }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [odds, setOdds] = useState<OddsGame[]>([])
   const [selectedGame, setSelectedGame] = useState<number | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     const now = new Date()
     const start = new Date(now)
     start.setDate(now.getDate() - 14)
@@ -37,13 +41,16 @@ export default function Schedule({ enableGameDetail }: Props) {
         setDates(scheduleData)
         setOdds(oddsData)
       })
-      .catch(e => setError(e.message))
+      .catch(e => {
+        console.error('Failed to load schedule', e)
+        setError("Couldn't load the schedule right now.")
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading schedule…</div>
-  if (error) return <div className="p-8 text-center text-red-600">{error}</div>
-  if (!dates.length) return <div className="p-8 text-center text-gray-500">No games found.</div>
+  if (loading) return <TableSkeleton rows={8} cols={4} />
+  if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
+  if (!dates.length) return <EmptyState>No games in this window.</EmptyState>
 
   const _d = new Date()
   const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
@@ -92,13 +99,17 @@ export default function Schedule({ enableGameDetail }: Props) {
                 tabIndex: 0,
                 'aria-label': `Box score: ${isHome ? 'vs' : '@'} ${opponent}, ${formatDate(date)}`,
               })}
-              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''}`}
+              // Hover is now reserved for rows that actually open something —
+              // every row used to tint its border, and the clickable ones were
+              // distinguished only by a 40%-opacity border, so the affordance
+              // read as noise. Matches the tables' hover:bg-red-50.
+              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-red-50 hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''}`}
             >
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date)}
                 {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
               </div>
-              <div className="text-sm text-gray-400 w-6 text-center">{isHome ? 'vs' : '@'}</div>
+              <div className="text-sm text-gray-500 w-6 text-center">{isHome ? 'vs' : '@'}</div>
               <img
                 src={teamLogoUrl(opponentId)}
                 alt={opponent}
@@ -106,9 +117,11 @@ export default function Schedule({ enableGameDetail }: Props) {
                 onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900">{opponent}</div>
+                {/* truncate: at 375px this column gets ~100px, and a long club
+                    name wrapped to two lines and changed the row height. */}
+                <div className="font-medium text-gray-900 truncate">{opponent}</div>
                 {philliesOdds && (
-                  <div className="text-xs text-gray-400 mt-0.5">
+                  <div className="text-xs text-gray-500 mt-0.5">
                     ML {formatOdds(philliesOdds.ml)}{'  |  '}RL {philliesOdds.rlPoint > 0 ? '+' : ''}{philliesOdds.rlPoint} ({formatOdds(philliesOdds.rlJuice)})
                   </div>
                 )}
@@ -118,7 +131,7 @@ export default function Schedule({ enableGameDetail }: Props) {
                   {won ? 'W' : 'L'} {philliesScore}–{oppScore}
                 </div>
               ) : (
-                <div className="text-sm text-gray-400">{game.status.detailedState}</div>
+                <div className="text-sm text-gray-500">{game.status.detailedState}</div>
               )}
             </div>
           )

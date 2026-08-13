@@ -27,6 +27,17 @@ export default function ChatWidget() {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
+  // Both other overlays (GameLogModal, AuthWidget) close on Escape; on mobile
+  // this panel is inset-0 fullscreen, so the header X was the only way out.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   async function submitQuestion(question: string) {
     const text = question.trim()
     if (text.length === 0 || sending) return
@@ -87,7 +98,7 @@ export default function ChatWidget() {
           type="button"
           aria-label="Close chat"
           onClick={() => setOpen(false)}
-          className="rounded p-1 text-white/80 hover:text-white"
+          className="rounded p-2.5 -m-1 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

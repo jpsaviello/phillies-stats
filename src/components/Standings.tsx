@@ -4,6 +4,7 @@ import type { StandingsRecord } from '../types/mlb'
 import { useWildCardRace } from '../hooks/useWildCardRace'
 import PlayoffPush from './PlayoffPush'
 import WildCardStandings from './WildCardStandings'
+import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
 
@@ -15,13 +16,19 @@ export default function Standings() {
   // playoff position, and the tiebreaker round trips are expensive enough that
   // fetching them twice would be wasteful as well as divergence-prone.
   const race = useWildCardRace()
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     fetchStandings()
       .then(setRecords)
-      .catch(e => setError(e.message))
+      .catch(e => {
+        console.error('Failed to load standings', e)
+        setError("Couldn't load the standings right now.")
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
   // The panel and the wild card table both fail silently on their own, so they
   // render alongside the division table rather than inside its loading/error
@@ -30,20 +37,24 @@ export default function Standings() {
     <div className="max-w-2xl space-y-8">
       <PlayoffPush divisionRecords={records} {...race} />
       {loading ? (
-        <div className="p-8 text-center text-gray-500">Loading standings…</div>
+        <TableSkeleton rows={5} cols={5} />
       ) : error ? (
-        <div className="p-8 text-center text-red-600">{error}</div>
+        <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
+      ) : records.length === 0 ? (
+        <EmptyState>No standings available yet.</EmptyState>
       ) : (
         <div>
           <h2 className="text-lg font-semibold text-gray-800 mb-3">NL East Standings</h2>
-          <table className="w-full text-sm">
+          {/* Card chrome matches the wild card table below it — the two sit in
+              the same scroll view and were styled differently. */}
+          <table className="w-full text-sm card overflow-hidden">
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-                <th className="px-4 py-3 text-left font-medium">Team</th>
-                <th className="px-4 py-3 text-center font-medium">W</th>
-                <th className="px-4 py-3 text-center font-medium">L</th>
-                <th className="px-4 py-3 text-center font-medium">PCT</th>
-                <th className="px-4 py-3 text-center font-medium">GB</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Team</th>
+                <th scope="col" className="px-4 py-3 text-center font-medium">W</th>
+                <th scope="col" className="px-4 py-3 text-center font-medium">L</th>
+                <th scope="col" className="px-4 py-3 text-center font-medium">PCT</th>
+                <th scope="col" className="px-4 py-3 text-center font-medium">GB</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -54,9 +65,12 @@ export default function Standings() {
                     key={r.team.id}
                     className={isPhillies ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}
                   >
-                    <td className="px-4 py-3 text-gray-900 flex items-center gap-2">
-                      {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
-                      {r.team.name}
+                    {/* flex on a span, not the <td> — see WildCardStandings. */}
+                    <td className="px-4 py-3 text-gray-900">
+                      <span className="flex items-center gap-2">
+                        {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
+                        {r.team.name}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center tabular-nums">{r.wins}</td>
                     <td className="px-4 py-3 text-center tabular-nums">{r.losses}</td>

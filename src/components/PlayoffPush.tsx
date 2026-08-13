@@ -22,8 +22,8 @@ interface Props extends WildCardRace {
 
 function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-3">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</div>
+    <div className="flex-1 card px-4 py-3">
+      <div className="card-label">{label}</div>
       {children}
     </div>
   )
@@ -84,8 +84,10 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
               <div className="flex items-baseline gap-2">
                 <Stat>{ordinal(wildCardIndex + 1)}</Stat>
                 <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                    margin.inSpot ? 'bg-green-100 text-green-700' : 'bg-red-100 text-phillies-red'
+                  // text-xs, and darkened text on the tinted backgrounds: at
+                  // 10px with green-700/phillies-red this pill sat near 3.5:1.
+                  className={`rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${
+                    margin.inSpot ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}
                 >
                   {margin.inSpot ? 'In' : 'Out'}
@@ -110,14 +112,15 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
                 )}
               </p>
               {tiebreakerNote && (
-                <p className="mt-0.5 text-[11px] text-gray-400">{tiebreakerNote.detail}</p>
+                <p className="mt-0.5 text-[11px] text-gray-500">{tiebreakerNote.detail}</p>
               )}
+              {/* The definition used to live only in a title attribute, so it
+                  was invisible on touch and to keyboard users. */}
               {wildCardElim !== null && (
-                <p
-                  className="mt-1 text-xs text-gray-500"
-                  title="Any combination of Phillies losses and wins by the club holding the final wild card spot that totals this number eliminates Philadelphia."
-                >
-                  Elimination number: <span className="tabular-nums font-medium">{wildCardElim}</span>
+                <p className="mt-1 text-xs text-gray-500">
+                  Elimination number:{' '}
+                  <span className="tabular-nums font-medium">{wildCardElim}</span> — Phillies losses
+                  plus wins by the final wild card team
                 </p>
               )}
             </>
@@ -133,19 +136,22 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
             {phillies.losses}
           </p>
           {divisionMagic !== null ? (
-            <p className="mt-1 text-xs text-gray-500" title="Any combination of Phillies wins and second-place losses that totals this number clinches the division.">
-              Magic number: <span className="tabular-nums font-medium">{divisionMagic}</span>
+            <p className="mt-1 text-xs text-gray-500">
+              Magic number: <span className="tabular-nums font-medium">{divisionMagic}</span> —
+              Phillies wins plus second-place losses to clinch
             </p>
           ) : divisionElim !== null ? (
-            <p className="mt-1 text-xs text-gray-500" title="Any combination of Phillies losses and division-leader wins that totals this number eliminates Philadelphia from the NL East.">
-              Elimination number: <span className="tabular-nums font-medium">{divisionElim}</span>
+            <p className="mt-1 text-xs text-gray-500">
+              Elimination number:{' '}
+              <span className="tabular-nums font-medium">{divisionElim}</span> — Phillies losses plus
+              division-leader wins
             </p>
           ) : null}
         </Card>
       </div>
 
       {schedule && schedule.total > 0 && (
-        <div className="mt-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+        <div className="mt-3 card px-4 py-3 text-sm">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-gray-700">
             <span className="font-display text-xl text-phillies-navy tabular-nums">
               {schedule.total}
@@ -162,7 +168,7 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
                   className="tabular-nums"
                   title="Combined winning percentage of the clubs left on the schedule, weighted by games played against each."
                 >
-                  opponents {formatPct(sos)}
+                  opponent win rate {formatPct(sos)}
                 </span>
                 <span className="text-xs text-gray-500">
                   ({sos > 0.5 ? 'tougher' : 'easier'} than average)

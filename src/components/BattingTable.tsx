@@ -4,6 +4,7 @@ import type { BattingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
 import StarButton from './StarButton'
+import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 interface Split {
   player: Player
@@ -23,15 +24,25 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
   const [sort, setSort] = useState<{ key: keyof BattingStats; dir: 'asc' | 'desc' }>({ key: 'avg', dir: 'desc' })
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: BattingStats } | null>(null)
 
+  // Bumping reloadKey re-runs the fetch; it's what the error state's Try again
+  // button drives.
+  const [reloadKey, setReloadKey] = useState(0)
+
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     fetchBattingStats()
       .then(setSplits)
-      .catch(e => setError(e.message))
+      .catch(e => {
+        // The raw message stays in the console; fans get a readable sentence.
+        console.error('Failed to load batting stats', e)
+        setError("Couldn't load batting stats right now.")
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading batting stats…</div>
-  if (error) return <div className="p-8 text-center text-red-600">{error}</div>
+  if (loading) return <TableSkeleton rows={12} cols={9} />
+  if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
 
   const sorted = [...splits]
     .filter(s => s.stat.atBats > 0)
@@ -59,6 +70,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
     { key: 'ops', label: 'OPS', defaultDir: 'desc' },
   ]
 
+  // Previously this rendered a header row over a blank body with no explanation.
+  if (sorted.length === 0) {
+    return <EmptyState>No batters have recorded an at-bat yet this season.</EmptyState>
+  }
+
   // Built once per render rather than scanning `favorites` per row.
   const starredIds = new Set(favorites.map(f => f.playerId))
 
@@ -71,36 +87,65 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
             {/* Wider only when the star is rendered — it eats ~22px of the cell,
                 which wrapped most names onto two lines at 375px. Signed-out
                 stays at the original min-w-36. */}
-            <th className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
-            <th className="px-3 py-3 text-center font-medium">POS</th>
-            {cols.map(c => (
-              <th
-                key={c.key}
-                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sort.key === c.key ? 'text-phillies-red' : ''}`}
-                onClick={() =>
-                  setSort(prev =>
-                    prev.key === c.key
-                      ? { key: c.key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
-                      : { key: c.key, dir: c.defaultDir }
-                  )
-                }
-              >
-                {c.label}
-              </th>
-            ))}
+            <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
+            <th scope="col" className="px-3 py-3 text-center font-medium">POS</th>
+            {cols.map(c => {
+              const active = sort.key === c.key
+              return (
+                <th
+                  key={c.key}
+                  scope="col"
+                  aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  className="px-3 py-3 text-center font-medium whitespace-nowrap"
+                >
+                  {/* A real <button> rather than a click handler on the <th>: the
+                      header was previously keyboard-dead, so sorting was
+                      mouse-only. */}
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-0.5 uppercase rounded hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${active ? 'text-phillies-red' : ''}`}
+                    onClick={() =>
+                      setSort(prev =>
+                        prev.key === c.key
+                          ? { key: c.key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+                          : { key: c.key, dir: c.defaultDir }
+                      )
+                    }
+                  >
+                    {c.label}
+                    {/* Direction was previously invisible — the active column was
+                        tinted but nothing indicated which way it sorted. */}
+                    {active && <span aria-hidden="true">{sort.dir === 'asc' ? '▲' : '▼'}</span>}
+                  </button>
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {sorted.map(({ player, stat }) => (
             <tr
               key={player.id}
-              className="hover:bg-red-50 transition-colors cursor-pointer"
+              // Same keyboard treatment as Schedule.tsx's clickable game rows —
+              // without it the whole GameLogModal feature is mouse-only.
+              role="button"
+              tabIndex={0}
+              aria-label={`Game log for ${player.fullName}`}
+              className="group hover:bg-red-50 transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
               onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedPlayer({ id: player.id, name: player.fullName, stat })
+                }
+              }}
             >
               {/* The star lives INSIDE this cell rather than in a column of its
                   own: this cell is sticky left-0, and a column to its left would
-                  sit outside the frozen region and break the geometry. */}
-              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">
+                  sit outside the frozen region and break the geometry.
+                  group-hover mirrors the row tint — an opaque background is
+                  required for the sticky cell, so it can't inherit the row's. */}
+              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-red-50 transition-colors">
                 <span className="flex items-center gap-1.5">
                   {signedIn && (
                     <StarButton

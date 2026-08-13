@@ -131,7 +131,7 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
                 type="button"
                 aria-label="Close sign in"
                 onClick={closeModal}
-                className="rounded p-1 text-gray-400 hover:text-gray-600"
+                className="rounded p-1 text-gray-500 hover:text-gray-600"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -162,7 +162,7 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
                   autoComplete="email"
                   autoFocus
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-400 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
@@ -184,7 +184,7 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
                   maxLength={200}
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   placeholder={mode === 'signup' ? 'At least 8 characters' : ''}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-400 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 

@@ -49,8 +49,10 @@ export default function DailyBriefing() {
   const label = formatDate(briefing.date, { month: 'short', day: 'numeric' })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-3">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    // The page wrapper lives in App.tsx so this can sit beside OnThisDayCard on
+    // wider screens; flex-1 makes it full width when that card self-hides.
+    <div className="flex-1 min-w-0">
+      <div className="card overflow-hidden">
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
@@ -59,7 +61,7 @@ export default function DailyBriefing() {
         >
           <div className="flex items-center gap-2">
             <span aria-hidden="true">📰</span>
-            <span className="font-display text-xs uppercase tracking-wider text-gray-400">
+            <span className="card-label">
               Daily Briefing — {label}
             </span>
             <svg
@@ -69,7 +71,7 @@ export default function DailyBriefing() {
               stroke="currentColor"
               strokeWidth="2"
               aria-hidden="true"
-              className={`h-4 w-4 ml-auto shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              className={`h-4 w-4 ml-auto shrink-0 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
             </svg>

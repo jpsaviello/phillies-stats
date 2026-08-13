@@ -4,6 +4,9 @@ import type { TrendPoint } from '../utils/trends'
 interface Props {
   points: TrendPoint[]
   yFormat: (v: number) => string
+  // Names the graphic for assistive tech; the chart is otherwise an unlabelled
+  // role="img" and the trend is unavailable non-visually.
+  label: string
 }
 
 const VIEW_W = 640
@@ -40,7 +43,7 @@ function dateLabel(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function TrendChart({ points, yFormat }: Props) {
+export default function TrendChart({ points, yFormat, label }: Props) {
   const [hover, setHover] = useState<number | null>(null)
 
   const ticks = niceTicks(
@@ -116,7 +119,12 @@ export default function TrendChart({ points, yFormat }: Props) {
   })()
 
   return (
-    <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full" role="img">
+    <svg
+      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      className="w-full"
+      role="img"
+      aria-label={`${label} trend over ${points.length} games, from ${yFormat(points[0].value)} on ${dateLabel(points[0].date)} to ${yFormat(last.value)} on ${dateLabel(last.date)}`}
+    >
       {ticks.map(t => (
         <g key={t}>
           <line x1={MARGIN.left} y1={y(t)} x2={MARGIN.left + PLOT_W} y2={y(t)} stroke="#e5e7eb" strokeWidth="1" />

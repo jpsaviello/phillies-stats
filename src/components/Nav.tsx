@@ -19,6 +19,8 @@ export default function Nav({ active, onChange }: NavProps) {
         {tabs.map(tab => (
           <button
             key={tab.id}
+            // Active state was conveyed by colour and a border alone.
+            aria-current={active === tab.id ? 'page' : undefined}
             onClick={() => onChange(tab.id)}
             className={`shrink-0 whitespace-nowrap px-3 sm:px-5 py-3 font-display text-sm sm:text-base font-semibold uppercase tracking-wide border-b-2 transition-colors ${
               active === tab.id

@@ -187,16 +187,16 @@ export default function HeroStrip() {
   return (
     <div className="max-w-7xl mx-auto px-4 pt-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <div className="font-display text-xs uppercase tracking-wider text-gray-400">Record</div>
+        <div className="card px-4 py-3">
+          <div className="card-label">Record</div>
           <div className="font-display text-3xl font-bold text-phillies-navy tabular-nums mt-1">
             {record.wins}–{record.losses}
           </div>
           <div className="text-sm text-gray-500 mt-0.5">{subtitle}</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <div className="font-display text-xs uppercase tracking-wider text-gray-400">Last Game</div>
+        <div className="card px-4 py-3">
+          <div className="card-label">Last Game</div>
           {lastGame && last ? (
             <>
               <div className="font-display text-xl font-bold text-phillies-navy tabular-nums mt-1">
@@ -212,17 +212,17 @@ export default function HeroStrip() {
                 />
                 <span className="truncate">{last.isHome ? 'vs' : '@'} {last.opponent}</span>
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">
+              <div className="text-xs text-gray-500 mt-0.5">
                 {new Date(lastGame.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </div>
             </>
           ) : (
-            <div className="font-display text-xl font-bold text-gray-300 mt-1">—</div>
+            <div className="font-display text-xl font-bold text-gray-400 mt-1">—</div>
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <div className="font-display text-xs uppercase tracking-wider text-gray-400">Next Game</div>
+        <div className="card px-4 py-3">
+          <div className="card-label">Next Game</div>
           {nextGame && next && nextDate ? (
             <>
               <div className="flex items-center gap-1.5 mt-1 min-w-0">
@@ -242,16 +242,16 @@ export default function HeroStrip() {
                   : `${nextDate.toLocaleDateString('en-US', { weekday: 'short' })} ${nextDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
               </div>
               {nextOdds && (
-                <div className="text-xs text-gray-400 mt-0.5">ML {formatOdds(nextOdds.ml)}</div>
+                <div className="text-xs text-gray-500 mt-0.5">ML {formatOdds(nextOdds.ml)}</div>
               )}
             </>
           ) : (
-            <div className="font-display text-xl font-bold text-gray-300 mt-1">—</div>
+            <div className="font-display text-xl font-bold text-gray-400 mt-1">—</div>
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <div className="font-display text-xs uppercase tracking-wider text-gray-400">Team Leaders</div>
+        <div className="card px-4 py-3">
+          <div className="card-label">Team Leaders</div>
           <div className="mt-1.5 space-y-1.5">
             {leaders.map(({ label, leader }) => (
               <div key={label} className="flex items-center gap-2 min-w-0">
@@ -263,7 +263,7 @@ export default function HeroStrip() {
                       className="w-6 h-6 rounded-full shrink-0"
                       onError={hideOnError}
                     />
-                    <span className="font-display text-xs uppercase tracking-wider text-gray-400 w-8 shrink-0">
+                    <span className="card-label w-8 shrink-0">
                       {label}
                     </span>
                     <span className="font-display font-bold text-phillies-navy tabular-nums">
@@ -273,10 +273,10 @@ export default function HeroStrip() {
                   </>
                 ) : (
                   <>
-                    <span className="font-display text-xs uppercase tracking-wider text-gray-400 w-8 shrink-0">
+                    <span className="card-label w-8 shrink-0">
                       {label}
                     </span>
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-400">—</span>
                   </>
                 )}
               </div>

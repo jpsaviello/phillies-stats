@@ -88,13 +88,17 @@ export default function App() {
       <HeroStrip />
       {/* Self-hides unless you're signed in with at least one starred player. */}
       <FavoritesCard signedIn={user !== null} favorites={favorites} />
-      {/* Self-hides when no fresh briefing exists; mounted outside the tab
-          conditionals so it reads the same on every tab. Also gated by the
-          enable-daily-briefing flag as a manual kill switch. */}
-      {enableDailyBriefing && <DailyBriefing />}
-      {/* Stacked below the briefing, fully independent: its own fetch, its own
-          collapse state, and it self-hides the same way. */}
-      {enableOnThisDay && <OnThisDayCard />}
+      {/* Both self-hide when they have nothing fresh to show, and each owns its
+          own fetch and collapse state. They share a row from sm up rather than
+          stacking, because both are one-line headlines at rest and the stack
+          above the tab bar is already several screens tall on a phone. flex-1
+          on each child means a lone survivor still fills the row. */}
+      {(enableDailyBriefing || enableOnThisDay) && (
+        <div className="max-w-7xl mx-auto px-4 pt-3 flex flex-col sm:flex-row gap-3">
+          {enableDailyBriefing && <DailyBriefing />}
+          {enableOnThisDay && <OnThisDayCard />}
+        </div>
+      )}
       <Nav active={tab} onChange={setTab} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && (

@@ -46,7 +46,7 @@ function formatDate(iso: string) {
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <div className="font-display text-xs uppercase tracking-wider text-gray-400">{label}</div>
+      <div className="card-label">{label}</div>
       <div className="font-display text-2xl font-bold text-phillies-navy tabular-nums mt-0.5">{value}</div>
     </div>
   )
@@ -99,10 +99,15 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${playerName} game log`}
         className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        {/* Sticky so the close button stays reachable — this panel scrolls
+            through splits, a chart and ten game rows. Matches GameDetailModal. */}
+        <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <img
               src={playerHeadshotUrl(personId)}
@@ -112,7 +117,11 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
             />
             <h2 className="font-semibold text-gray-900">{playerName}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none px-2">
+          <button
+            onClick={onClose}
+            aria-label="Close game log"
+            className="text-gray-500 hover:text-gray-700 text-xl leading-none px-3 py-2 -mr-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+          >
             &times;
           </button>
         </div>
@@ -224,9 +233,13 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                 {stats.map((s, i) => (
                   <button
                     key={s.label}
+                    type="button"
+                    // The selected state was colour-only; aria-pressed gives it a
+                    // programmatic equivalent.
+                    aria-pressed={i === statIndex}
                     onClick={() => setStatIndex(i)}
                     className={
-                      'text-xs font-medium rounded-full px-3 py-1 transition-colors ' +
+                      'text-xs font-medium rounded-full px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ' +
                       (i === statIndex
                         ? 'bg-phillies-red text-white'
                         : 'text-gray-600 border border-gray-300 hover:border-gray-400')
@@ -237,9 +250,13 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                 ))}
               </div>
               {trendPoints.length >= 2 ? (
-                <TrendChart points={trendPoints} yFormat={stats[statIndex].format} />
+                <TrendChart
+                  points={trendPoints}
+                  yFormat={stats[statIndex].format}
+                  label={`${playerName} ${stats[statIndex].label}`}
+                />
               ) : (
-                <div className="text-center text-gray-400 text-sm py-8">Not enough games yet.</div>
+                <div className="text-center text-gray-500 text-sm py-8">Not enough games yet.</div>
               )}
             </div>
           )}
@@ -314,7 +331,7 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
                   ))}
                   {games.length === 0 && (
                     <tr>
-                      <td colSpan={group === 'hitting' ? 9 : 8} className="text-center text-gray-400 py-6">
+                      <td colSpan={group === 'hitting' ? 9 : 8} className="text-center text-gray-500 py-6">
                         No recent games.
                       </td>
                     </tr>

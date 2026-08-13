@@ -9,7 +9,9 @@ interface HeaderProps {
 export default function Header({ user, onAuthChange }: HeaderProps) {
   return (
     <header className="bg-phillies-navy bg-pinstripe text-white border-b-4 border-phillies-red">
-      <div className="max-w-7xl mx-auto px-4 py-5 flex items-center justify-between gap-3 sm:gap-4">
+      {/* Tighter on phones: six self-hiding blocks stack between this header and
+          the tab bar, so every row saved here is a row closer to the stats. */}
+      <div className="max-w-7xl mx-auto px-4 py-3 sm:py-5 flex items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="bg-white rounded-full p-1.5 shadow shrink-0">
             <img
@@ -19,10 +21,10 @@ export default function Header({ user, onAuthChange }: HeaderProps) {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-wide leading-none">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-wide leading-none truncate">
               Philadelphia Phillies
             </h1>
-            <p className="font-display text-blue-200 text-sm uppercase tracking-widest mt-1">
+            <p className="hidden sm:block font-display text-blue-200 text-sm uppercase tracking-widest mt-1">
               2026 Season Statistics
             </p>
           </div>

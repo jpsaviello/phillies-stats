@@ -4,6 +4,7 @@ import type { PitchingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
 import StarButton from './StarButton'
+import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 interface Split {
   player: Player
@@ -23,15 +24,23 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite }:
   const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: PitchingStats } | null>(null)
 
+  // See BattingTable — reloadKey drives the error state's Try again button.
+  const [reloadKey, setReloadKey] = useState(0)
+
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     fetchPitchingStats()
       .then(setSplits)
-      .catch(e => setError(e.message))
+      .catch(e => {
+        console.error('Failed to load pitching stats', e)
+        setError("Couldn't load pitching stats right now.")
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading pitching stats…</div>
-  if (error) return <div className="p-8 text-center text-red-600">{error}</div>
+  if (loading) return <TableSkeleton rows={12} cols={8} />
+  if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
 
   const sorted = [...splits]
     .filter(s => parseFloat(s.stat.inningsPitched) > 0)
@@ -56,6 +65,10 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite }:
     { key: 'whip', label: 'WHIP', defaultDir: 'asc' },
   ]
 
+  if (sorted.length === 0) {
+    return <EmptyState>No pitchers have thrown an inning yet this season.</EmptyState>
+  }
+
   // Built once per render rather than scanning `favorites` per row.
   const starredIds = new Set(favorites.map(f => f.playerId))
 
@@ -66,34 +79,56 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite }:
         <thead>
           <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
             {/* Wider only when the star is rendered — see BattingTable. */}
-            <th className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
-            {cols.map(c => (
-              <th
-                key={c.key}
-                className={`px-3 py-3 text-center font-medium cursor-pointer hover:text-gray-900 whitespace-nowrap ${sort.key === c.key ? 'text-phillies-red' : ''}`}
-                onClick={() =>
-                  setSort(prev =>
-                    prev.key === c.key
-                      ? { key: c.key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
-                      : { key: c.key, dir: c.defaultDir }
-                  )
-                }
-              >
-                {c.label}
-              </th>
-            ))}
+            <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
+            {cols.map(c => {
+              const active = sort.key === c.key
+              return (
+                <th
+                  key={c.key}
+                  scope="col"
+                  aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  className="px-3 py-3 text-center font-medium whitespace-nowrap"
+                >
+                  {/* Real <button>, sort arrow — see the matching comment in BattingTable. */}
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-0.5 uppercase rounded hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${active ? 'text-phillies-red' : ''}`}
+                    onClick={() =>
+                      setSort(prev =>
+                        prev.key === c.key
+                          ? { key: c.key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+                          : { key: c.key, dir: c.defaultDir }
+                      )
+                    }
+                  >
+                    {c.label}
+                    {active && <span aria-hidden="true">{sort.dir === 'asc' ? '▲' : '▼'}</span>}
+                  </button>
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {sorted.map(({ player, stat }) => (
             <tr
               key={player.id}
-              className="hover:bg-red-50 transition-colors cursor-pointer"
+              // Keyboard treatment mirrors BattingTable / Schedule.
+              role="button"
+              tabIndex={0}
+              aria-label={`Game log for ${player.fullName}`}
+              className="group hover:bg-red-50 transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
               onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedPlayer({ id: player.id, name: player.fullName, stat })
+                }
+              }}
             >
               {/* Star inside the sticky cell, not a column of its own — see the
                   matching comment in BattingTable. */}
-              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white">
+              <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-red-50 transition-colors">
                 <span className="flex items-center gap-1.5">
                   {signedIn && (
                     <StarButton

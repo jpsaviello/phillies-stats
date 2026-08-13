@@ -12,8 +12,11 @@ export default function StarButton({ starred, playerName, onToggle }: Props) {
       aria-pressed={starred}
       aria-label={label}
       title={label}
-      className={`shrink-0 leading-none transition-colors ${
-        starred ? 'text-phillies-red' : 'text-gray-300 hover:text-gray-400'
+      // p-2 -m-2 grows the tap target from the 16px glyph to ~32px without
+      // shifting layout — it sits inside a clickable row, so a mis-tap opened
+      // the game-log modal instead of starring.
+      className={`shrink-0 leading-none transition-colors p-2 -m-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${
+        starred ? 'text-phillies-red' : 'text-gray-500 hover:text-gray-600'
       }`}
       onClick={e => {
         // The whole <tr> opens GameLogModal — without this, every star click

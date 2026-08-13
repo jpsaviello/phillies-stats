@@ -79,8 +79,8 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-3">
-      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-        <div className="font-display text-xs uppercase tracking-wider text-gray-400">
+      <div className="card px-4 py-3">
+        <div className="card-label">
           Your Players
         </div>
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2">
@@ -113,7 +113,7 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
                     <div className="flex items-center gap-2">
                       {stats.map(({ label, value }) => (
                         <span key={label} className="flex items-baseline gap-1">
-                          <span className="font-display text-[10px] uppercase tracking-wider text-gray-400">
+                          <span className="font-display text-[10px] uppercase tracking-wider text-gray-500">
                             {label}
                           </span>
                           <span className="font-display text-sm font-bold text-phillies-navy tabular-nums">
@@ -123,14 +123,14 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-gray-300">—</div>
+                    <div className="text-gray-400">—</div>
                   )}
                 </div>
               </div>
             )
           })}
         </div>
-        {hidden > 0 && <div className="text-xs text-gray-400 mt-2">+{hidden} more</div>}
+        {hidden > 0 && <div className="text-xs text-gray-500 mt-2">+{hidden} more</div>}
       </div>
     </div>
   )

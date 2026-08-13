@@ -81,7 +81,7 @@ function TeamBoxscore({ team, label }: { team: BoxscoreTeam; label: string }) {
                   <tr key={player.person.id}>
                     <td className={`py-2 px-2 text-gray-900 ${isSub ? 'pl-6 text-gray-600' : ''}`}>
                       {player.person.fullName}
-                      <span className="text-gray-400 ml-1.5 text-xs">
+                      <span className="text-gray-500 ml-1.5 text-xs">
                         {player.position?.abbreviation}
                       </span>
                     </td>
@@ -284,7 +284,7 @@ export default function GameDetailModal({ gamePk, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close box score"
-            className="text-gray-400 hover:text-gray-700 text-xl leading-none px-2 shrink-0"
+            className="text-gray-500 hover:text-gray-700 text-xl leading-none px-2 shrink-0"
           >
             &times;
           </button>

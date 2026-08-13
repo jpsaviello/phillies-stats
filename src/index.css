@@ -7,6 +7,17 @@
   --font-display: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Card chrome and the muted section label were hand-written at ~12 and ~15 call
+   sites respectively, drifting into two competing radii (rounded-xl/rounded-lg)
+   and two border colors. These are the canonical versions. */
+@utility card {
+  @apply bg-white rounded-xl border border-gray-200;
+}
+
+@utility card-label {
+  @apply font-display text-xs uppercase tracking-wider text-gray-500;
+}
+
 /* Phillies home-uniform pinstripe, for navy surfaces */
 .bg-pinstripe {
   background-image: repeating-linear-gradient(

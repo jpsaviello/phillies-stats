@@ -62,8 +62,9 @@ export default function OnThisDayCard() {
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-3">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    // Wrapper lives in App.tsx — see the matching comment in DailyBriefing.
+    <div className="flex-1 min-w-0">
+      <div className="card overflow-hidden">
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
@@ -72,7 +73,7 @@ export default function OnThisDayCard() {
         >
           <div className="flex items-center gap-2">
             <span aria-hidden="true">🕰️</span>
-            <span className="font-display text-xs uppercase tracking-wider text-gray-400">
+            <span className="card-label">
               On This Day — {year}
             </span>
             <svg
@@ -82,7 +83,7 @@ export default function OnThisDayCard() {
               stroke="currentColor"
               strokeWidth="2"
               aria-hidden="true"
-              className={`h-4 w-4 ml-auto shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              className={`h-4 w-4 ml-auto shrink-0 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
             </svg>

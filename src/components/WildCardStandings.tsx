@@ -15,14 +15,14 @@ export default function WildCardStandings({ records, notes, loading }: WildCardR
   return (
     <div>
       <h2 className="text-lg font-semibold text-gray-800 mb-3">NL Wild Card Race</h2>
-      <table className="w-full text-sm bg-white rounded-lg border border-gray-100 overflow-hidden">
+      <table className="w-full text-sm card overflow-hidden">
         <thead>
           <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <th className="px-4 py-3 text-left font-medium w-8">#</th>
-            <th className="px-4 py-3 text-left font-medium">Team</th>
-            <th className="px-4 py-3 text-center font-medium">W</th>
-            <th className="px-4 py-3 text-center font-medium">L</th>
-            <th className="px-4 py-3 text-center font-medium">GB</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium w-8">#</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium">Team</th>
+            <th scope="col" className="px-4 py-3 text-center font-medium">W</th>
+            <th scope="col" className="px-4 py-3 text-center font-medium">L</th>
+            <th scope="col" className="px-4 py-3 text-center font-medium">GB</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -34,19 +34,32 @@ export default function WildCardStandings({ records, notes, loading }: WildCardR
                   {/* Positional, not r.wildCardRank — the API's rank ignores tiebreakers, so
                       after reordering its numbers would print out of sequence (2, 4, 3). */}
                   <td className="px-4 py-3 text-gray-500 tabular-nums">{i + 1}</td>
-                  <td className="px-4 py-3 text-gray-900 flex items-center gap-2">
-                    {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
-                    {r.team.teamName ?? r.team.name}
-                    {r.clinchIndicator && (
-                      <span className="text-xs font-normal text-green-600 uppercase" title="Clinched">
-                        {r.clinchIndicator}
-                      </span>
-                    )}
-                    {notes.has(r.team.id) && (
-                      <span className="text-xs font-normal text-gray-400" title={notes.get(r.team.id)!.detail}>
-                        †
-                      </span>
-                    )}
+                  {/* The flex lives on a span, not the <td>: display:flex on a
+                      cell drops it out of table layout, so the column stops
+                      negotiating its width with the header. */}
+                  <td className="px-4 py-3 text-gray-900">
+                    <span className="flex items-center gap-2">
+                      {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
+                      {r.team.teamName ?? r.team.name}
+                      {r.clinchIndicator && (
+                        <span
+                          className="text-xs font-normal text-green-700 uppercase"
+                          aria-label="Clinched"
+                          title="Clinched"
+                        >
+                          {r.clinchIndicator}
+                        </span>
+                      )}
+                      {notes.has(r.team.id) && (
+                        <span
+                          className="text-xs font-normal text-gray-500"
+                          aria-label={notes.get(r.team.id)!.detail}
+                          title={notes.get(r.team.id)!.detail}
+                        >
+                          †
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums">{r.wins}</td>
                   <td className="px-4 py-3 text-center tabular-nums">{r.losses}</td>
@@ -56,7 +69,7 @@ export default function WildCardStandings({ records, notes, loading }: WildCardR
                   <tr className="bg-gray-50">
                     <td
                       colSpan={5}
-                      className="px-4 py-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 border-t-2 border-dashed border-gray-300"
+                      className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600 border-t-2 border-dashed border-gray-400"
                     >
                       Playoff cutoff
                     </td>
