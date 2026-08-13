@@ -37,22 +37,3 @@ export function recentForm(splits: GameLogSplit[], count = 3): RecentForm | null
     era: eraOver(earnedRuns, outs),
   }
 }
-
-/**
- * Which of two ERA strings is better, for the "edge" highlight.
- *
- * Requires BOTH to be real numbers. An unannounced starter, or one whose line
- * failed to load, has no ERA — highlighting the other pitcher as "better" than
- * a blank is a comparison against nothing, and it reads as a claim the data
- * doesn't support. MLB also sends "-.--" for a pitcher who hasn't allowed an
- * earned run, which would parse as NaN and silently win.
- *
- * Returns null when they're equal, so a genuine tie highlights neither.
- */
-export function betterEra(left: string | undefined, right: string | undefined): 'left' | 'right' | null {
-  const a = Number(left)
-  const b = Number(right)
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return null
-  if (a === b) return null
-  return a < b ? 'left' : 'right'
-}

@@ -9,10 +9,17 @@ import {
 import type { Game } from '../api/mlb'
 import type { PitchingStats, ProbablePitcher, RecentForm } from '../types/mlb'
 import type { getPhilliesOdds } from '../utils/odds'
-import { betterEra, recentForm } from '../utils/matchup'
+import { recentForm } from '../utils/matchup'
 
 const PHILLIES_ID = 143
 const RECENT_STARTS = 3
+
+// Every stat cell is styled identically. An earlier version emphasized whichever
+// pitcher had the better ERA, which was a mistake twice over: it was drawn in
+// phillies-red, the club's own brand color, so the *opponent* lit up in Phillies
+// red whenever he was outpitching us — and picking a winner per row editorializes
+// on a panel whose job is to lay the two lines side by side and let you read them.
+const CELL = 'py-1 text-center font-display tabular-nums text-phillies-navy'
 
 interface Props {
   game: Game
@@ -143,14 +150,12 @@ export default function MatchupPreview({ game, date, philliesOdds }: Props) {
   const { phi, opp } = starters
   const gameDate = new Date(game.gameDate)
   const when = `${gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-  const eraEdge = betterEra(phi?.season?.era, opp?.season?.era)
 
-  const rows: { label: string; left: string; right: string; edge?: 'left' | 'right' | null }[] = [
+  const rows: { label: string; left: string; right: string }[] = [
     {
       label: 'ERA',
       left: phi?.season?.era ?? '—',
       right: opp?.season?.era ?? '—',
-      edge: eraEdge,
     },
     {
       label: 'W–L',
@@ -201,21 +206,13 @@ export default function MatchupPreview({ game, date, philliesOdds }: Props) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map(({ label, left, right, edge }) => (
+          {rows.map(({ label, left, right }) => (
             <tr key={label}>
-              <td
-                className={`py-1 text-center font-display tabular-nums ${edge === 'left' ? 'font-bold text-phillies-red' : 'text-phillies-navy'}`}
-              >
-                {left}
-              </td>
+              <td className={CELL}>{left}</td>
               <th scope="row" className="py-1 card-label text-center font-normal whitespace-nowrap">
                 {label}
               </th>
-              <td
-                className={`py-1 text-center font-display tabular-nums ${edge === 'right' ? 'font-bold text-phillies-red' : 'text-phillies-navy'}`}
-              >
-                {right}
-              </td>
+              <td className={CELL}>{right}</td>
             </tr>
           ))}
         </tbody>
