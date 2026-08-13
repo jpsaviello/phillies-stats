@@ -2,18 +2,24 @@ import { useEffect, useState } from 'react'
 import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
+import GameDetailModal from './GameDetailModal'
 
 const PHILLIES_ID = 143
+
+interface Props {
+  enableGameDetail: boolean
+}
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
 }
 
-export default function Schedule() {
+export default function Schedule({ enableGameDetail }: Props) {
   const [dates, setDates] = useState<{ date: string; games: Game[] }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [odds, setOdds] = useState<OddsGame[]>([])
+  const [selectedGame, setSelectedGame] = useState<number | null>(null)
 
   useEffect(() => {
     const now = new Date()
@@ -49,6 +55,7 @@ export default function Schedule() {
   }
 
   return (
+    <>
     <div className="max-w-2xl space-y-2">
       {dates.map(({ date, games }) =>
         games.map(game => {
@@ -65,8 +72,28 @@ export default function Schedule() {
           const oddsGame = oddsMap.get(oddsKey)
           const philliesOdds = !isFinished && isToday && oddsGame ? getPhilliesOdds(oddsGame) : null
 
+          // A game that hasn't started has no linescore, no batting order and no
+          // decisions, so there is nothing to open. In-progress games are fair
+          // game — the modal shows the innings played so far.
+          const clickable = enableGameDetail && game.status.abstractGameState !== 'Preview'
+
           return (
-            <div key={game.gamePk} className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''}`}>
+            <div
+              key={game.gamePk}
+              {...(clickable && {
+                onClick: () => setSelectedGame(game.gamePk),
+                onKeyDown: (e: React.KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedGame(game.gamePk)
+                  }
+                },
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': `Box score: ${isHome ? 'vs' : '@'} ${opponent}, ${formatDate(date)}`,
+              })}
+              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''}`}
+            >
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date)}
                 {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
@@ -98,5 +125,9 @@ export default function Schedule() {
         })
       )}
     </div>
+    {selectedGame != null && (
+      <GameDetailModal gamePk={selectedGame} onClose={() => setSelectedGame(null)} />
+    )}
+    </>
   )
 }

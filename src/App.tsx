@@ -28,7 +28,9 @@ export default function App() {
   // Manual kill switch, independent of DailyBriefing's own self-hide logic.
   // Defaults true so an unreachable LD client preserves today's behavior
   // (briefing shows) rather than silently hiding it.
-  const { enableDailyBriefing = true, enableOnThisDay = true } = useFlags()
+  // enableGameDetail gates only the Schedule row's click affordance, so flag-off
+  // leaves that tab exactly as it was before box scores existed.
+  const { enableDailyBriefing = true, enableOnThisDay = true, enableGameDetail = true } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
   // on it. The session cookie is httpOnly, so the only way to know who's
   // signed in is to ask the backend.
@@ -110,7 +112,7 @@ export default function App() {
           />
         )}
         {tab === 'standings' && <Standings />}
-        {tab === 'schedule' && <Schedule />}
+        {tab === 'schedule' && <Schedule enableGameDetail={enableGameDetail} />}
       </main>
       {/* Mounted once, outside the tab conditionals, so chat history survives tab switches. */}
       <ChatWidget />

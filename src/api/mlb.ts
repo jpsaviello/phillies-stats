@@ -187,6 +187,109 @@ export async function fetchLiveFeed(gamePk: number): Promise<LiveFeed> {
   return get(`/game/${gamePk}/feed/live?fields=${LIVE_FEED_FIELDS}`)
 }
 
+// One player's line in a single game. `stats` is that game's line and is an
+// EMPTY object for anyone who didn't appear — the response carries the whole
+// 26-man roster, not just the players who played. Callers must filter on the
+// stat object being non-empty; see GameDetailModal.
+export interface BoxscorePlayer {
+  person: { id: number; fullName: string }
+  position?: { abbreviation?: string }
+  // Batting-order slot code: "100" = 1st slot starter, "101" = a substitute who
+  // batted in the 1st slot. Absent for anyone who never came to the plate.
+  battingOrder?: string
+  stats?: {
+    batting?: Partial<BoxscoreBatting>
+    // MLB pre-formats the decision annotation here as "(W, 2-8)" / "(S, 18)";
+    // don't rebuild it from liveData.decisions.
+    pitching?: Partial<BoxscorePitching> & { note?: string }
+  }
+  seasonStats?: {
+    batting?: { avg?: string }
+    pitching?: { era?: string }
+  }
+}
+
+export interface BoxscoreBatting {
+  atBats: number
+  runs: number
+  hits: number
+  rbi: number
+  baseOnBalls: number
+  strikeOuts: number
+  doubles: number
+  triples: number
+  homeRuns: number
+}
+
+export interface BoxscorePitching {
+  inningsPitched: string
+  hits: number
+  runs: number
+  earnedRuns: number
+  baseOnBalls: number
+  strikeOuts: number
+  homeRuns: number
+}
+
+export interface BoxscoreTeam {
+  team: { id: number; name: string }
+  players: Record<string, BoxscorePlayer>
+  // Appearance order, and reliable — unlike `batters`, which appends the
+  // pitchers to the end of the list.
+  pitchers: number[]
+}
+
+interface LinescoreSide {
+  runs?: number
+  hits?: number
+  errors?: number
+}
+
+// Trimmed shape of the v1.1 live feed's boxscore/linescore/decisions. The
+// boxscore endpoint proper lives on api/v1, which the /api/mlb proxy does not
+// map (MLB_ALLOWED sends /game/ to v1.1) — the live feed carries the same data
+// and is already allowlisted, so this needs no backend change.
+export interface GameBoxscore {
+  gameData: {
+    status: { abstractGameState: string; detailedState: string }
+    datetime?: { officialDate?: string }
+    teams: {
+      home: { id: number; name: string; teamName?: string; abbreviation?: string }
+      away: { id: number; name: string; teamName?: string; abbreviation?: string }
+    }
+  }
+  liveData: {
+    linescore?: {
+      scheduledInnings?: number
+      // Length varies: extra-inning games are common and 7-inning games exist,
+      // so never assume nine entries.
+      innings?: { num: number; home?: LinescoreSide; away?: LinescoreSide }[]
+      teams?: { home?: LinescoreSide; away?: LinescoreSide }
+    }
+    boxscore?: { teams?: { home?: BoxscoreTeam; away?: BoxscoreTeam } }
+    // Absent for games that haven't produced a decision yet.
+    decisions?: {
+      winner?: { id: number; fullName: string }
+      loser?: { id: number; fullName: string }
+      save?: { id: number; fullName: string }
+    }
+  }
+}
+
+// Same trick as LIVE_FEED_FIELDS: the raw feed is ~860KB, and this field list
+// cuts it to ~39KB — still one request for the entire modal.
+const BOXSCORE_FIELDS =
+  'gameData,status,abstractGameState,detailedState,datetime,officialDate,' +
+  'teams,home,away,id,name,teamName,abbreviation,liveData,linescore,innings,num,' +
+  'runs,hits,errors,scheduledInnings,boxscore,players,person,fullName,position,' +
+  'stats,batting,pitching,seasonStats,atBats,rbi,baseOnBalls,strikeOuts,homeRuns,' +
+  'doubles,triples,avg,era,inningsPitched,earnedRuns,pitchers,battingOrder,' +
+  'decisions,winner,loser,save,note'
+
+export async function fetchBoxscore(gamePk: number): Promise<GameBoxscore> {
+  return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`)
+}
+
 interface OddsOutcome {
   name: string
   price: number
