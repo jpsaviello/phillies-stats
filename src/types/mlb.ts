@@ -60,6 +60,28 @@ export interface StandingsRecord {
   losses: number
   gamesBack: string
   divisionRank: string
+  /**
+   * Clinch/elimination fields the regularSeason response already carries. MLB
+   * sends "-" (not a number, and not absent) for a figure that doesn't apply —
+   * e.g. magicNumber on a non-leader — so every consumer must treat a
+   * non-numeric string as "no value" rather than parsing it.
+   */
+  magicNumber?: string
+  eliminationNumber?: string
+  wildCardEliminationNumber?: string
+  divisionLeader?: boolean
+  clinched?: boolean
+}
+
+/** One not-yet-played regular-season game, reduced to what the panel needs. */
+export interface RemainingGame {
+  opponentId: number
+  isHome: boolean
+}
+
+export interface TeamRecord {
+  wins: number
+  losses: number
 }
 
 // The wildCard standings type shares almost no fields with StandingsRecord

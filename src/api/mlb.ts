@@ -91,6 +91,58 @@ export async function fetchSeasonResults(teamId: number) {
   return results
 }
 
+// The games that HAVEN'T happened yet — same endpoint and fields= idiom as
+// fetchSeasonResults, filtered the other way. Games remaining is derived from
+// this count and never from 162 - (W+L): the schedule can carry more Final games
+// than the standings show decisions for (a tie or suspended game), which puts
+// that subtraction off by one.
+export async function fetchRemainingSchedule() {
+  const data = await get<{
+    dates: {
+      games: {
+        status: { abstractGameState: string }
+        teams: { home: { team: { id: number } }; away: { team: { id: number } } }
+      }[]
+    }[]
+  }>(
+    `/schedule?sportId=1&season=${SEASON}&teamId=${PHILLIES_ID}&gameType=R` +
+      `&fields=dates,games,status,abstractGameState,teams,home,away,team,id`
+  )
+
+  const remaining: import('../types/mlb').RemainingGame[] = []
+  for (const date of data.dates ?? []) {
+    for (const game of date.games ?? []) {
+      if (game.status.abstractGameState === 'Final') continue
+      const isHome = game.teams.home.team.id === PHILLIES_ID
+      remaining.push({
+        opponentId: isHome ? game.teams.away.team.id : game.teams.home.team.id,
+        isHome,
+      })
+    }
+  }
+  return remaining
+}
+
+// All 30 clubs' records in one call. Both leagues are required, not just the NL:
+// the remaining schedule includes interleague games, so an NL-only map would
+// leave the strength-of-schedule calculation with unknown opponents.
+export async function fetchLeagueRecords() {
+  const data = await get<{
+    records: { teamRecords: { team: { id: number }; wins: number; losses: number }[] }[]
+  }>(
+    `/standings?leagueId=103,104&season=${SEASON}&standingsTypes=regularSeason` +
+      `&fields=records,teamRecords,team,id,wins,losses`
+  )
+
+  const records = new Map<number, import('../types/mlb').TeamRecord>()
+  for (const group of data.records ?? []) {
+    for (const t of group.teamRecords ?? []) {
+      records.set(t.team.id, { wins: t.wins, losses: t.losses })
+    }
+  }
+  return records
+}
+
 export async function fetchSchedule(startDate: string, endDate: string) {
   const data = await get<{ dates: { date: string; games: Game[] }[] }>(
     `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore`

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { fetchStandings } from '../api/mlb'
 import type { StandingsRecord } from '../types/mlb'
+import { useWildCardRace } from '../hooks/useWildCardRace'
+import PlayoffPush from './PlayoffPush'
 import WildCardStandings from './WildCardStandings'
 
 const PHILLIES_ID = 143
@@ -9,6 +11,10 @@ export default function Standings() {
   const [records, setRecords] = useState<StandingsRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Owned here, not in either child: the panel and the table state the same
+  // playoff position, and the tiebreaker round trips are expensive enough that
+  // fetching them twice would be wasteful as well as divergence-prone.
+  const race = useWildCardRace()
 
   useEffect(() => {
     fetchStandings()
@@ -17,10 +23,12 @@ export default function Standings() {
       .finally(() => setLoading(false))
   }, [])
 
-  // The wild card table owns its own fetch and fails silently, so it renders
-  // alongside the division table rather than inside its loading/error states.
+  // The panel and the wild card table both fail silently on their own, so they
+  // render alongside the division table rather than inside its loading/error
+  // states — a standings failure doesn't take either of them down.
   return (
     <div className="max-w-2xl space-y-8">
+      <PlayoffPush divisionRecords={records} {...race} />
       {loading ? (
         <div className="p-8 text-center text-gray-500">Loading standings…</div>
       ) : error ? (
@@ -61,7 +69,7 @@ export default function Standings() {
           </table>
         </div>
       )}
-      <WildCardStandings />
+      <WildCardStandings {...race} />
     </div>
   )
 }
