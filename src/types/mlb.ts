@@ -175,3 +175,41 @@ export interface StatSplit {
   split: { code: string; description: string } // vl, vr, h, a
   stat: BattingStats | PitchingStats
 }
+
+/**
+ * One relief/start appearance, reduced from a game's boxscore pitching line to
+ * what workload tracking needs. `wasStart` is a per-outing fact (this game),
+ * distinct from a player's season-long role — see PitcherWorkload.role.
+ */
+export interface BullpenOuting {
+  gamePk: number
+  date: string
+  pitches: number
+  inningsPitched: string
+  battersFaced: number
+  earnedRuns: number
+  strikeOuts: number
+  baseOnBalls: number
+  hits: number
+  inheritedRunners: number
+  wasStart: boolean
+}
+
+/**
+ * One pitcher's workload over the tracked window. `role` classifies the player
+ * for the whole window (season gamesStarted/gamesPlayed, falling back to
+ * per-outing wasStart when season splits aren't available yet — see the
+ * bullpen-usage design spec, decision 2, for why the roster alone can't do this).
+ * `daysSinceLast` is null when the pitcher has no outings in the window at all,
+ * which is a fact worth showing, not an error.
+ */
+export interface PitcherWorkload {
+  playerId: number
+  name: string
+  role: 'reliever' | 'starter'
+  outings: BullpenOuting[]
+  totalPitches: number
+  totalOuts: number
+  daysSinceLast: number | null
+  flags: string[]
+}

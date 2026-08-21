@@ -19,3 +19,11 @@ export function daysBehind(date: string, today: string): number {
 export function formatDate(date: string, options: Intl.DateTimeFormatOptions): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', options)
 }
+
+// Pure calendar-date arithmetic (e.g. "7 days before today") via Date.UTC on
+// the Y/M/D components — never the local timezone — so the result doesn't
+// depend on where the browser happens to be running.
+export function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}

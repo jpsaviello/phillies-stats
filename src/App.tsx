@@ -31,11 +31,13 @@ export default function App() {
   // enableGameDetail gates only the Schedule row's click affordance, so flag-off
   // leaves that tab exactly as it was before box scores existed.
   // enableMatchupPreview likewise gates only the pregame panel above that list.
+  // enableBullpenUsage gates only the panel above the Pitching tab's table.
   const {
     enableDailyBriefing = true,
     enableOnThisDay = true,
     enableGameDetail = true,
     enableMatchupPreview = true,
+    enableBullpenUsage = true,
   } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
   // on it. The session cookie is httpOnly, so the only way to know who's
@@ -119,6 +121,7 @@ export default function App() {
             signedIn={user !== null}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
+            enableBullpenUsage={enableBullpenUsage}
           />
         )}
         {tab === 'standings' && <Standings />}

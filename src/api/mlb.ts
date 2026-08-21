@@ -364,6 +364,49 @@ export async function fetchBoxscore(gamePk: number): Promise<GameBoxscore> {
   return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`)
 }
 
+// Trimmed to just the pitching lines — BullpenUsage needs numbers from every
+// pitcher in a window of games, not the whole boxscore GameDetailModal renders.
+// Same /game/{pk}/feed/live path as fetchBoxscore (already allowlisted via the
+// /game/ -> v1.1 mapping in MLB_ALLOWED), narrower fields=. ~22KB per game.
+export interface BullpenBoxscore {
+  liveData: {
+    boxscore?: {
+      teams?: {
+        home?: BullpenBoxscoreTeam
+        away?: BullpenBoxscoreTeam
+      }
+    }
+  }
+}
+
+interface BullpenBoxscoreTeam {
+  team: { id: number }
+  // Appearance order, reliable unlike players' key order.
+  pitchers: number[]
+  players: Record<string, { person: { id: number; fullName: string }; stats: { pitching: BullpenPitchingLine } }>
+}
+
+interface BullpenPitchingLine {
+  pitchesThrown?: number
+  inningsPitched?: string
+  battersFaced?: number
+  earnedRuns?: number
+  strikeOuts?: number
+  baseOnBalls?: number
+  hits?: number
+  inheritedRunners?: number
+  gamesStarted?: number
+}
+
+const BULLPEN_FIELDS =
+  'liveData,boxscore,teams,home,away,team,id,players,person,fullName,stats,pitching,' +
+  'pitchesThrown,inningsPitched,battersFaced,gamesStarted,earnedRuns,strikeOuts,' +
+  'baseOnBalls,hits,inheritedRunners,pitchers'
+
+export async function fetchBullpenBoxscore(gamePk: number): Promise<BullpenBoxscore> {
+  return get(`/game/${gamePk}/feed/live?fields=${BULLPEN_FIELDS}`)
+}
+
 interface OddsOutcome {
   name: string
   price: number
