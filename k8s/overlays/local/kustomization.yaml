@@ -2,3 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
+replicas:
+  - name: phillies-stats
+    count: 2
+  - name: phillies-stats-api
+    count: 2
