@@ -2,7 +2,7 @@ import type { GameLogSplit, StatSplit } from '../types/mlb'
 
 const BASE = '/api/mlb'
 const PHILLIES_ID = 143
-const SEASON = 2026
+export const SEASON = 2026
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
@@ -15,6 +15,39 @@ export async function fetchRoster() {
     `/teams/${PHILLIES_ID}/roster?rosterType=active&season=${SEASON}`
   )
   return data.roster
+}
+
+// Trimmed from 112KB to 31.5KB (measured against the live 40-man). Same
+// `fields=` idiom as fetchLiveFeed / fetchBullpenBoxscore. `stat` is listed once
+// and covers both the hitting and pitching group objects.
+const ROSTER_FIELDS = [
+  'roster',
+  'person', 'id', 'fullName', 'currentAge', 'batSide', 'pitchHand', 'code',
+  'jerseyNumber', 'position', 'abbreviation', 'name', 'type',
+  'status', 'description',
+  'stats', 'group', 'displayName', 'splits', 'stat',
+  'gamesPlayed', 'atBats', 'runs', 'hits', 'doubles', 'triples', 'homeRuns',
+  'rbi', 'stolenBases', 'avg', 'obp', 'slg', 'ops', 'strikeOuts', 'baseOnBalls',
+  'gamesStarted', 'wins', 'losses', 'era', 'inningsPitched', 'whip', 'saves',
+].join(',')
+
+/**
+ * The 40-man roster with each player's season line attached.
+ *
+ * Deliberately NOT a change to fetchRoster() — that one's `rosterType=active`
+ * semantics are load-bearing for BullpenUsage, which uses it to give a
+ * zero-appearance row to available arms. `active` structurally cannot contain an
+ * injured player, which is precisely why the Roster tab needs `40Man` instead.
+ *
+ * `hydrate=person` is what supplies batSide/pitchHand — the bare roster response
+ * carries neither.
+ */
+export async function fetchRosterWithStats() {
+  const data = await get<{ roster: import('../types/mlb').RosterPlayer[] }>(
+    `/teams/${PHILLIES_ID}/roster?rosterType=40Man&season=${SEASON}` +
+      `&hydrate=person(stats(type=season,season=${SEASON}))&fields=${ROSTER_FIELDS}`
+  )
+  return data.roster ?? []
 }
 
 export async function fetchBattingStats() {

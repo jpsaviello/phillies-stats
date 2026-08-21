@@ -5,6 +5,7 @@ import { handleChat } from './chat.js'
 import { isHttpsFrom, sessionTokenFrom } from './cookies.js'
 import { addFavorite, listFavorites, removeFavorite } from './favorites.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from './core.js'
+import { changePassword, deleteAccount, getProfile, updateAvatar, updateProfile } from './profile.js'
 import { clientIpFrom } from './rateLimit.js'
 
 export const app = new Hono().basePath('/api')
@@ -96,6 +97,55 @@ app.post('/favorites/remove', async c => {
     return c.json({ error: 'invalid JSON body' }, 400)
   }
   return reply(c, await removeFavorite(body, sessionTokenFrom(c.req.header('cookie'))))
+})
+
+app.get('/profile', async c => reply(c, await getProfile(sessionTokenFrom(c.req.header('cookie')))))
+
+app.post('/profile/update', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(c, await updateProfile(body, sessionTokenFrom(c.req.header('cookie'))))
+})
+
+app.post('/profile/avatar', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(c, await updateAvatar(body, sessionTokenFrom(c.req.header('cookie'))))
+})
+
+app.post('/profile/password', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(c, await changePassword(body, sessionTokenFrom(c.req.header('cookie'))))
+})
+
+app.post('/profile/delete', async c => {
+  let body: unknown
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400)
+  }
+  return reply(
+    c,
+    await deleteAccount(
+      body,
+      sessionTokenFrom(c.req.header('cookie')),
+      isHttpsFrom(c.req.header('x-forwarded-proto'))
+    )
+  )
 })
 
 app.get('/health', c => c.json({ ok: true }))

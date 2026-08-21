@@ -1,10 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { login, logout, signup } from '../api/auth'
+import ProfileModal from './ProfileModal'
+import { profileInitials } from '../utils/profileDisplay'
 import type { User } from '../types/auth'
+import type { Profile } from '../types/profile'
 
 interface AuthWidgetProps {
   user: User | null
   onAuthChange: (user: User | null) => void
+  profile: Profile | null
+  onProfileChange: (profile: Profile) => void
 }
 
 type Mode = 'signin' | 'signup'
@@ -13,13 +18,14 @@ type Mode = 'signin' | 'signup'
 // like ChatWidget: signing in is an occasional action, not an ongoing one.
 // Only UI state lives here — whether someone is signed in is App-level state,
 // since future features will need to read it too.
-export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
+export default function AuthWidget({ user, onAuthChange, profile, onProfileChange }: AuthWidgetProps) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -80,11 +86,30 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
   }
 
   if (user !== null) {
+    const displayName = profile?.displayName?.trim() || user.email
     return (
       <div className="flex shrink-0 items-center gap-3">
-        <span className="hidden max-w-[14rem] truncate text-sm text-blue-100 sm:inline">
-          {user.email}
-        </span>
+        <button
+          type="button"
+          aria-label="Open profile"
+          onClick={() => setProfileModalOpen(true)}
+          className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-white/10"
+        >
+          {profile?.avatarDataUrl ? (
+            <img
+              src={profile.avatarDataUrl}
+              alt=""
+              className="h-7 w-7 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white">
+              {profileInitials(profile, user)}
+            </span>
+          )}
+          <span className="hidden max-w-[14rem] truncate text-sm text-blue-100 sm:inline">
+            {displayName}
+          </span>
+        </button>
         <button
           type="button"
           onClick={handleSignOut}
@@ -92,6 +117,19 @@ export default function AuthWidget({ user, onAuthChange }: AuthWidgetProps) {
         >
           Sign out
         </button>
+
+        {profileModalOpen && (
+          <ProfileModal
+            user={user}
+            profile={profile}
+            onProfileChange={onProfileChange}
+            onClose={() => setProfileModalOpen(false)}
+            onAccountDeleted={() => {
+              setProfileModalOpen(false)
+              onAuthChange(null)
+            }}
+          />
+        )}
       </div>
     )
   }

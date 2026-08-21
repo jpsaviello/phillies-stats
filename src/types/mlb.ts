@@ -47,6 +47,46 @@ export interface PlayerWithStats {
   pitching?: PitchingStats
 }
 
+/**
+ * Roster status codes seen live on the 40-man: Active, the three IL tiers, and
+ * Reassigned to Minors. The `(string & {})` arm keeps an unseen code (paternity
+ * list, restricted list, suspension) assignable so it falls through to a default
+ * group instead of failing to type — the roster must never fail to render
+ * because MLB added a status we hadn't met.
+ */
+export type RosterStatusCode = 'A' | 'D10' | 'D15' | 'D60' | 'RM' | (string & {})
+
+/**
+ * One entry from `rosterType=40Man` hydrated with the player's season line.
+ *
+ * Distinct from [RosterEntry], which models the un-hydrated `rosterType=active`
+ * response BullpenUsage depends on. The 40-man view returns 45 entries, not 40:
+ * 60-day IL players don't count against the 40-man but the API includes them,
+ * which is exactly the behavior the Roster tab wants.
+ */
+export interface RosterPlayer {
+  person: {
+    id: number
+    fullName: string
+    currentAge?: number
+    batSide?: { code: string }
+    pitchHand?: { code: string }
+    /**
+     * Present for anyone with 2026 appearances; absent entirely for players who
+     * have none (five of them live today), so every consumer must handle a
+     * missing array rather than indexing into it.
+     */
+    stats?: {
+      group: { displayName: string }
+      splits: { stat: BattingStats | PitchingStats }[]
+    }[]
+  }
+  /** Can be an empty string — five of today's twelve minors players have no number. */
+  jerseyNumber: string
+  position: { abbreviation: string; name: string; type: string }
+  status: { code: RosterStatusCode; description: string }
+}
+
 export interface RosterEntry {
   person: Player
   jerseyNumber: string

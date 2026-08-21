@@ -1,22 +1,30 @@
-type Tab = 'batting' | 'pitching' | 'standings' | 'schedule'
+type Tab = 'batting' | 'pitching' | 'roster' | 'standings' | 'schedule'
 
 interface NavProps {
   active: Tab
   onChange: (tab: Tab) => void
+  /**
+   * Flag-gated tabs are removed from the bar entirely rather than rendered
+   * inert: a visible tab whose panel is flagged off would click through to an
+   * empty <main>, which is worse than the tab not existing.
+   */
+  hidden?: Tab[]
 }
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'batting', label: 'Batting' },
   { id: 'pitching', label: 'Pitching' },
+  { id: 'roster', label: 'Roster' },
   { id: 'standings', label: 'Standings' },
   { id: 'schedule', label: 'Schedule' },
 ]
 
-export default function Nav({ active, onChange }: NavProps) {
+export default function Nav({ active, onChange, hidden = [] }: NavProps) {
+  const visible = tabs.filter(t => !hidden.includes(t.id))
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
-        {tabs.map(tab => (
+        {visible.map(tab => (
           <button
             key={tab.id}
             // Active state was conveyed by colour and a border alone.

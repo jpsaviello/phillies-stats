@@ -13,6 +13,8 @@ const LOGIN_LIMIT = 5
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const SIGNUP_LIMIT = 5
 const SIGNUP_WINDOW_MS = 60 * 60 * 1000
+const PASSWORD_CHANGE_LIMIT = 5
+const PASSWORD_CHANGE_WINDOW_MS = 15 * 60 * 1000
 
 interface Window {
   windowStart: number
@@ -22,6 +24,12 @@ interface Window {
 const loginIpWindows = new Map<string, Window>()
 const loginEmailWindows = new Map<string, Window>()
 const signupIpWindows = new Map<string, Window>()
+// Keyed by user id, not IP — unlike every other bucket in this file. These
+// routes already require a valid session, so the threat isn't an anonymous
+// attacker; it's someone holding a stolen or borrowed session cookie
+// brute-forcing the current password to lock the real owner out. The
+// attacker controls their own IP, but not the victim's user id.
+const passwordChangeUserWindows = new Map<string, Window>()
 
 function prune(windows: Map<string, Window>, now: number, windowMs: number): void {
   for (const [key, window] of windows) {
@@ -96,4 +104,28 @@ export function checkSignupLimit(ip: string): RouteResult | null {
 
   consume(signupIpWindows, ip, now, SIGNUP_WINDOW_MS)
   return null
+}
+
+// Called before touching the database, same ordering as checkLoginLimit.
+export function checkPasswordChangeLimit(userId: string): RouteResult | null {
+  const now = Date.now()
+  prune(passwordChangeUserWindows, now, PASSWORD_CHANGE_WINDOW_MS)
+
+  if (
+    isOverLimit(passwordChangeUserWindows, userId, now, PASSWORD_CHANGE_WINDOW_MS, PASSWORD_CHANGE_LIMIT)
+  ) {
+    return {
+      status: 429,
+      body: { error: 'Too many password change attempts — wait 15 minutes and try again.' },
+    }
+  }
+
+  consume(passwordChangeUserWindows, userId, now, PASSWORD_CHANGE_WINDOW_MS)
+  return null
+}
+
+// Called only after the current password actually verifies, matching
+// clearLoginLimit's convention — a brute-force run never reaches this.
+export function clearPasswordChangeLimit(userId: string): void {
+  passwordChangeUserWindows.delete(userId)
 }

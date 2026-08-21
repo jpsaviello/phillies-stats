@@ -734,3 +734,236 @@ Not done, out of scope per the plan (unchanged from planning):
   deliberately deferred -- `tiebreakers.ts` is written so it could adopt it).
 - No LaunchDarkly flag (correctness fix; failure path already matches today's
   behavior).
+# Progress Ledger: roster-tab
+
+Plan: docs/superpowers/plans/2026-08-21-roster-tab.md
+Spec: docs/superpowers/specs/2026-08-21-roster-tab-design.md
+Base: deba138 (develop)
+
+Task 1 (types): complete -- RosterStatusCode + RosterPlayer added to src/types/mlb.ts.
+  Existing RosterEntry left untouched (BullpenUsage depends on its active-only shape).
+Task 2 (api): complete -- fetchRosterWithStats() added. rosterType=40Man (NOT a change
+  to fetchRoster, whose active-only semantics BullpenUsage relies on). fields= trim
+  measured at 31.5KB vs 112KB untrimmed. Also exported the existing SEASON const so the
+  component's "2026 Season" header and "No 2026 appearances" label derive from one source
+  instead of a literal and a local-clock getFullYear() (caught during implementation --
+  the clock version would disagree with SEASON in January).
+Task 3 (utils/roster.ts): complete -- pure, replayed against live 40-man JSON with
+  `node --experimental-strip-types`. 13/13 assertions pass: 26/7/12 split, all 45 players
+  appear exactly once, Schwarber classified DH (position.type "Hitter") not IF, no pitcher
+  classified as a hitter, all 5 statless players handled, Rojas correctly IL-and-statless,
+  IL subgroups ordered 10->15->60, switch-hitter renders S/R, blank jersey numbers sort
+  last, jersey "4" confirmed to be two different players (Arraez + Kemp) so person.id is
+  the React key.
+Task 4 (component): complete.
+  DESIGN CHANGE FROM PLAN: the plan specified separate hitter (AVG/HR/RBI/OPS) and pitcher
+  (W-L/ERA/GS/K) stat columns. That cannot work in the IL section, which groups by injury
+  tier -- "Injured 60-Day" holds Adolis García and Brad Keller in the same subgroup, so
+  shared headers would have to label a hitter's AVG and a pitcher's W-L as the same column.
+  Replaced with a single "2026 Season" column formatted per row (formatSeasonLine), which
+  stays honest in mixed groups and is more compact on mobile.
+  Statless rows are deliberately NOT clickable -- GameLogModal would open onto an empty
+  season header and an empty trend chart.
+Task 5 (wiring): complete -- Nav gained a `hidden` prop so flag-off removes the tab entry
+  rather than leaving a tab that clicks through to an empty <main>. App has a guard effect
+  for the flag flipping off live while the roster tab is the active one.
+Task 6 (verification): complete.
+  - npx tsc -b: clean. npm run lint (oxlint): clean. npm run build: clean.
+  - webapp-testing (real Chromium, both servers up): 27/27 assertions pass, zero console
+    errors. Covered all three sections, all seven IL players by name with their specific
+    designations, no "undefined"/"NaN" in the DOM, statless label, S/R switch-hitter,
+    DH group, row-click opens GameLogModal on the right player, statless row has no
+    role="button", and no horizontal page overflow at 375px.
+  - Flag-off path verified for real (temporarily defaulted the flag false, reloaded):
+    Roster removed from the nav, other four tabs intact, default tab still renders,
+    no page errors. Reverted.
+  - Note for future browser runs: wait_until='networkidle' NEVER settles on this app --
+    the LaunchDarkly client holds an SSE stream open. Use 'domcontentloaded' + a wait.
+  - Note: subgroup labels carry text-transform:uppercase, so Playwright inner_text()
+    returns them uppercased; compare case-insensitively or the assertions false-fail.
+
+OUTSTANDING -- not done, needs the user:
+  The LaunchDarkly flag `enable-roster-tab` has NOT been created. Creating/targeting a
+  flag is a shared external-state change, so it was left for the user to confirm. Until it
+  exists, useFlags() returns undefined and the `= true` code default renders the tab, so
+  current behavior is correct either way. IF IT IS CREATED, IT MUST BE CREATED WITH
+  TARGETING ON: per the enable-bullpen-usage trap already recorded in CLAUDE.md, a flag
+  created with targeting off serves offVariation (false) to every connected client, which
+  would hide the tab in production for everyone whose LD client connects successfully.
+
+Not committed -- per the user's standing rule, staging/committing/pushing is theirs.
+
+# Progress Ledger: user-profile
+
+Plan: docs/superpowers/plans/2026-08-21-user-profile.md
+Spec: docs/superpowers/specs/2026-08-21-user-profile-design.md
+Base: develop @ deba138 + uncommitted roster-tab working tree
+
+Task 1 (migration): complete -- server/migrations/003_user_profiles.sql applied via
+  npx neon psql. Verified \d user_profiles (all columns, non-partial unique index on
+  user_id) and the upsert-resurrection sanity check (insert -> soft-delete -> re-insert
+  with ON CONFLICT DO UPDATE SET deleted_at = NULL -> exactly one live row).
+Task 2 (authorize extraction): complete -- server/src/authorize.ts holds the shared
+  authorize(sessionToken, feature) preamble, lifted out of favorites.ts's former private
+  helper. favorites.ts now imports it, passing 'favorites' so its error strings
+  (`'favorites not configured'`) are byte-identical to before. Regression-curled all
+  three favorites routes post-refactor -- unchanged.
+Task 3 (profile.ts read/update/avatar): complete -- getProfile/updateProfile/updateAvatar
+  in server/src/profile.ts. DEFAULT_PROFILE returned when no row exists (signup never
+  creates one). updateProfile's INSERT/ON CONFLICT column list deliberately excludes
+  avatar_data_url so a field save can never clobber the photo -- verified by curl (see
+  Task 9). fan_since upper bound computed via Intl.DateTimeFormat in America/New_York,
+  not a bare Date().getFullYear() (host clock is UTC in both containers).
+Task 4 (password change + deletion): complete -- changePassword and deleteAccount added
+  to profile.ts. New user-id-keyed rate-limit bucket in authRateLimit.ts (5/15min,
+  distinct from every IP-keyed bucket in that file). deleteAccount is the first
+  multi-statement transaction in this backend (explicit pool.connect() + BEGIN/COMMIT/
+  ROLLBACK + client.release() in finally) across users/sessions/favorite_players/
+  user_profiles. auth.ts's validatePassword and MIN_PASSWORD_CHARS exported (pure
+  refactor, no behavior change) so profile.ts reuses the same rules rather than
+  re-deriving them.
+Task 5 (wiring): complete -- five /profile routes added to both server/src/app.ts (Hono)
+  and api/index.ts (Vercel's segments/rest router, following the favorites precedent).
+  Confirmed clean with a standalone `tsc --ignoreConfig` pass on api/index.ts (neither
+  build type-checks that file on its own).
+Task 6 (frontend types/api/avatar util): complete -- src/types/profile.ts,
+  src/api/profile.ts (mirrors favorites.ts's fetch/error-handling shape exactly),
+  src/utils/avatar.ts (createImageBitmap -> canvas -> JPEG q0.82 downscale, no dependency).
+Task 7 (ProfileModal + wiring): complete -- src/components/ProfileModal.tsx (You /
+  Phillies / Notifications / Account sections); AuthWidget.tsx's signed-in branch now
+  shows an avatar-or-initials + display-name button (was a bare email span) that opens
+  the modal; Header.tsx and App.tsx thread profile/onProfileChange through exactly as
+  they already thread user/onAuthChange. Extracted a shared `profileInitials()` helper
+  into src/utils/profileDisplay.ts rather than duplicating the initials logic between
+  AuthWidget's header trigger and ProfileModal's avatar fallback.
+  DEVIATION FROM PLAN: plan didn't call out a shared initials helper explicitly --
+  added during implementation once the same logic was about to be written twice.
+Task 8 (docs): complete -- CLAUDE.md gained a "User profile" paragraph (density-matched
+  to the Auth/Favorites paragraphs) covering the separate-table decision, lazy row
+  creation, the non-partial unique index, the avatar-not-object-storage tradeoff and why
+  svg+xml is excluded, the user-id-keyed password rate limiter, the first-transaction
+  note on deletion, and the inert notification prefs. Updated the src/components/
+  inventory and api/index.ts's route list.
+Task 9 (verification): complete.
+  - npx tsc -b: clean. npm --prefix server run build: clean. npm run lint (oxlint): clean.
+    npm run build: clean. Standalone tsc --ignoreConfig on api/index.ts: clean.
+  - curl matrix against npm run dev:server (:8080), cookie jars, throwaway accounts:
+    * No-cookie GET /api/profile and all four POSTs -> 401 (not a default profile,
+      confirming the deliberate divergence from /api/me).
+    * Fresh signup -> GET /api/profile returns DEFAULT_PROFILE with no DB row.
+    * Full-field update round-trips correctly; re-update with "" in every text field
+      normalizes to NULL (not empty string) in the response.
+    * All 12 validation-matrix cases rejected 400 with the correct field named:
+      61-char displayName, phone "abc"/too-few-digits/too-many-digits, 4-char
+      favoriteNumber, non-digit favoriteNumber, fanSince 1882 and 2027 (next year),
+      favoritePlayerId 0/-1/"abc", notifyDailyBriefing as a string.
+    * Avatar: valid small JPEG data URL saved; a subsequent /update (no avatar in
+      payload) left the avatar untouched -- proves the column-list exclusion works;
+      { avatarDataUrl: null } cleared it; image/svg+xml payload -> 400; 250k-char
+      payload -> 400 (200k cap).
+    * Password change: wrong current -> 401; 7-char new -> 400; new === current -> 400;
+      valid change succeeded, the calling session stayed authenticated, a second
+      concurrently-logged-in session was revoked (verified via /api/me on that cookie
+      returning { user: null }); 6th attempt within the window -> 429 (limit is 5,
+      cleared by the earlier successful change).
+    * Account deletion: wrong password -> 401; correct password -> 200 with a clearing
+      Set-Cookie; confirmed in Neon directly that users.deleted_at, all sessions
+      (revoked_at), favorite_players, and user_profiles all moved in one shot. Old
+      cookie -> /api/me returns { user: null }. Re-signup with the freed email
+      succeeded and started with an empty favorites list and a default profile.
+    * Transaction rollback: temporarily sabotaged the favorite_players UPDATE statement
+      (nonexistent column) mid-deleteAccount, rebuilt, hit the route -> 502, then
+      confirmed in Neon that users.deleted_at was still NULL and the session was still
+      live -- BEGIN/ROLLBACK genuinely reverted the whole transaction, not just the
+      failing statement. Reverted the sabotage, rebuilt clean, reconfirmed tsc/build.
+    * Cross-account isolation: two independent accounts, each GET /api/profile returned
+      only its own saved display name.
+    * Fail-soft: DATABASE_URL= (empirically had to override with an empty value, not
+      `env -u`, because tsx --env-file=../.env.local reloads it from the file otherwise)
+      -> all five profile routes 503, /api/health, /api/me, /api/mlb/* unaffected.
+    * npx vercel dev --listen 3210 (DATABASE_URL etc. exported into its shell first --
+      it does not read .env.local): confirmed the multi-segment /api/profile/* router
+      branch works there too, and a 150KB avatar payload round-tripped successfully
+      through Vercel's request handling.
+    * All throwaway test accounts created during this pass were deleted via
+      /api/profile/delete afterward.
+  - webapp-testing (Playwright, real Chromium, both servers up): delegated to a
+    dedicated subagent per the user's standing multi-agent-SDD preference, so browser
+    tool noise stays out of the orchestrator's context. Full pass, 12/12, zero bugs:
+    signed-out baseline, sign-up -> modal open, field save with correct persistence
+    (no reset to stale values), full page reload preserving both session and saved
+    profile fields (proves the DB round-trip, not just React state), avatar upload of
+    a 7.69MB source image producing a 48,967-byte request body (proves the client-side
+    canvas/JPEG downscale actually ran), avatar removal reverting to initials, password
+    change with old-password-now-fails/new-password-works verified by actually signing
+    out and back in, a forced-500 failure path showing an inline error and never a false
+    "Saved.", Escape/backdrop-click/focus-visibility/caret-color all correct, 0px
+    horizontal overflow at 375px, and account deletion + same-email re-signup producing
+    a genuinely clean new profile. Two console messages logged were both the expected
+    401/500 artifacts of the deliberate negative-path tests, not spontaneous bugs.
+
+Review: a phase-reviewer subagent did a full Gate-3.5-style read of every changed file
+  against the spec, in parallel with the webapp-testing pass. Initial verdict: NEEDS
+  CHANGES, four real findings (backend contract compliance and the security-relevant
+  pieces -- routes, status codes, the avatar prefix/length checks, the transaction shape,
+  the authorize()/auth.ts refactors -- were all confirmed to match the spec exactly; the
+  findings were in gaps the curl matrix and the plan's own checklist didn't specifically
+  walk).
+  1. [HIGH, fixed] ProfileModal.tsx's form-hydration effect re-ran on EVERY `profile`
+     prop change, not just the first. Since updateAvatar's response also flows through
+     onProfileChange, saving a new avatar while other form fields had unsaved edits
+     silently reverted those edits to the last-saved values -- a real data-loss bug.
+     Fix: a `hydratedRef` so the form only hydrates from the server once per modal
+     mount; the modal already fully unmounts on close (`{profileModalOpen && <ProfileModal
+     .../>}` in AuthWidget.tsx), so a fresh open still re-hydrates correctly.
+  2. [MEDIUM, fixed] profile.ts's four normalizeText-based validators (displayName,
+     phone, location, favoriteNumber) validated the already-coerced value rather than
+     the raw request-body value, so e.g. `{"displayName": 123}` silently normalized to
+     NULL (a silent "clear this field") instead of a 400 -- inconsistent with how
+     favoritePlayerId/fanSince/the booleans validate the raw body value. Fixed by
+     rewriting all four to type-check the raw value first (`'<field> must be a string'`,
+     matching the snake_case field-naming convention the other 400s already use), with
+     the length/format checks unchanged. Verified via curl with number/boolean/array
+     payloads for all four fields -> 400 with the right message; sanity-checked a legit
+     multi-field update still round-trips correctly afterward.
+  3. [MEDIUM, fixed] changePassword's two writes (password hash update, then session
+     revocation) were NOT transactional, unlike deleteAccount -- if the hash update
+     succeeded but the revocation query then failed, the caller would be told the whole
+     operation failed (502) despite their password having actually changed, their
+     rate-limit bucket not being cleared, and stolen/borrowed sessions on other devices
+     staying live despite the UI's "your other devices have been signed out" claim.
+     Fixed by wrapping both statements in the same pool.connect()/BEGIN/COMMIT/ROLLBACK/
+     finally-release pattern deleteAccount already uses. Re-verified end-to-end via curl:
+     caller session survives, a second concurrently-logged-in session is revoked, cleanup
+     still succeeds.
+  4. [MEDIUM, fixed] ProfileModal rendered `profile === null` as an unconditional,
+     permanent "Loading your profile..." with no error state and no retry -- if the
+     initial GET /api/profile failed after a successful sign-in (fetchProfile's
+     documented fail-soft-to-null contract), the modal was a dead end. Fixed by having
+     the modal retry the fetch itself when it mounts with `profile === null`. distinguishing
+     "still in flight" from "failed" via a `profileLoadFailed` flag, and showing a
+     "Couldn't load your profile" message with a "Try again" button instead of an
+     infinite spinner.
+  All four fixes verified: tsc -b, server build, oxlint, and full vite build clean after
+  each; the two backend fixes re-verified with a targeted curl pass (type-confused
+  payloads for all four affected fields -> 400 with the field named; password-change
+  transaction re-run end-to-end confirming session revocation still works). The frontend
+  fixes (#1 and #4) were not re-run through webapp-testing after the review landed --
+  they're logic-level fixes to code paths the earlier full Playwright pass didn't happen
+  to exercise (editing a field then changing the avatar in the same session; a forced
+  failure specifically on the initial GET rather than on a POST), so they're verified by
+  code reading and the type checker rather than a second full browser pass. Worth a spot
+  check by the user if it matters before shipping.
+
+OUTSTANDING -- not done, needs the user:
+  None required to ship. Two optional follow-ups noted by the reviewer but not acted on
+  (both pre-existing risk patterns, not regressions introduced by this feature):
+  - `signup` (auth.ts, unchanged by this plan) has the same two-statement-without-a-
+    transaction shape changePassword had before this review's fix (insert user, then
+    insert session) -- not fixed here since it's out of this feature's diff, but worth
+    hardening the same way if it's ever revisited.
+  - No LaunchDarkly flag (deliberate, matching auth/favorites -- see spec's Feature flag
+    section).
+
+All tasks complete. Not committed -- per the user's standing rule, staging/committing/
+  pushing is theirs.

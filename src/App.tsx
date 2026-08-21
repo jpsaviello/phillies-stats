@@ -10,6 +10,7 @@ import LiveGameStrip from './components/LiveGameStrip'
 import Nav, { type Tab } from './components/Nav'
 import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
+import Roster from './components/Roster'
 import Standings from './components/Standings'
 import Schedule from './components/Schedule'
 import ChatWidget from './components/ChatWidget'
@@ -17,8 +18,10 @@ import FavoritesCard from './components/FavoritesCard'
 import { fetchConfig } from './api/mlb'
 import { fetchCurrentUser } from './api/auth'
 import { addFavorite, fetchFavorites, removeFavorite } from './api/favorites'
+import { fetchProfile } from './api/profile'
 import type { User } from './types/auth'
 import type { Favorite } from './types/favorites'
+import type { Profile } from './types/profile'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('batting')
@@ -32,12 +35,15 @@ export default function App() {
   // leaves that tab exactly as it was before box scores existed.
   // enableMatchupPreview likewise gates only the pregame panel above that list.
   // enableBullpenUsage gates only the panel above the Pitching tab's table.
+  // enableRosterTab is the first flag that gates a whole TAB, so flag-off has to
+  // remove the nav entry too, not just the panel — see the `hidden` prop below.
   const {
     enableDailyBriefing = true,
     enableOnThisDay = true,
     enableGameDetail = true,
     enableMatchupPreview = true,
     enableBullpenUsage = true,
+    enableRosterTab = true,
   } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
   // on it. The session cookie is httpOnly, so the only way to know who's
@@ -46,6 +52,16 @@ export default function App() {
   // Lives here, not in the tables: both tables and FavoritesCard read it, and
   // the tables unmount on every tab switch.
   const [favorites, setFavorites] = useState<Favorite[]>([])
+  // Lives here, next to user/favorites: the header (avatar + name) and the
+  // profile modal both need it.
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  // LD pushes flag changes live, so the roster tab can be turned off while it's
+  // the one being viewed. Without this the nav entry disappears and <main>
+  // renders nothing, with no tab highlighted and no way back except a click.
+  useEffect(() => {
+    if (!enableRosterTab && tab === 'roster') setTab('batting')
+  }, [enableRosterTab, tab])
 
   useEffect(() => {
     fetchConfig()
@@ -69,6 +85,16 @@ export default function App() {
     fetchFavorites().then(setFavorites)
   }, [user])
 
+  // Same arrangement as favorites: keyed on user, clears on sign-out, runs
+  // again right after sign-in. fetchProfile never rejects.
+  useEffect(() => {
+    if (user === null) {
+      setProfile(null)
+      return
+    }
+    fetchProfile().then(setProfile)
+  }, [user])
+
   // Optimistic: the star flips immediately, the server's list replaces it on
   // success, and a failure restores the pre-click snapshot so a star can't lie
   // about having been saved.
@@ -87,7 +113,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-phillies-cream">
-      <Header user={user} onAuthChange={setUser} />
+      <Header user={user} onAuthChange={setUser} profile={profile} onProfileChange={setProfile} />
       <LaunchDarklyDemoBanner />
       {showAllStarBanner && <AllStarBanner />}
       {/* Self-hides unless a Phillies game is live; mounted outside the tab
@@ -107,7 +133,11 @@ export default function App() {
           {enableOnThisDay && <OnThisDayCard />}
         </div>
       )}
-      <Nav active={tab} onChange={setTab} />
+      <Nav
+        active={tab}
+        onChange={setTab}
+        hidden={enableRosterTab ? [] : ['roster']}
+      />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === 'batting' && (
           <BattingTable
@@ -122,6 +152,13 @@ export default function App() {
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
             enableBullpenUsage={enableBullpenUsage}
+          />
+        )}
+        {tab === 'roster' && enableRosterTab && (
+          <Roster
+            signedIn={user !== null}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
           />
         )}
         {tab === 'standings' && <Standings />}

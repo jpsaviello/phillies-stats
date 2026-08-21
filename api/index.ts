@@ -4,6 +4,13 @@ import { handleChat } from '../server/src/chat.js'
 import { isHttpsFrom, sessionTokenFrom } from '../server/src/cookies.js'
 import { addFavorite, listFavorites, removeFavorite } from '../server/src/favorites.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
+import {
+  changePassword,
+  deleteAccount,
+  getProfile,
+  updateAvatar,
+  updateProfile,
+} from '../server/src/profile.js'
 import { clientIpFrom } from '../server/src/rateLimit.js'
 
 // Single static function handling all of /api/* — see vercel.json's
@@ -109,6 +116,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'POST' && rest[0] === 'remove') {
         return send(res, await removeFavorite(req.body, token))
+      }
+    }
+    if (first === 'profile') {
+      const token = sessionTokenFrom(req.headers['cookie'])
+      if (req.method === 'GET' && rest.length === 0) {
+        return send(res, await getProfile(token))
+      }
+      if (req.method === 'POST' && rest[0] === 'update') {
+        return send(res, await updateProfile(req.body, token))
+      }
+      if (req.method === 'POST' && rest[0] === 'avatar') {
+        return send(res, await updateAvatar(req.body, token))
+      }
+      if (req.method === 'POST' && rest[0] === 'password') {
+        return send(res, await changePassword(req.body, token))
+      }
+      if (req.method === 'POST' && rest[0] === 'delete') {
+        return send(
+          res,
+          await deleteAccount(req.body, token, isHttpsFrom(req.headers['x-forwarded-proto']))
+        )
       }
     }
     return send(res, { status: 404, body: { error: 'not found' } })

@@ -14,7 +14,7 @@ import { generateSessionToken, hashPassword, hashSessionToken, verifyPassword } 
 import { getPool } from './db.js'
 
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
-const MIN_PASSWORD_CHARS = 8
+export const MIN_PASSWORD_CHARS = 8
 // Upper bound exists to cap scrypt work per request, not for storage reasons.
 const MAX_PASSWORD_CHARS = 200
 const MAX_EMAIL_CHARS = 254
@@ -49,7 +49,7 @@ function validateEmail(email: string): string | null {
   return null
 }
 
-function validatePassword(password: string): string | null {
+export function validatePassword(password: string): string | null {
   if (password.length === 0) return 'password is required'
   if (password.length < MIN_PASSWORD_CHARS) {
     return `password must be at least ${MIN_PASSWORD_CHARS} characters`

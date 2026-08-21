@@ -1,12 +1,15 @@
 import AuthWidget from './AuthWidget'
 import type { User } from '../types/auth'
+import type { Profile } from '../types/profile'
 
 interface HeaderProps {
   user: User | null
   onAuthChange: (user: User | null) => void
+  profile: Profile | null
+  onProfileChange: (profile: Profile) => void
 }
 
-export default function Header({ user, onAuthChange }: HeaderProps) {
+export default function Header({ user, onAuthChange, profile, onProfileChange }: HeaderProps) {
   return (
     <header className="bg-phillies-navy bg-pinstripe text-white border-b-4 border-phillies-red">
       {/* Tighter on phones: six self-hiding blocks stack between this header and
@@ -29,7 +32,12 @@ export default function Header({ user, onAuthChange }: HeaderProps) {
             </p>
           </div>
         </div>
-        <AuthWidget user={user} onAuthChange={onAuthChange} />
+        <AuthWidget
+          user={user}
+          onAuthChange={onAuthChange}
+          profile={profile}
+          onProfileChange={onProfileChange}
+        />
       </div>
     </header>
   )

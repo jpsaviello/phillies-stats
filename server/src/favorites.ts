@@ -6,9 +6,8 @@
 // (Vercel) both call these unchanged. No Hono import, see core.ts.
 
 import type { Pool } from 'pg'
-import { resolveSessionUser } from './auth.js'
+import { authorize } from './authorize.js'
 import type { RouteResult } from './core.js'
-import { getPool } from './db.js'
 
 const MAX_FAVORITES = 50
 const MAX_PLAYER_NAME_CHARS = 100
@@ -23,25 +22,6 @@ type CountRow = { live_count: string; already_starred: string }
 interface Favorite {
   playerId: number
   playerName: string
-}
-
-type Authorized =
-  | { ok: true; pool: Pool; userId: string }
-  | { ok: false; result: RouteResult }
-
-// Shared preamble for all three routes. Unlike /api/me this does NOT fail soft:
-// favorites is only ever called once sign-in state is already known, so an
-// expired session is a real error the client should be able to see.
-async function authorize(sessionToken: string | undefined): Promise<Authorized> {
-  const pool = getPool()
-  if (pool === null) {
-    return { ok: false, result: { status: 503, body: { error: 'favorites not configured' } } }
-  }
-  const user = await resolveSessionUser(pool, sessionToken)
-  if (user === null) {
-    return { ok: false, result: { status: 401, body: { error: 'sign in required' } } }
-  }
-  return { ok: true, pool, userId: user.id }
 }
 
 // Returned by every route, including the two mutations, so the client always
@@ -81,7 +61,7 @@ function playerNameFrom(requestBody: unknown): string {
 }
 
 export async function listFavorites(sessionToken: string | undefined): Promise<RouteResult> {
-  const auth = await authorize(sessionToken)
+  const auth = await authorize(sessionToken, 'favorites')
   if (!auth.ok) return auth.result
 
   try {
@@ -96,7 +76,7 @@ export async function addFavorite(
   requestBody: unknown,
   sessionToken: string | undefined
 ): Promise<RouteResult> {
-  const auth = await authorize(sessionToken)
+  const auth = await authorize(sessionToken, 'favorites')
   if (!auth.ok) return auth.result
 
   const playerId = playerIdFrom(requestBody)
@@ -141,7 +121,7 @@ export async function removeFavorite(
   requestBody: unknown,
   sessionToken: string | undefined
 ): Promise<RouteResult> {
-  const auth = await authorize(sessionToken)
+  const auth = await authorize(sessionToken, 'favorites')
   if (!auth.ok) return auth.result
 
   const playerId = playerIdFrom(requestBody)
