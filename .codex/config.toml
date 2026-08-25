@@ -1,0 +1,2 @@
+[mcp_servers.LaunchDarkly]
+url = "https://mcp.launchdarkly.com/mcp/launchdarkly"

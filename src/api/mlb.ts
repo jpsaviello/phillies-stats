@@ -241,7 +241,7 @@ export function playerHeadshotUrl(personId: number): string {
 export interface Game {
   gamePk: number
   gameDate: string
-  status: { abstractGameState: string; detailedState: string }
+  status: { abstractGameState: string; detailedState: string; startTimeTBD?: boolean }
   teams: {
     home: GameTeam
     away: GameTeam

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
+import { firstPitch } from '../utils/gameTime'
 import GameDetailModal from './GameDetailModal'
 import MatchupPreview from './MatchupPreview'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
@@ -157,7 +158,9 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
                   {won ? 'W' : 'L'} {philliesScore}–{oppScore}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">{game.status.detailedState}</div>
+                <div className="text-sm text-gray-500 tabular-nums">
+                  {firstPitch(game) ?? game.status.detailedState}
+                </div>
               )}
             </div>
           )
