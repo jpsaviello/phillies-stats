@@ -142,7 +142,7 @@ carries commits authored by someone other than you (it does carry
 `Claude <noreply@anthropic.com>` commits). **If the push is rejected, that IS a run
 failure** — nothing reaches production without it. Push to
 `claude/briefing-YYYY-MM-DD` instead so the work isn't lost, then report in the
-notification that the briefing was **not** published, and why.
+run's final summary that the briefing was **not** published, and why.
 
 ### 7. Verify production picked it up
 
@@ -153,13 +153,15 @@ curl -s https://phillies-stats.vercel.app/briefing.json | head -5
 The `date` in the response must be today's. The deploy build can still be running
 right after the push — if the first check shows yesterday's `date`, wait a short
 moment and check again before concluding the deploy failed. If it's still stale
-after that, say so in the notification rather than reporting success.
+after that, say so in the final summary rather than reporting success.
 
-### 8. Notify
+### 8. No push notifications
 
-Send one push notification per run: the headline plus a one-line score (for example
-`PHI 6, MIA 8 (L)`). Mention it if the push was rejected (so production was not
-updated) or if production still shows a stale `date` after the push.
+This routine must **never** call a notification tool (e.g. `PushNotification`) —
+not on success, not on failure. The only report of what happened is the run's own
+final text summary (step 9's three lines), which nobody's phone sees. This is
+deliberate: the user reads this in the routine's run history when they choose to,
+not as an interrupt.
 
 ### 9. When something goes wrong
 
@@ -169,8 +171,8 @@ nothing.** A missing briefing is better than a wrong one — the card hides itse
 once the file ages out. Never push a briefing you could not verify against the
 boxscore.
 
-Do not retry a rejected push more than once. Notify to report the failure,
-matching the auto-merge-branches convention of never notifying about a no-op.
+Do not retry a rejected push more than once. Report the failure in the final
+summary — never via a notification tool (see step 8).
 
 ---
 
