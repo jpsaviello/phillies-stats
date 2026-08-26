@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SEASON, fetchRosterWithStats } from '../api/mlb'
+import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import type { RosterPlayer } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import { formatSeasonLine, groupRoster, handedness, seasonLine } from '../utils/roster'
@@ -25,7 +26,8 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
   const [players, setPlayers] = useState<RosterPlayer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Selected | null>(null)
+  // Read from the URL, same as the Batting/Pitching tables — see the note there.
+  const { player: openPlayerId } = useRoute()
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -55,10 +57,18 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
   // chart to render, so his row isn't clickable at all — an empty modal is worse
   // than an inert row.
   function open(p: RosterPlayer) {
-    const line = seasonLine(p)
-    if (!line) return
-    setSelected({ id: p.person.id, name: p.person.fullName, group: line.group, stat: line.stat })
+    if (!seasonLine(p)) return
+    navigate({ player: p.person.id })
   }
+
+  // Rebuilt from the URL + loaded roster rather than captured at click time, so
+  // a link straight to ?player= opens the same modal a click would have.
+  const openPlayer = openPlayerId === null ? null : players.find(p => p.person.id === openPlayerId)
+  const openLine = openPlayer ? seasonLine(openPlayer) : null
+  const selected: Selected | null =
+    openPlayer && openLine
+      ? { id: openPlayer.person.id, name: openPlayer.person.fullName, group: openLine.group, stat: openLine.stat }
+      : null
 
   return (
     <>
@@ -118,7 +128,7 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
           playerName={selected.name}
           group={selected.group}
           seasonStat={selected.stat}
-          onClose={() => setSelected(null)}
+          onClose={() => dismiss({ player: null })}
         />
       )}
     </>

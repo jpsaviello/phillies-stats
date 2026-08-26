@@ -4,6 +4,7 @@ import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
 import { firstPitch } from '../utils/gameTime'
 import GameDetailModal from './GameDetailModal'
+import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import MatchupPreview from './MatchupPreview'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
@@ -23,7 +24,10 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [odds, setOdds] = useState<OddsGame[]>([])
-  const [selectedGame, setSelectedGame] = useState<number | null>(null)
+  // Which box score is open lives in the URL, so a game is linkable and Back
+  // closes the modal instead of leaving the site. GameDetailModal fetches by
+  // gamePk alone, so nothing else has to be restored alongside it.
+  const { game: selectedGame } = useRoute()
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -115,11 +119,11 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
             <div
               key={game.gamePk}
               {...(clickable && {
-                onClick: () => setSelectedGame(game.gamePk),
+                onClick: () => navigate({ game: game.gamePk }),
                 onKeyDown: (e: React.KeyboardEvent) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    setSelectedGame(game.gamePk)
+                    navigate({ game: game.gamePk })
                   }
                 },
                 role: 'button',
@@ -168,7 +172,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
       )}
     </div>
     {selectedGame != null && (
-      <GameDetailModal gamePk={selectedGame} onClose={() => setSelectedGame(null)} />
+      <GameDetailModal gamePk={selectedGame} onClose={() => dismiss({ game: null })} />
     )}
     </>
   )

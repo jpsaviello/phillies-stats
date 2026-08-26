@@ -1,4 +1,7 @@
-type Tab = 'batting' | 'pitching' | 'roster' | 'standings' | 'schedule'
+// The Tab union now lives with the router, since the URL is what holds the
+// active tab. Re-exported below so existing `from './components/Nav'` imports
+// keep working.
+import type { Tab } from '../hooks/useRoute'
 
 interface NavProps {
   active: Tab

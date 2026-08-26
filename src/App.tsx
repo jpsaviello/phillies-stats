@@ -7,7 +7,7 @@ import HeroStrip from './components/HeroStrip'
 import DailyBriefing from './components/DailyBriefing'
 import OnThisDayCard from './components/OnThisDayCard'
 import LiveGameStrip from './components/LiveGameStrip'
-import Nav, { type Tab } from './components/Nav'
+import Nav from './components/Nav'
 import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
 import Roster from './components/Roster'
@@ -15,6 +15,7 @@ import Standings from './components/Standings'
 import Schedule from './components/Schedule'
 import ChatWidget from './components/ChatWidget'
 import FavoritesCard from './components/FavoritesCard'
+import { initRoute, setTab, useRoute } from './hooks/useRoute'
 import { fetchConfig } from './api/mlb'
 import { fetchCurrentUser } from './api/auth'
 import { addFavorite, fetchFavorites, removeFavorite } from './api/favorites'
@@ -24,7 +25,9 @@ import type { Favorite } from './types/favorites'
 import type { Profile } from './types/profile'
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('batting')
+  // The active tab lives in the URL rather than in state, so every view is
+  // linkable and Back moves between them instead of leaving the site.
+  const { tab } = useRoute()
   // Gated on the backend feature flag; starts hidden so a disabled or
   // unreachable flag never flashes the banner before config resolves.
   const [showAllStarBanner, setShowAllStarBanner] = useState(false)
@@ -60,8 +63,13 @@ export default function App() {
   // the one being viewed. Without this the nav entry disappears and <main>
   // renders nothing, with no tab highlighted and no way back except a click.
   useEffect(() => {
-    if (!enableRosterTab && tab === 'roster') setTab('batting')
+    // replace, not push: pushing would leave the now-hidden roster tab in
+    // history, so Back would land on it and bounce straight back here.
+    if (!enableRosterTab && tab === 'roster') setTab('batting', { replace: true })
   }, [enableRosterTab, tab])
+
+  // Gives a bare "/" the address of the tab it's actually showing.
+  useEffect(initRoute, [])
 
   useEffect(() => {
     fetchConfig()

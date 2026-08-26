@@ -1,13 +1,29 @@
 import type { GameLogSplit, StatSplit } from '../types/mlb'
+import { cached, NO_CACHE, type CacheOptions } from '../utils/cache'
 
 const BASE = '/api/mlb'
+const MINUTE = 60_000
 const PHILLIES_ID = 143
 export const SEASON = 2026
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) throw new Error(`MLB API error: ${res.status} ${path}`)
-  return res.json()
+// Cache profiles. Season-long numbers move a few times a day at most, so the
+// generous window is what makes tab switches instant; anything reflecting a game
+// in progress gets a short window or none. See utils/cache.ts for why.
+const STATS: CacheOptions = { ttl: 5 * MINUTE, maxStale: 25 * MINUTE }
+// Shorter than STATS because LiveGameStrip polls the schedule every 60s to
+// decide whether a game has started — a 5-minute window would delay the live
+// strip appearing by that much.
+const SCHEDULE: CacheOptions = { ttl: 1 * MINUTE, maxStale: 4 * MINUTE }
+// A box score can belong to a game still being played, so it gets a window
+// short enough to stay honest but long enough that reopening one is instant.
+const BOXSCORE: CacheOptions = { ttl: 1 * MINUTE }
+
+async function get<T>(path: string, options: CacheOptions = STATS): Promise<T> {
+  return cached(`mlb:${path}`, options, async () => {
+    const res = await fetch(`${BASE}${path}`)
+    if (!res.ok) throw new Error(`MLB API error: ${res.status} ${path}`)
+    return res.json() as Promise<T>
+  })
 }
 
 export async function fetchRoster() {
@@ -181,7 +197,8 @@ export async function fetchLeagueRecords() {
 // about two days out, so most games in this window carry none at all.
 export async function fetchSchedule(startDate: string, endDate: string) {
   const data = await get<{ dates: { date: string; games: Game[] }[] }>(
-    `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore,probablePitcher`
+    `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore,probablePitcher`,
+    SCHEDULE
   )
   return data.dates
 }
@@ -225,9 +242,12 @@ export interface AppConfig {
 // everything-off so a missing/unreachable backend hides gated UI rather than
 // flashing it; callers gate rendering on the resolved value.
 export async function fetchConfig(): Promise<AppConfig> {
-  const res = await fetch('/api/config')
-  if (!res.ok) throw new Error(`Config API ${res.status}`)
-  return res.json()
+  // Backend feature flags; they change on deploy, not during a visit.
+  return cached('config', { ttl: 30 * MINUTE }, async () => {
+    const res = await fetch('/api/config')
+    if (!res.ok) throw new Error(`Config API ${res.status}`)
+    return res.json() as Promise<AppConfig>
+  })
 }
 
 export function teamLogoUrl(teamId: number): string {
@@ -291,7 +311,7 @@ const LIVE_FEED_FIELDS =
   'plays,currentPlay,matchup,batter,pitcher,id,fullName'
 
 export async function fetchLiveFeed(gamePk: number): Promise<LiveFeed> {
-  return get(`/game/${gamePk}/feed/live?fields=${LIVE_FEED_FIELDS}`)
+  return get(`/game/${gamePk}/feed/live?fields=${LIVE_FEED_FIELDS}`, NO_CACHE)
 }
 
 // One player's line in a single game. `stats` is that game's line and is an
@@ -394,7 +414,7 @@ const BOXSCORE_FIELDS =
   'decisions,winner,loser,save,note'
 
 export async function fetchBoxscore(gamePk: number): Promise<GameBoxscore> {
-  return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`)
+  return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`, BOXSCORE)
 }
 
 // Trimmed to just the pitching lines — BullpenUsage needs numbers from every
@@ -437,7 +457,7 @@ const BULLPEN_FIELDS =
   'baseOnBalls,hits,inheritedRunners,pitchers'
 
 export async function fetchBullpenBoxscore(gamePk: number): Promise<BullpenBoxscore> {
-  return get(`/game/${gamePk}/feed/live?fields=${BULLPEN_FIELDS}`)
+  return get(`/game/${gamePk}/feed/live?fields=${BULLPEN_FIELDS}`, BOXSCORE)
 }
 
 interface OddsOutcome {
@@ -470,7 +490,11 @@ export function formatOdds(price: number): string {
 // The backend holds the Odds API key and a shared 30-min cache; a 503 here
 // means the server has no key configured (callers already fail soft).
 export async function fetchOdds(): Promise<OddsGame[]> {
-  const res = await fetch('/api/odds')
-  if (!res.ok) throw new Error(`Odds API ${res.status}`)
-  return res.json()
+  // The backend already caches upstream odds for 30 minutes; this only stops
+  // Schedule and HeroStrip from each making the same round trip.
+  return cached('odds', { ttl: 5 * MINUTE, maxStale: 25 * MINUTE }, async () => {
+    const res = await fetch('/api/odds')
+    if (!res.ok) throw new Error(`Odds API ${res.status}`)
+    return res.json() as Promise<OddsGame[]>
+  })
 }

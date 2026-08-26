@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchPitchingStats } from '../api/mlb'
+import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import type { PitchingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import BullpenUsage from './BullpenUsage'
@@ -27,7 +28,8 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
-  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: PitchingStats } | null>(null)
+  // Read from the URL, same as BattingTable — see the note there.
+  const { player: openPlayerId } = useRoute()
 
   // See BattingTable — reloadKey drives the error state's Try again button.
   const [reloadKey, setReloadKey] = useState(0)
@@ -43,6 +45,11 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
       })
       .finally(() => setLoading(false))
   }, [reloadKey])
+
+  // Looked up in `splits`, not the filtered rows, so a link to a pitcher with
+  // no innings still opens; null until the fetch lands, which is what restores
+  // the modal from a cold URL.
+  const selected = openPlayerId === null ? null : splits.find(s => s.player.id === openPlayerId) ?? null
 
   const sorted = [...splits]
     .filter(s => parseFloat(s.stat.inningsPitched) > 0)
@@ -131,11 +138,11 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                     tabIndex={0}
                     aria-label={`Game log for ${player.fullName}`}
                     className="group hover:bg-red-50 transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
-                    onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
+                    onClick={() => navigate({ player: player.id })}
                     onKeyDown={e => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        setSelectedPlayer({ id: player.id, name: player.fullName, stat })
+                        navigate({ player: player.id })
                       }
                     }}
                   >
@@ -163,13 +170,13 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
               </tbody>
             </table>
           </div>
-          {selectedPlayer && (
+          {selected && (
             <GameLogModal
-              personId={selectedPlayer.id}
-              playerName={selectedPlayer.name}
+              personId={selected.player.id}
+              playerName={selected.player.fullName}
               group="pitching"
-              seasonStat={selectedPlayer.stat}
-              onClose={() => setSelectedPlayer(null)}
+              seasonStat={selected.stat}
+              onClose={() => dismiss({ player: null })}
             />
           )}
         </>

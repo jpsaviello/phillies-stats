@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchBattingStats } from '../api/mlb'
+import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import type { BattingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
@@ -22,7 +23,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof BattingStats; dir: 'asc' | 'desc' }>({ key: 'avg', dir: 'desc' })
-  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; name: string; stat: BattingStats } | null>(null)
+  // Which player's game log is open is read from the URL rather than held in
+  // state: that makes the modal linkable, and makes Back close it instead of
+  // leaving the site. Deriving it (rather than syncing state to the URL) means
+  // there is only ever one source of truth to disagree with.
+  const { player: openPlayerId } = useRoute()
 
   // Bumping reloadKey re-runs the fetch; it's what the error state's Try again
   // button drives.
@@ -40,6 +45,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
       })
       .finally(() => setLoading(false))
   }, [reloadKey])
+
+  // Looked up in `splits`, not the filtered/sorted rows, so a link to a player
+  // with no at-bats still opens. Resolves to null until the fetch lands, which
+  // is what lets a cold URL restore the modal once data arrives.
+  const selected = openPlayerId === null ? null : splits.find(s => s.player.id === openPlayerId) ?? null
 
   if (loading) return <TableSkeleton rows={12} cols={9} />
   if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
@@ -132,11 +142,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
               tabIndex={0}
               aria-label={`Game log for ${player.fullName}`}
               className="group hover:bg-red-50 transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
-              onClick={() => setSelectedPlayer({ id: player.id, name: player.fullName, stat })}
+              onClick={() => navigate({ player: player.id })}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  setSelectedPlayer({ id: player.id, name: player.fullName, stat })
+                  navigate({ player: player.id })
                 }
               }}
             >
@@ -168,13 +178,13 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
         </tbody>
       </table>
     </div>
-    {selectedPlayer && (
+    {selected && (
       <GameLogModal
-        personId={selectedPlayer.id}
-        playerName={selectedPlayer.name}
+        personId={selected.player.id}
+        playerName={selected.player.fullName}
         group="hitting"
-        seasonStat={selectedPlayer.stat}
-        onClose={() => setSelectedPlayer(null)}
+        seasonStat={selected.stat}
+        onClose={() => dismiss({ player: null })}
       />
     )}
     </>
