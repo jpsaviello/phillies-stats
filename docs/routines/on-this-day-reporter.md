@@ -11,8 +11,8 @@ follow the "Prompt" section, so editing this file changes what the routine does
 on its next run — no dashboard edit needed. Keep the routine's stored prompt
 limited to invariants, or the two will drift.
 
-**Routine:** `trig_017HYfmZPpHAyXVde2QcQWb7` ·
-[manage](https://claude.ai/code/routines/trig_017HYfmZPpHAyXVde2QcQWb7) ·
+**Routine:** `trig_01FRTs8tgq6MA8wRUY1XfrK7` ·
+[manage](https://claude.ai/code/routines/trig_01FRTs8tgq6MA8wRUY1XfrK7) ·
 daily at 13:00 UTC (≈9 AM ET), model `claude-sonnet-5`.
 
 **Why 13:00 and not 12:00:** `daily-beat-reporter` fires at 12:00 UTC and ends by
@@ -193,7 +193,7 @@ carries commits authored by someone other than you (it does carry
 `Claude <noreply@anthropic.com>` commits). **If the push is rejected, that IS a run
 failure** — nothing reaches production without it. Push to
 `claude/on-this-day-YYYY-MM-DD` instead so the work isn't lost, then report in the
-notification that the card was **not** published, and why.
+run's final summary that the card was **not** published, and why.
 
 ### 7. Verify production picked it up
 
@@ -204,14 +204,15 @@ curl -s https://phillies-stats.vercel.app/on-this-day.json | head -5
 The `date` in the response must be today's. The deploy build can still be running
 right after the push — if the first check shows yesterday's `date`, wait a short
 moment and check again before concluding the deploy failed. If it's still stale
-after that, say so in the notification rather than reporting success.
+after that, say so in the final summary rather than reporting success.
 
-### 8. Notify
+### 8. No push notifications
 
-Send one push notification per run: the headline plus the historical date (for
-example `Aug 5, 2014 — PHI 2, HOU 1 (15 inn)`). Mention it if the push was
-rejected (so production was not updated) or if production still shows a stale
-`date` after the push.
+This routine must **never** call a notification tool (e.g. `PushNotification`) —
+not on success, not on failure. The only report of what happened is the run's own
+final text summary (step 9's three lines), which nobody's phone sees. This is
+deliberate: the user reads this in the routine's run history when they choose to,
+not as an interrupt.
 
 ### 9. When something goes wrong
 
@@ -224,8 +225,8 @@ degradation is intended, so do not overwrite a good card with a worse one just t
 have written something.
 
 Never push a card you could not verify against the boxscore. Do not retry a
-rejected push more than once. Notify to report the failure, matching the
-auto-merge-branches convention of never notifying about a no-op.
+rejected push more than once. Report the failure in the final summary — never via
+a notification tool (see step 8).
 
 ---
 
