@@ -13,6 +13,12 @@ export interface RouteResult {
   // and purely additive: every route that predates auth omits it, so both
   // wrappers' cookie handling no-ops for them.
   cookies?: string[]
+  // Set only by routes whose response isn't JSON -- currently just the
+  // unsubscribe link, which a mail client opens in a browser and so has to
+  // answer with a readable page rather than {"ok":true}. When present, `body`
+  // must already be a string; both wrappers send it verbatim. Same additive
+  // contract as `cookies`: every other route omits it and is unaffected.
+  contentType?: string
 }
 
 const MLB_V1 = 'https://statsapi.mlb.com/api/v1'

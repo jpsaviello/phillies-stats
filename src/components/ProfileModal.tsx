@@ -28,6 +28,7 @@ interface FormState {
   favoriteNumber: string
   fanSince: string
   notifyDailyBriefing: boolean
+  notifyOnThisDay: boolean
   notifyGameReminders: boolean
 }
 
@@ -39,6 +40,7 @@ const EMPTY_FORM: FormState = {
   favoriteNumber: '',
   fanSince: '',
   notifyDailyBriefing: false,
+  notifyOnThisDay: false,
   notifyGameReminders: false,
 }
 
@@ -51,6 +53,7 @@ function formFrom(profile: Profile): FormState {
     favoriteNumber: profile.favoriteNumber ?? '',
     fanSince: profile.fanSince !== null ? String(profile.fanSince) : '',
     notifyDailyBriefing: profile.notifyDailyBriefing,
+    notifyOnThisDay: profile.notifyOnThisDay,
     notifyGameReminders: profile.notifyGameReminders,
   }
 }
@@ -64,6 +67,7 @@ function updateFrom(form: FormState): ProfileUpdate {
     favoriteNumber: form.favoriteNumber.trim() || null,
     fanSince: form.fanSince !== '' ? Number(form.fanSince) : null,
     notifyDailyBriefing: form.notifyDailyBriefing,
+    notifyOnThisDay: form.notifyOnThisDay,
     notifyGameReminders: form.notifyGameReminders,
   }
 }
@@ -479,7 +483,9 @@ export default function ProfileModal({
               <section className="space-y-3">
                 <h3 className="card-label">Notifications</h3>
                 <p className="text-xs text-gray-500">
-                  We don't send anything yet — this saves your preference for when we do.
+                  We send one email each morning to <strong>{user.email}</strong>, with whichever
+                  sections you pick below. Unsubscribe any time from the link in the email, or by
+                  clearing these boxes.
                 </p>
 
                 <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -494,12 +500,28 @@ export default function ProfileModal({
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input
                     type="checkbox"
+                    checked={form.notifyOnThisDay}
+                    onChange={e => setForm({ ...form, notifyOnThisDay: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-phillies-red focus:ring-phillies-red"
+                  />
+                  Email me "On this day"
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
                     checked={form.notifyGameReminders}
                     onChange={e => setForm({ ...form, notifyGameReminders: e.target.checked })}
                     className="h-4 w-4 rounded border-gray-300 text-phillies-red focus:ring-phillies-red"
                   />
                   Remind me before game time
                 </label>
+                {/* Scoped to this one pref now that the other two actually
+                    send -- the old blanket "we don't send anything yet" line
+                    above them would be false. */}
+                <p className="text-xs text-gray-500">
+                  Game reminders aren't built yet — that box just saves your preference for when
+                  they are.
+                </p>
               </section>
 
               {saveError !== null && (

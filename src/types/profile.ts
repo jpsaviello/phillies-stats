@@ -1,6 +1,6 @@
 // The signed-in user's profile, as the backend exposes it. Every field is
-// nullable except the two notification prefs, mirroring server/src/profile.ts's
-// DEFAULT_PROFILE (an all-null, both-false row is the normal state for anyone
+// nullable except the three notification prefs, mirroring server/src/profile.ts's
+// DEFAULT_PROFILE (an all-null, all-false row is the normal state for anyone
 // who hasn't saved a profile yet — the row is created lazily on first save).
 export interface Profile {
   displayName: string | null
@@ -11,6 +11,7 @@ export interface Profile {
   fanSince: number | null
   avatarDataUrl: string | null
   notifyDailyBriefing: boolean
+  notifyOnThisDay: boolean
   notifyGameReminders: boolean
 }
 

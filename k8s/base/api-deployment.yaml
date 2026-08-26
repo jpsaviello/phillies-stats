@@ -48,6 +48,28 @@ spec:
                   # return 503 and /api/me falls soft to {"user": null}, so the
                   # header just shows "Sign In" and nothing else breaks.
                   optional: true
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: phillies-stats-sendgrid
+                  key: SENDGRID_API_KEY
+                  # Pod starts without the secret; sendEmail() returns
+                  # {success: false, error: 'email not configured'}.
+                  optional: true
+            # Only Vercel Cron actually calls /api/notifications/daily (see
+            # vercel.json). Kept here for parity so the route can be exercised
+            # against this backend by hand; without it the route answers 503.
+            - name: CRON_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: phillies-stats-sendgrid
+                  key: CRON_SECRET
+                  optional: true
+            # Canonical origin for the links inside the email and for reading
+            # briefing.json / on-this-day.json. Falls back to the request's own
+            # origin when unset.
+            - name: SITE_ORIGIN
+              value: "http://phillies-stats.com"
           readinessProbe:
             httpGet:
               path: /api/health

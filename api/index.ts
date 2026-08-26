@@ -4,6 +4,7 @@ import { handleChat } from '../server/src/chat.js'
 import { isHttpsFrom, sessionTokenFrom } from '../server/src/cookies.js'
 import { addFavorite, listFavorites, removeFavorite } from '../server/src/favorites.js'
 import { mlbProxy, getOdds, getConfig, type RouteResult } from '../server/src/core.js'
+import { runDailyEmails, unsubscribe } from '../server/src/notifications.js'
 import {
   changePassword,
   deleteAccount,
@@ -42,7 +43,33 @@ function send(res: VercelResponse, result: RouteResult) {
   if (result.cookies !== undefined && result.cookies.length > 0) {
     res.setHeader('Set-Cookie', result.cookies)
   }
+  // Non-JSON responses (currently only the unsubscribe page) carry their own
+  // content type and an already-serialized string body, so .json() -- which
+  // would re-serialize it as a quoted JSON string -- is bypassed.
+  if (result.contentType !== undefined) {
+    res.setHeader('Content-Type', result.contentType)
+    res.statusCode = result.status
+    return res.end(result.body as string)
+  }
   res.status(result.status).json(result.body)
+}
+
+// The origin this request arrived on -- used to fetch briefing.json /
+// on-this-day.json and to build the email's links. On Vercel that is the
+// deployment that just shipped the fresh JSON. SITE_ORIGIN overrides it in
+// notifications.ts when set.
+function originFrom(req: VercelRequest): string {
+  const header = (name: string): string | undefined => {
+    const raw = req.headers[name]
+    return Array.isArray(raw) ? raw[0] : raw
+  }
+  const proto = header('x-forwarded-proto')?.split(',')[0]?.trim() ?? 'https'
+  const host = header('x-forwarded-host') ?? header('host') ?? ''
+  return `${proto}://${host}`
+}
+
+function queryValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -136,6 +163,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return send(
           res,
           await deleteAccount(req.body, token, isHttpsFrom(req.headers['x-forwarded-proto']))
+        )
+      }
+    }
+    // Cron-triggered (vercel.json's crons entry) plus the unauthenticated
+    // unsubscribe link, which accepts POST as well so mail clients' native
+    // one-click List-Unsubscribe control works.
+    if (first === 'notifications') {
+      if (req.method === 'GET' && rest[0] === 'daily') {
+        return send(
+          res,
+          await runDailyEmails(queryValue(req.headers['authorization']), originFrom(req))
+        )
+      }
+      if ((req.method === 'GET' || req.method === 'POST') && rest[0] === 'unsubscribe') {
+        return send(
+          res,
+          await unsubscribe(
+            queryValue(queryParams['token']),
+            queryValue(queryParams['kind'])
+          )
         )
       }
     }

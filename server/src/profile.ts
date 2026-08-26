@@ -30,6 +30,7 @@ type ProfileRow = {
   fan_since: number | null
   avatar_data_url: string | null
   notify_daily_briefing: boolean
+  notify_on_this_day: boolean
   notify_game_reminders: boolean
 }
 
@@ -42,6 +43,7 @@ interface Profile {
   fanSince: number | null
   avatarDataUrl: string | null
   notifyDailyBriefing: boolean
+  notifyOnThisDay: boolean
   notifyGameReminders: boolean
 }
 
@@ -56,6 +58,7 @@ const DEFAULT_PROFILE: Profile = {
   fanSince: null,
   avatarDataUrl: null,
   notifyDailyBriefing: false,
+  notifyOnThisDay: false,
   notifyGameReminders: false,
 }
 
@@ -198,6 +201,7 @@ function toProfile(row: ProfileRow): Profile {
     fanSince: row.fan_since,
     avatarDataUrl: row.avatar_data_url,
     notifyDailyBriefing: row.notify_daily_briefing,
+    notifyOnThisDay: row.notify_on_this_day,
     notifyGameReminders: row.notify_game_reminders,
   }
 }
@@ -205,7 +209,8 @@ function toProfile(row: ProfileRow): Profile {
 async function readProfile(pool: Pool, userId: string): Promise<Profile> {
   const rows = await pool.query<ProfileRow>(
     `SELECT display_name, phone, location, favorite_player_id, favorite_number,
-            fan_since, avatar_data_url, notify_daily_briefing, notify_game_reminders
+            fan_since, avatar_data_url, notify_daily_briefing, notify_on_this_day,
+            notify_game_reminders
        FROM user_profiles WHERE user_id = $1 AND deleted_at IS NULL`,
     [userId]
   )
@@ -233,6 +238,7 @@ interface UpdateFields {
   favoriteNumber: string | null
   fanSince: number | null
   notifyDailyBriefing: boolean
+  notifyOnThisDay: boolean
   notifyGameReminders: boolean
 }
 
@@ -247,6 +253,7 @@ function updateFieldsFrom(requestBody: unknown): UpdateFields {
     favoriteNumber: normalizeText(body?.favoriteNumber),
     fanSince: typeof body?.fanSince === 'number' ? body.fanSince : null,
     notifyDailyBriefing: body?.notifyDailyBriefing as unknown as boolean,
+    notifyOnThisDay: body?.notifyOnThisDay as unknown as boolean,
     notifyGameReminders: body?.notifyGameReminders as unknown as boolean,
   }
 }
@@ -269,6 +276,7 @@ export async function updateProfile(
     validateFavoriteNumber(body?.favoriteNumber) ??
     validateFanSince(body?.fanSince) ??
     validateBoolean(body?.notifyDailyBriefing, 'notify_daily_briefing') ??
+    validateBoolean(body?.notifyOnThisDay, 'notify_on_this_day') ??
     validateBoolean(body?.notifyGameReminders, 'notify_game_reminders')
   if (problem !== null) return { status: 400, body: { error: problem } }
 
@@ -278,8 +286,9 @@ export async function updateProfile(
     await auth.pool.query(
       `INSERT INTO user_profiles (
          user_id, display_name, phone, location, favorite_player_id,
-         favorite_number, fan_since, notify_daily_briefing, notify_game_reminders
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         favorite_number, fan_since, notify_daily_briefing, notify_on_this_day,
+         notify_game_reminders
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (user_id) DO UPDATE SET
          deleted_at = NULL,
          display_name = EXCLUDED.display_name,
@@ -289,6 +298,7 @@ export async function updateProfile(
          favorite_number = EXCLUDED.favorite_number,
          fan_since = EXCLUDED.fan_since,
          notify_daily_briefing = EXCLUDED.notify_daily_briefing,
+         notify_on_this_day = EXCLUDED.notify_on_this_day,
          notify_game_reminders = EXCLUDED.notify_game_reminders,
          updated_at = now()`,
       [
@@ -300,6 +310,7 @@ export async function updateProfile(
         fields.favoriteNumber,
         fields.fanSince,
         fields.notifyDailyBriefing,
+        fields.notifyOnThisDay,
         fields.notifyGameReminders,
       ]
     )
