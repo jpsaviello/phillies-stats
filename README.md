@@ -2,7 +2,7 @@
 
 A personal project — a stats site for the Philadelphia Phillies. Batting/pitching leaders, standings (with a real wild-card tiebreaker calculation), schedule with live odds, a daily AI-written beat report, an "on this day" historical card, pregame matchup previews, bullpen workload tracking, and a Claude-powered chat bot you can ask about the team. Built almost entirely with [Claude Code](https://claude.com/claude-code).
 
-**Live site: [phillies-stats.vercel.app](https://phillies-stats.vercel.app/)**
+**Live site: [allthingsphils.com](https://allthingsphils.com/)**
 
 <img width="1686" height="1002" alt="Phillies Stats screenshot" src="https://github.com/user-attachments/assets/0f62af44-dad8-4b2e-b56a-273650de7c74" />
 

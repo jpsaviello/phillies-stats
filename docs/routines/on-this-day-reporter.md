@@ -40,12 +40,14 @@ SDKs — no third-party REST APIs), so every data fetch would fail with
 
 ```
 statsapi.mlb.com
-phillies-stats.vercel.app
+allthingsphils.com
 ```
 
-`phillies-stats.vercel.app` covers the post-push production check (step 7). No
-Vercel token or org/project IDs are needed — deploy happens automatically when
-the routine pushes to `develop` (see step 6), not via a CLI call.
+`allthingsphils.com` is the custom domain now fronting production (it replaced
+`phillies-stats.vercel.app` — same Vercel deployment, different hostname) and
+covers the post-push production check (step 7). No Vercel token or
+org/project IDs are needed — deploy happens automatically when the routine
+pushes to `develop` (see step 6), not via a CLI call.
 
 Allowlists are per-environment and are **not** inherited between environments, so
 if this routine is ever moved to a different environment, the hosts above have to
@@ -198,7 +200,7 @@ run's final summary that the card was **not** published, and why.
 ### 7. Verify production picked it up
 
 ```
-curl -s https://phillies-stats.vercel.app/on-this-day.json | head -5
+curl -s https://allthingsphils.com/on-this-day.json | head -5
 ```
 
 The `date` in the response must be today's. The deploy build can still be running
@@ -232,7 +234,8 @@ a notification tool (see step 8).
 
 ## Deployment behavior (read this before wondering why the card is missing)
 
-- **Vercel production** (`phillies-stats.vercel.app`) is updated automatically when
+- **Vercel production** (`allthingsphils.com`, the custom domain in front of the
+  Vercel deployment — no longer `phillies-stats.vercel.app`) is updated automatically when
   the routine's `git push origin develop` (step 6) lands — `develop` is this
   project's configured production branch, so the push itself is the deploy.
   Production is as fresh as the last successful push, so the card's staleness
