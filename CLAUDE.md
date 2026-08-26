@@ -147,6 +147,19 @@ Requires the `playwright` Python package and its Chromium browser binary to be i
 
 **Verifying chat changes costs real money** — every widget message is a billed Anthropic request against the user's key, so ask before sending one and keep the run to a single question. Most of a chat change can be verified for free first: the tools' trimming logic is pure, so replay it against real `statsapi.mlb.com` JSON (curl the endpoint, apply the same field picks) and check the shape before spending anything; the rate limiter has its own free path (see above). When you do run the widget, both servers must be up (`npm run dev:server` **and** `npm run dev`), and drive it via `aria-label="Open chat"` → the `Ask about the Phillies…` placeholder → Enter, reading the reply out of the `aria-label="Phillies chat"` dialog. Allow ~90s: a multi-tool answer under Opus is slow, and a short Playwright timeout looks like a failure when the request is merely still running.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every PR into `develop` and on push to `develop`. Six independent jobs, each its own GitHub check:
+
+- **frontend-build** — `npm ci && npm run build` (`tsc -b && vite build`). The main signal: nothing else in CI type-checks the frontend or proves it bundles.
+- **frontend-lint** — `npm ci && npm run lint` (Oxlint).
+- **backend-build** — `npm ci && npm run build` inside `server/`. Easy to forget this needs its own check: `server/` is a separate `package.json` with its own `tsc` build (see Architecture), and before this workflow nothing verified it compiled short of `pipeline.sh` or a live Vercel build failing.
+- **dependency-drift** — `node scripts/check-dep-drift.mjs`, no install needed (it only reads both `package.json` files). Root `package.json` deliberately duplicates `@anthropic-ai/sdk` and `pg` so Vercel's root-level install can resolve them when bundling `api/index.ts` (see "On Vercel" below) — this catches the two copies drifting apart, which Vercel's build wouldn't error on, it would just silently bundle the stale version.
+- **k8s-validate** — renders `k8s/base` and `k8s/overlays/local` with `kubectl kustomize` (pure client-side, no cluster needed) and schema-validates the output plus the standalone `k8s/monitoring/grafana-ingress.yaml` with `kubeconform`. Catches a broken kustomization or a malformed manifest before it reaches `pipeline.sh`.
+- **secret-scan** — runs the open-source `gitleaks` CLI directly via its official Docker image (`docker run zricethezav/gitleaks:latest detect`) against the checked-out tree, **not** the `gitleaks-action` wrapper — that wrapper gates some repository-ownership types behind a paid license, and the plain binary needs none of that.
+
+**What this doesn't cover:** there's still no automated test suite (see Testing above) — these jobs prove the app builds, lints clean, and ships no committed secret, not that any feature behaves correctly. `webapp-testing` verification before calling a feature done is still required and CI is not a substitute for it.
+
 ## Automated routines
 
 **auto-merge-branches routine** (finds unmerged branches, opens/merges PRs into `develop`): only send a push notification when there's something actionable — a branch merged, a PR blocked on failing checks, a merge conflict, or an error running the routine. If the run finds no candidate branches or nothing to do, end the run silently; do not notify just to report a no-op.

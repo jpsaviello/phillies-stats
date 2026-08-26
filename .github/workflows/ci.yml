@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+# A second push to the same PR should cancel the still-running check for the
+# first — otherwise two runs race and the PR sits on whichever finishes last.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-build:
+    name: Frontend build (tsc + vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  frontend-lint:
+    name: Frontend lint (oxlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  backend-build:
+    name: Backend build (server/)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+        working-directory: server
+      - run: npm run build
+        working-directory: server
+
+  dependency-drift:
+    name: Root/server dependency drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Root package.json deliberately duplicates @anthropic-ai/sdk and pg so
+      # Vercel's root-level install can resolve them when bundling
+      # api/index.ts (see CLAUDE.md, "On Vercel"). No npm install needed here
+      # — the check only reads both package.json files.
+      - run: node scripts/check-dep-drift.mjs
+
+  k8s-validate:
+    name: k8s manifests (kustomize + kubeconform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+      # kubectl kustomize is pure client-side rendering (no cluster needed) —
+      # catches a broken kustomization.yaml or YAML syntax error before it
+      # reaches pipeline.sh, which today is the first thing that would notice.
+      - name: Build base + local overlay
+        run: |
+          kubectl kustomize k8s/base > /tmp/base.yaml
+          kubectl kustomize k8s/overlays/local > /tmp/overlay-local.yaml
+      # kubeconform schema-validates the rendered manifests against the k8s
+      # API without needing a real cluster. grafana-ingress.yaml isn't part of
+      # either kustomization (see the comment in that file — it's applied
+      # standalone to the monitoring namespace), so it's checked directly.
+      - name: Validate rendered manifests
+        run: |
+          kubeconform -strict -summary /tmp/base.yaml /tmp/overlay-local.yaml k8s/monitoring/grafana-ingress.yaml
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The open-source gitleaks CLI directly via its official image, rather
+      # than the gitleaks-action wrapper — that wrapper gates some repo
+      # ownership types behind a paid license, and the plain binary needs
+      # none of that. Scans the working tree at HEAD, which is what matters
+      # here: is a secret checked in right now, not whether one ever was.
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --no-git --redact -v
