@@ -142,7 +142,7 @@ export default function LiveGameStrip() {
               <img
                 src={playerHeadshotUrl(matchup.batter.id)}
                 alt=""
-                className="w-8 h-8 rounded-full"
+                className="w-8 h-8 rounded-full object-cover"
                 onError={hideOnError}
               />
               <div>
@@ -158,7 +158,7 @@ export default function LiveGameStrip() {
               <img
                 src={playerHeadshotUrl(matchup.pitcher.id)}
                 alt=""
-                className="w-8 h-8 rounded-full"
+                className="w-8 h-8 rounded-full object-cover"
                 onError={hideOnError}
               />
               <div>
