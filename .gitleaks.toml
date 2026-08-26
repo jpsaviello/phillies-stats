@@ -1,0 +1,26 @@
+# Config for the secret-scan CI job (.github/workflows/ci.yml). Keep the
+# bundled default ruleset — this only narrows it around specific confirmed
+# false positives, verified by hand against the actual file contents each
+# time one is added here. Never widen an entry beyond the exact string that
+# triggered it, and never allowlist a whole path just to quiet the tool.
+title = "phillies-stats gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Confirmed false positives — not credentials"
+  # Match against the whole source line, not just the rule's captured span —
+  # generic-api-key's match window is narrower than the phrases below, so
+  # matching only the capture would silently fail to allowlist anything.
+  regexTarget = "line"
+  regexes = [
+    # The generic-api-key rule matches any short string literal assigned to a
+    # var whose name contains "KEY". DISMISS_KEY is the localStorage key name
+    # for AllStarBanner's dismiss flag (see CLAUDE.md's localStorage section),
+    # not a secret — it appears in both the component and its design doc.
+    '''phillies_allstar_banner_dismissed_2026''',
+    # .superpowers/sdd/progress.md:101 narrates that a *placeholder* value was
+    # appended to .env.local for local dev, not a real key.
+    '''ANTHROPIC_API_KEY= placeholder appended''',
+  ]
