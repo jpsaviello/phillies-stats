@@ -32,13 +32,15 @@ REST APIs), so every data fetch would fail with `403 host_not_allowed`. Add:
 
 ```
 statsapi.mlb.com
-phillies-stats.vercel.app
+allthingsphils.com
 ```
 
-`phillies-stats.vercel.app` covers the optional odds fetch (step 2, item 6) and the
-post-push production check (step 7). No Vercel token or org/project IDs are
-needed — deploy happens automatically when the routine pushes to `develop` (see
-step 6), not via a CLI call, so there is nothing to authenticate.
+`allthingsphils.com` is the custom domain now fronting production (it replaced
+`phillies-stats.vercel.app` — same Vercel deployment, different hostname) and
+covers the optional odds fetch (step 2, item 6) and the post-push production
+check (step 7). No Vercel token or org/project IDs are needed — deploy happens
+automatically when the routine pushes to `develop` (see step 6), not via a CLI
+call, so there is nothing to authenticate.
 
 ---
 
@@ -68,7 +70,7 @@ Everything comes from `statsapi.mlb.com` (public, no key). Team id `143`, season
    The NL East is division id `204`; `division.name` is often absent, so match on the id.
 5. **Season totals**, only if you cite one (e.g. "his 15th home run"):
    `/api/v1/stats?stats=season&group=hitting&teamId=143&season=2026&sportId=1&playerPool=all&limit=100`
-6. **Odds** (optional): `https://phillies-stats.vercel.app/api/odds`. Omit the
+6. **Odds** (optional): `https://allthingsphils.com/api/odds`. Omit the
    betting line if it returns non-200 or has no entry for the matchup — games
    more than a day out are usually not priced yet.
 
@@ -147,7 +149,7 @@ run's final summary that the briefing was **not** published, and why.
 ### 7. Verify production picked it up
 
 ```
-curl -s https://phillies-stats.vercel.app/briefing.json | head -5
+curl -s https://allthingsphils.com/briefing.json | head -5
 ```
 
 The `date` in the response must be today's. The deploy build can still be running
@@ -178,7 +180,8 @@ summary — never via a notification tool (see step 8).
 
 ## Deployment behavior (read this before wondering why the card is missing)
 
-- **Vercel production** (`phillies-stats.vercel.app`) is updated automatically when
+- **Vercel production** (`allthingsphils.com`, the custom domain in front of the
+  Vercel deployment — no longer `phillies-stats.vercel.app`) is updated automatically when
   the routine's `git push origin develop` (step 6) lands — `develop` is this
   project's configured production branch, so the push itself is the deploy. There
   is no separate CLI step. Production is as fresh as the last successful push, so
