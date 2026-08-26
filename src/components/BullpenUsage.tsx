@@ -32,8 +32,15 @@ function OutingTrail({ workload }: { workload: PitcherWorkload }) {
 
 function WorkloadRow({ workload }: { workload: PitcherWorkload }) {
   return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-4 py-3 text-gray-900">{workload.name}</td>
+    <tr className="group hover:bg-gray-50">
+      {/* Pinned while the row scrolls, same idiom as the Batting/Pitching
+          tables' Player column: the flags sit in the last column, so reaching
+          them on a phone otherwise scrolls the name out of view. Needs its own
+          background (a sticky cell would show the rows beneath it through a
+          transparent one) plus group-hover to keep the row highlight. */}
+      <td className="sticky left-0 bg-white px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
+        {workload.name}
+      </td>
       <td className="px-4 py-3 text-center tabular-nums">
         {workload.daysSinceLast === null ? <span className="text-gray-400">—</span> : workload.daysSinceLast}
       </td>
@@ -65,7 +72,10 @@ function GroupHeader({ label }: { label: string }) {
   return (
     <tr className="bg-gray-50">
       <td colSpan={7} className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
-        {label}
+        {/* Spans every column, so the label itself is pinned rather than the
+            cell — without this it scrolls out from under the sticky Pitcher
+            column and reads as a truncated word. */}
+        <span className="sticky left-0 inline-block">{label}</span>
       </td>
     </tr>
   )
@@ -161,37 +171,45 @@ export default function BullpenUsage({ seasonSplits }: Props) {
   return (
     <div className="mb-6">
       <h2 className="text-lg font-semibold text-gray-800 mb-3">Bullpen Usage</h2>
-      <table className="w-full text-sm card overflow-hidden">
-        <thead>
-          <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <th scope="col" className="px-4 py-3 text-left font-medium">Pitcher</th>
-            <th scope="col" className="px-4 py-3 text-center font-medium">Rest</th>
-            <th scope="col" className="px-4 py-3 text-center font-medium">App</th>
-            <th scope="col" className="px-4 py-3 text-center font-medium">Pit</th>
-            <th scope="col" className="px-4 py-3 text-center font-medium">IP</th>
-            <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left font-medium">Recent</th>
-            <th scope="col" className="px-4 py-3 text-left font-medium"></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {bullpen.length > 0 && (
-            <>
-              <GroupHeader label="Bullpen" />
-              {bullpen.map(w => (
-                <WorkloadRow key={w.playerId} workload={w} />
-              ))}
-            </>
-          )}
-          {rotation.length > 0 && (
-            <>
-              <GroupHeader label="Rotation" />
-              {rotation.map(w => (
-                <WorkloadRow key={w.playerId} workload={w} />
-              ))}
-            </>
-          )}
-        </tbody>
-      </table>
+      {/* Scroll wrapper, matching the Batting/Pitching/Roster tables. The flag
+          badges are whitespace-nowrap, so this table's min-content width is
+          wider than a phone viewport; bare, it had nothing to scroll inside and
+          stretched the whole document instead, leaving every other section
+          narrower than the page and the rows running off to the right. The card
+          chrome moves out here so the border still wraps the scroll area. */}
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th scope="col" className="sticky left-0 bg-gray-50 px-4 py-3 text-left font-medium">Pitcher</th>
+              <th scope="col" className="px-4 py-3 text-center font-medium">Rest</th>
+              <th scope="col" className="px-4 py-3 text-center font-medium">App</th>
+              <th scope="col" className="px-4 py-3 text-center font-medium">Pit</th>
+              <th scope="col" className="px-4 py-3 text-center font-medium">IP</th>
+              <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left font-medium">Recent</th>
+              <th scope="col" className="px-4 py-3 text-left font-medium"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {bullpen.length > 0 && (
+              <>
+                <GroupHeader label="Bullpen" />
+                {bullpen.map(w => (
+                  <WorkloadRow key={w.playerId} workload={w} />
+                ))}
+              </>
+            )}
+            {rotation.length > 0 && (
+              <>
+                <GroupHeader label="Rotation" />
+                {rotation.map(w => (
+                  <WorkloadRow key={w.playerId} workload={w} />
+                ))}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-2 text-xs text-gray-500">
         Appearances {windowStart && today ? `${windowStart} – ${today}` : 'this week'}. Rest is days
         since last appearance — not an availability prediction.
