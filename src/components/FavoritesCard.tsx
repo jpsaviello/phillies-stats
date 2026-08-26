@@ -104,7 +104,7 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
                 <img
                   src={playerHeadshotUrl(favorite.playerId)}
                   alt={name}
-                  className="w-7 h-7 rounded-full shrink-0"
+                  className="w-7 h-7 rounded-full shrink-0 object-cover"
                   onError={hideOnError}
                 />
                 <div className="min-w-0">

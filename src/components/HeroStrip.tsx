@@ -260,7 +260,7 @@ export default function HeroStrip() {
                     <img
                       src={playerHeadshotUrl(leader.player.id)}
                       alt={leader.player.fullName}
-                      className="w-6 h-6 rounded-full shrink-0"
+                      className="w-6 h-6 rounded-full shrink-0 object-cover"
                       onError={hideOnError}
                     />
                     <span className="card-label w-8 shrink-0">

@@ -69,7 +69,7 @@ function StarterHead({ starter }: { starter: Starter | null }) {
         <img
           src={playerHeadshotUrl(starter.pitcher.id)}
           alt=""
-          className="w-10 h-10 rounded-full bg-gray-100"
+          className="w-10 h-10 rounded-full bg-gray-100 object-cover"
           onError={hideOnError}
         />
         <img
