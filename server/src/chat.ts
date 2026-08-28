@@ -428,7 +428,7 @@ export async function handleChat(requestBody: unknown, clientIp: string): Promis
   try {
     const client = new Anthropic({ apiKey })
     const runner = client.beta.messages.toolRunner({
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-5',
       max_tokens: MAX_TOKENS,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
