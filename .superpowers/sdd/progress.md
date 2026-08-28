@@ -967,3 +967,74 @@ OUTSTANDING -- not done, needs the user:
 
 All tasks complete. Not committed -- per the user's standing rule, staging/committing/
   pushing is theirs.
+
+================================================================================
+FEATURE: startup-performance (2026-08-28)
+  Spec: docs/superpowers/specs/2026-08-28-startup-performance-design.md
+  Plan: docs/superpowers/plans/2026-08-28-startup-performance.md
+
+Part 1 -- unblock first paint (Tasks 1-2): DONE
+  src/main.tsx: asyncWithLDProvider -> withLDProvider, plus bootstrap:'localStorage'.
+  Task 2 re-verified the no-flicker claim against LD production before building:
+  enable-daily-briefing / enable-on-this-day / enable-game-detail / enable-bullpen-usage
+  all targeting-on; enable-matchup-preview and enable-roster-tab still don't exist in LD.
+  Every flag's served value matches its code default, so there is nothing to flicker.
+
+Part 2 -- survive a refresh (Tasks 3-8): DONE
+  src/utils/cache.ts: sessionStorage persistence under `phl:cache:v1:`, lazy per-key
+  restore, ttl<=0 never persisted, invalidate() clears storage, all access try/caught.
+  server/src/core.ts: RouteResult.cacheControl + mlbCachePolicy() + resolveCacheControl().
+  server/src/app.ts + api/index.ts: both wrappers emit, before the contentType return.
+
+DEVIATIONS FROM THE PLAN (all deliberate, all verified):
+  1. Task 1 -- `bootstrap` is NOT a top-level ProviderConfig field as the plan wrote it;
+     it lives under `options`. Plan was wrong, code is right.
+  2. Task 8 -- centralized in core.ts's resolveCacheControl() keyed on the first path
+     segment, rather than editing every return site in auth/favorites/profile/chat as
+     the plan said. Those four modules return from ~40 places; one missed return would
+     be silent and would be exactly the case that leaks on a shared edge cache.
+     api/index.ts routes all responses through one `reply` closure so the segment is
+     always supplied. (Self-inflicted bug caught mid-edit: the textual replacement hit
+     the closure's own body and made it infinitely recursive -- fixed before typecheck.)
+  3. Task 6 -- the plan's `/game/**/boxscore` 60s row describes a path this app never
+     requests. fetchBoxscore and fetchBullpenBoxscore use the SAME /game/{pk}/feed/live
+     path as the live strip, differing only by `fields=`, so they take the no-store
+     branch. Conservative on purpose; the /game/ 60s branch is now unreachable and kept
+     only for a future non-live game path. Spec table corrected to match.
+  4. Task 9 step 5 assumed retry buttons call invalidate(). They don't -- they bump a
+     `reloadKey`, and since only successes are stored a failure left nothing cached, so
+     retry reaches the network by construction. Verified anyway (error state -> click ->
+     1 network request -> table renders). invalidate() is currently unused app-wide; its
+     stale "Used by retry buttons" docstring was corrected rather than left misleading.
+
+VERIFICATION (Task 9) -- all passed, nothing paid for:
+  Headers, by curl against the live backend: /feed/live -> no-store; /schedule -> 60s+SWR;
+    /stats + /standings -> 300s+SWR; /config -> 60s; me/favorites/profile -> private,
+    no-store; 403 and 502 -> no header at all.
+  Browser (Playwright, dev server on :5175):
+    - LD blackholed (route left unresolved, i.e. a hang not a fast-fail): first paint
+      0.11s, all 5 nav tabs present, full app renders. This is the Part 1 result.
+    - Cold load 14 API requests -> reload 8.
+    - 6 keys persisted; ZERO live-feed keys on disk (the critical safety assertion).
+    - Live strip with ?liveGamePk: 3 feed requests in 38s, i.e. still on its ~15s
+      cadence and not frozen -- the top regression risk for both parts.
+    - sessionStorage forced to throw: app still renders, degrades to memory-only.
+  Builds: tsc -b, server tsc, oxlint, full vite build all clean.
+  Pre-existing and unrelated: /api/odds returns 502 upstream (key/quota), which surfaces
+    as one console 502; Schedule.tsx already catches it and renders no odds.
+
+DOCS (Task 10): CLAUDE.md updated -- cache section (three problems, persistence layer and
+  its three traps, the no-user-data invariant), a new RouteResult.cacheControl paragraph,
+  a new paragraph on LD not blocking first paint, and two stale facts corrected:
+  enable-bullpen-usage targeting is ON in production (docs said OFF), and enable-roster-tab
+  has no LD flag (previously unmentioned).
+
+OUTSTANDING -- needs the user:
+  - Not committed. Per the standing rule, staging/committing/pushing is the user's.
+  - k8s needs pipeline.sh to pick up the backend change; Vercel gets both on push.
+  - Out of scope but confirmed this session: the k8s nginx serves dist/ UNCOMPRESSED
+    (stock nginx:alpine ships `#gzip on;` commented) -- index.js 374,055 B vs ~110.9 KB
+    gzipped, CSS 36,004 B vs ~7.2 KB, and no Cache-Control on content-hashed assets.
+    ~292 KB wasted per cold load on phillies-stats.com only; Vercel handles both itself.
+    Larger than either part of this feature. Worth one curl against the live ingress to
+    confirm the ingress controller isn't compressing on its own, then its own spec.

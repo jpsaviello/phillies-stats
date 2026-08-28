@@ -4,7 +4,7 @@ import { getCurrentUser, login, logout, signup } from './auth.js'
 import { handleChat } from './chat.js'
 import { isHttpsFrom, sessionTokenFrom } from './cookies.js'
 import { addFavorite, listFavorites, removeFavorite } from './favorites.js'
-import { mlbProxy, getOdds, getConfig, type RouteResult } from './core.js'
+import { mlbProxy, getOdds, getConfig, resolveCacheControl, type RouteResult } from './core.js'
 import { runDailyEmails, unsubscribe } from './notifications.js'
 import { changePassword, deleteAccount, getProfile, updateAvatar, updateProfile } from './profile.js'
 import { clientIpFrom } from './rateLimit.js'
@@ -16,6 +16,12 @@ function reply(c: Context, result: RouteResult) {
   // overwriting each other. No-ops for every route that sets no cookies.
   for (const cookie of result.cookies ?? []) {
     c.header('Set-Cookie', cookie, { append: true })
+  }
+  // Set before the contentType early-return below, or non-JSON responses would
+  // silently skip it.
+  const cacheControl = resolveCacheControl(c.req.path.slice('/api/'.length).split('/')[0], result)
+  if (cacheControl !== undefined) {
+    c.header('Cache-Control', cacheControl)
   }
   // Non-JSON responses (currently only the unsubscribe page) carry their own
   // content type and an already-serialized string body.
