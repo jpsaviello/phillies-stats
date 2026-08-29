@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchSchedule, teamLogoUrl, fetchOdds, formatOdds } from '../api/mlb'
 import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
 import { firstPitch } from '../utils/gameTime'
+import { scrollBehavior } from '../utils/motion'
 import GameDetailModal from './GameDetailModal'
 import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import MatchupPreview from './MatchupPreview'
@@ -29,6 +30,27 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
   // gamePk alone, so nothing else has to be restored alongside it.
   const { game: selectedGame } = useRoute()
   const [reloadKey, setReloadKey] = useState(0)
+  // The row the jump button targets: today's game, or the next one when today is
+  // an off day. Deliberately NOT scrolled to on mount — that would jump straight
+  // past MatchupPreview, the panel this tab renders above the list on purpose,
+  // and moving someone's scroll position on arrival is disorienting even when
+  // the destination is right.
+  const anchorRef = useRef<HTMLDivElement | null>(null)
+  const [flash, setFlash] = useState(false)
+
+  // Clears the jump highlight. Held in a ref so an unmount mid-flash (a tab
+  // switch) can't leave a timer that sets state on a dead component.
+  const flashTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(flashTimer.current), [])
+
+  function jumpToAnchor() {
+    const el = anchorRef.current
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: scrollBehavior() })
+    setFlash(true)
+    window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlash(false), 1500)
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -78,6 +100,15 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
     .flatMap(({ date, games }) => games.map(game => ({ date, game })))
     .find(({ date, game }) => date >= today && game.status.abstractGameState === 'Preview')
 
+  // The date whose first row gets the anchor ref: today when today has a game,
+  // otherwise the next dated game in the window. Undefined in a window with
+  // nothing today or later, which is what hides the button.
+  const flat = dates.flatMap(({ date, games }) => games.map(game => ({ date, game })))
+  const anchorDate = flat.find(({ date }) => date === today)?.date
+    ?? flat.find(({ date }) => date > today)?.date
+  const anchorIsToday = anchorDate === today
+  let anchorPlaced = false
+
   let upcomingOdds: ReturnType<typeof getPhilliesOdds> = null
   if (upcoming && upcoming.date === today) {
     const { home, away } = upcoming.game.teams
@@ -94,7 +125,21 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
         philliesOdds={upcomingOdds}
       />
     )}
-    <div className="max-w-2xl space-y-2">
+    <div className="max-w-2xl">
+      {anchorDate && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={jumpToAnchor}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+          >
+            {/* The list runs oldest first over today ± 14 days, so without this
+                the tab opens on a game from two weeks ago. */}
+            {anchorIsToday ? 'Jump to today' : 'Jump to next game'}
+          </button>
+        </div>
+      )}
+    <div className="space-y-2">
       {dates.map(({ date, games }) =>
         games.map(game => {
           const isHome = game.teams.home.team.id === PHILLIES_ID
@@ -105,6 +150,10 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
           const won = isHome ? game.teams.home.isWinner : game.teams.away.isWinner
           const opponentId = isHome ? game.teams.away.team.id : game.teams.home.team.id
           const isToday = date === today
+          // First row of the anchor date only — a doubleheader must not hand the
+          // ref to its second game and leave the first scrolled off screen.
+          const isAnchor = date === anchorDate && !anchorPlaced
+          if (isAnchor) anchorPlaced = true
 
           const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
           const oddsGame = oddsMap.get(oddsKey)
@@ -118,6 +167,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
           return (
             <div
               key={game.gamePk}
+              ref={isAnchor ? anchorRef : undefined}
               {...(clickable && {
                 onClick: () => navigate({ game: game.gamePk }),
                 onKeyDown: (e: React.KeyboardEvent) => {
@@ -134,7 +184,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
               // every row used to tint its border, and the clickable ones were
               // distinguished only by a 40%-opacity border, so the affordance
               // read as noise. Matches the tables' hover:bg-red-50.
-              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-red-50 hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''}`}
+              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-red-50 hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
             >
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date)}
@@ -170,6 +220,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
           )
         })
       )}
+    </div>
     </div>
     {selectedGame != null && (
       <GameDetailModal gamePk={selectedGame} onClose={() => dismiss({ game: null })} />

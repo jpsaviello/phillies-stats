@@ -5,8 +5,11 @@ import type { PitchingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import BullpenUsage from './BullpenUsage'
 import GameLogModal from './GameLogModal'
+import PlayerSearch from './PlayerSearch'
+import ScrollX from './ScrollX'
 import StarButton from './StarButton'
-import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
+import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
+import { matchesQuery } from '../utils/search'
 
 interface Split {
   player: Player
@@ -33,6 +36,9 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
 
   // See BattingTable — reloadKey drives the error state's Try again button.
   const [reloadKey, setReloadKey] = useState(0)
+
+  // Component state, not a URL param — see the note in BattingTable.
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -74,6 +80,9 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
     { key: 'whip', label: 'WHIP', defaultDir: 'asc' },
   ]
 
+  // Filtered after sorting and after the inningsPitched gate — see BattingTable.
+  const rows = sorted.filter(s => matchesQuery(s.player.fullName, query))
+
   // Built once per render rather than scanning `favorites` per row.
   const starredIds = new Set(favorites.map(f => f.playerId))
 
@@ -94,7 +103,18 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
         <EmptyState>No pitchers have thrown an inning yet this season.</EmptyState>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <PlayerSearch
+            value={query}
+            onChange={setQuery}
+            shown={rows.length}
+            total={sorted.length}
+            label="Search pitchers"
+            placeholder="Search pitchers…"
+          />
+          {rows.length === 0 ? (
+            <NoMatches query={query} noun="pitchers" onClear={() => setQuery('')} />
+          ) : (
+          <ScrollX>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -130,7 +150,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {sorted.map(({ player, stat }) => (
+                {rows.map(({ player, stat }) => (
                   <tr
                     key={player.id}
                     // Keyboard treatment mirrors BattingTable / Schedule.
@@ -169,7 +189,8 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollX>
+          )}
           {selected && (
             <GameLogModal
               personId={selected.player.id}
