@@ -2,6 +2,24 @@ import type { GameLogSplit, PitchingGameStat, RecentForm } from '../types/mlb'
 import { eraOver, inningsToOuts, outsToInnings } from './innings'
 
 /**
+ * MLB's pitchHand.code as the shorthand a box score would print: LHP/RHP, or
+ * "SP" for the rare switch-pitcher (code "S"). Returns null for a missing or
+ * unrecognized code so the label is simply omitted rather than shown blank.
+ */
+export function handLabel(code: string | null | undefined): string | null {
+  switch (code) {
+    case 'L':
+      return 'LHP'
+    case 'R':
+      return 'RHP'
+    case 'S':
+      return 'SP'
+    default:
+      return null
+  }
+}
+
+/**
  * A starter's last N starts, aggregated.
  *
  * Relief appearances are excluded: a game log mixes them in, and one mop-up

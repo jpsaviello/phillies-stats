@@ -192,9 +192,10 @@ export async function fetchLeagueRecords() {
   return records
 }
 
-// probablePitcher adds only {id, fullName, link} per side — no stats, so a
-// matchup view still has to fetch each starter separately. MLB posts probables
-// about two days out, so most games in this window carry none at all.
+// probablePitcher adds only {id, fullName, link} per side — no stats, no
+// throwing hand — so a matchup view still has to fetch each starter separately.
+// MLB posts probables about two days out, so most games in this window carry
+// none at all.
 export async function fetchSchedule(startDate: string, endDate: string) {
   const data = await get<{ dates: { date: string; games: Game[] }[] }>(
     `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore,probablePitcher`,
@@ -203,16 +204,36 @@ export async function fetchSchedule(startDate: string, endDate: string) {
   return data.dates
 }
 
-// Season pitching line for ANY player, not just a Phillie — the opposing
-// probable starter is the whole point, so this can't reuse fetchPitchingStats
-// (which is scoped to teamId=143). Resolves null when the player has no
-// pitching line this season rather than throwing, since a just-called-up
-// starter legitimately has none.
+// Season pitching line plus throwing hand for ANY player, not just a Phillie —
+// the opposing probable starter is the whole point, so this can't reuse
+// fetchPitchingStats (which is scoped to teamId=143). One request: the combined
+// /people/{id}?hydrate=stats endpoint carries `pitchHand` on the person and the
+// season line under the hydrated stats, and trimmed with `fields=` it comes in
+// smaller than the old stats-only call. `season` resolves null when the player
+// has no pitching line this year (a just-called-up starter), `hand` null when
+// MLB has no handedness on file — each is consumed independently.
+const PITCHER_SEASON_FIELDS = [
+  'people', 'id', 'pitchHand', 'code',
+  'stats', 'splits', 'stat',
+  'gamesPlayed', 'gamesStarted', 'wins', 'losses', 'era', 'inningsPitched',
+  'strikeOuts', 'baseOnBalls', 'hits', 'homeRuns', 'whip', 'saves',
+].join(',')
+
 export async function fetchPitcherSeason(personId: number) {
-  const data = await get<{ stats: { splits: { stat: import('../types/mlb').PitchingStats }[] }[] }>(
-    `/people/${personId}/stats?stats=season&group=pitching&season=${SEASON}&sportId=1`
+  const data = await get<{
+    people: {
+      pitchHand?: { code: string }
+      stats?: { splits: { stat: import('../types/mlb').PitchingStats }[] }[]
+    }[]
+  }>(
+    `/people/${personId}?hydrate=stats(group=[pitching],type=[season],season=${SEASON})` +
+      `&fields=${PITCHER_SEASON_FIELDS}`
   )
-  return data.stats[0]?.splits[0]?.stat ?? null
+  const person = data.people[0]
+  return {
+    hand: person?.pitchHand?.code ?? null,
+    season: person?.stats?.[0]?.splits[0]?.stat ?? null,
+  }
 }
 
 export async function fetchGameLog(personId: number, group: 'hitting' | 'pitching') {
