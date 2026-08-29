@@ -2,13 +2,20 @@ import { useEffect, useState } from 'react'
 import { fetchStandings } from '../api/mlb'
 import type { StandingsRecord } from '../types/mlb'
 import { useWildCardRace } from '../hooks/useWildCardRace'
+import LeagueRankings from './LeagueRankings'
 import PlayoffPush from './PlayoffPush'
 import WildCardStandings from './WildCardStandings'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
 
-export default function Standings() {
+interface Props {
+  // Independent self-hiding panel, same arrangement as the other flag-gated
+  // panels. Defaults on so an unreachable LD client renders it.
+  enableLeagueRankings?: boolean
+}
+
+export default function Standings({ enableLeagueRankings = true }: Props) {
   const [records, setRecords] = useState<StandingsRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +91,10 @@ export default function Standings() {
         </div>
       )}
       <WildCardStandings {...race} />
+      {/* Last on the tab and outside the standings fetch's branches: it owns
+          its own two requests and renders nothing when both fail, so a
+          standings error can't take it down and it can't take them down. */}
+      {enableLeagueRankings && <LeagueRankings />}
     </div>
   )
 }
