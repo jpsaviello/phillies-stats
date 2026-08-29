@@ -1,6 +1,8 @@
 # Phillies Stats
 
-A personal project — a stats site for the Philadelphia Phillies. Batting/pitching leaders, standings (with a real wild-card tiebreaker calculation), schedule with live odds, a daily AI-written beat report, an "on this day" historical card, pregame matchup previews, bullpen workload tracking, and a Claude-powered chat bot you can ask about the team. Built almost entirely with [Claude Code](https://claude.com/claude-code).
+[![CI](https://github.com/jpsaviello/phillies-stats/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/jpsaviello/phillies-stats/actions/workflows/ci.yml)
+
+A personal project — a stats site for the Philadelphia Phillies. Batting/pitching leaders, standings (with a real wild-card tiebreaker calculation), schedule with live odds, a daily AI-written beat report, an "on this day" historical card, pregame matchup previews, bullpen workload tracking, a live in-progress game strip, and a Claude-powered chat bot you can ask about the team. Built almost entirely with [Claude Code](https://claude.com/claude-code).
 
 **Live site: [allthingsphils.com](https://allthingsphils.com/)**
 
@@ -18,6 +20,9 @@ A personal project — a stats site for the Philadelphia Phillies. Batting/pitch
 - **Daily Briefing** & **On This Day** — auto-generated cards written by scheduled AI routines each morning, sourced only from verified box scores
 - **Chat bot** — ask questions about the Phillies; a Claude tool-use agent that pulls real stats, schedules, box scores, and odds (with web search as a fallback) rather than guessing
 - **Accounts** — email/password sign-in, favorite players ("star" a player, see them in a "Your Players" card), and a profile (avatar, hometown, fan-since, notification prefs)
+- **Daily email digest** — an opt-in morning email combining the beat report and "on this day" card for signed-in users, with one-click unsubscribe
+- **Shareable links** — the active tab and any open player/game modal live in the URL, so a link to a specific player or game restores that exact view
+- **Player search** — filter the Batting/Pitching/Roster tables by name, diacritic-insensitive (matches "Sanchez" against "Sánchez")
 
 ## Tech Stack
 
@@ -31,6 +36,8 @@ A personal project — a stats site for the Philadelphia Phillies. Batting/pitch
 ## Running Locally
 
 Requires **two** servers running at once:
+
+**One env var is required before `npm run dev` will render anything:** set `VITE_LAUNCHDARKLY_CLIENT_SIDE_ID` in a `.env.local` at the repo root. Without it the app throws on startup and shows a blank page — unlike the keys below, this one doesn't degrade gracefully.
 
 ```bash
 npm install
@@ -57,6 +64,8 @@ Optional local env vars (`.env.local`, gitignored) unlock extra features — the
 | `ODDS_API_KEY` | Betting odds on the Schedule tab |
 | `ANTHROPIC_API_KEY` | The chat bot |
 | `DATABASE_URL` | Sign-in, favorites, profiles |
+| `SENDGRID_API_KEY` | Sending the daily email digest |
+| `CRON_SECRET` | Authenticating the `/api/notifications/daily` cron route |
 
 No automated test runner is configured; features are verified with a Playwright-based browser-testing workflow instead.
 
