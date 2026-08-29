@@ -1064,3 +1064,20 @@ Verification (webapp-testing, both servers, 1280x900 + 375x700):
 Pre-existing, unrelated: `/api/odds` 502 `{"error":"Odds API 401"}` — the local ODDS_API_KEY is rejected upstream.
   Schedule already does fetchOdds().catch(() => []), so odds simply don't render. Not touched by this work.
 All tasks complete. Uncommitted working-tree changes (user stages/commits).
+# Progress Ledger: batting-form + league-rankings
+
+Plan: docs/superpowers/plans/2026-08-29-batting-form-and-league-rankings.md
+Base: 1fb2dd3
+
+Task 1 (data layer): complete — fetchBattingByDateRange + fetchTeamStats, both on already-allowlisted proxy prefixes (/stats, /teams/), so no MLB_ALLOWED change.
+Task 2 (pure logic): complete — utils/battingForm.ts, utils/rankings.ts.
+Task 3 (Hot & Cold): complete — BattingForm.tsx; BattingTable refactored off early returns to the single-return shape (same refactor PitchingTable needed for BullpenUsage).
+  - Bug found and fixed during browser verification: a row printed "+.100" grouped under "Holding steady". Both OPS figures are 3-decimal, but .872 - .772 is a hair under .100 in float; the delta is now rounded at classification time so grouping and the printed number cannot disagree.
+Task 4 (League Rankings): complete — LeagueRankings.tsx mounted below WildCardStandings.
+Task 5 (flags + docs): complete — enableBattingForm / enableLeagueRankings default true in App.tsx; CLAUDE.md + README updated; two design specs + one plan written.
+  - Known gap (accepted, matches enable-matchup-preview / enable-roster-tab): neither LD flag exists in LaunchDarkly, so both always serve the `= true` code default. The LD MCP server is unauthenticated in this session, so the flags could not be created here.
+Task 6 (verification): complete — tsc -b + oxlint clean; webapp-testing against live MLB data at 1280px and 375px.
+  - Ranks cross-checked against statsapi directly: runs 12th, HR 11th, OBP 22nd, K 16th (hitting); ERA 12th, K 1st, HR allowed 21st, SV 14th, BB 8th (pitching) — all match the panel, lower-is-better categories included.
+  - Failure paths driven by aborting each request in turn: byDateRange fails -> panel hides, table keeps its 20 rows; season stats fail -> panel still renders (dashes in ±OPS) and the table shows its error state; teams/stats pitching fails -> Offense card stands alone; both fail -> block hides and the standings are untouched.
+  - Regression check: the game-log modal still opens from a batting row and Back still closes it after the single-return refactor.
+All tasks complete.

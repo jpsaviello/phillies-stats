@@ -23,6 +23,42 @@ export interface BattingStats {
   baseOnBalls: number
 }
 
+/**
+ * A hitter's line over a trailing date window (`stats=byDateRange`).
+ *
+ * Separate from BattingStats rather than a widened version of it because the
+ * Batting table's column list is typed `keyof BattingStats`, and plate
+ * appearances are only ever read here — as the sample-size gate for the Hot &
+ * Cold panel, where a pitcher's single at-bat would otherwise show up as a
+ * .000 hitter in a freefall.
+ */
+export interface WindowBattingStats extends BattingStats {
+  plateAppearances: number
+}
+
+/**
+ * One hitter's recent form: the window line plus how its OPS compares with the
+ * same player's season OPS. Deliberately carries no projection — see the
+ * batting-form design spec.
+ */
+export interface HitterForm {
+  playerId: number
+  name: string
+  games: number
+  atBats: number
+  hits: number
+  homeRuns: number
+  rbi: number
+  /** As MLB formats them, e.g. ".286" / "1.171". */
+  avg: string
+  ops: string
+  /** Season OPS, or null when the player has no season line to compare against. */
+  seasonOps: number | null
+  /** Window OPS minus season OPS; null whenever either side is missing. */
+  opsDelta: number | null
+  trend: 'hot' | 'cold' | 'steady' | 'unknown'
+}
+
 export interface PitchingStats {
   gamesPlayed: number
   gamesStarted: number

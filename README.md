@@ -15,6 +15,8 @@ A personal project — a stats site for the Philadelphia Phillies. Batting/pitch
 - **Playoff Push** — wild card and division position, magic/elimination numbers, games left, strength of remaining schedule, pace projection
 - **Schedule** — upcoming/past games with live betting odds (moneyline + run line) for the next game
 - **Matchup Preview** — pregame probable-starter comparison (season lines, last-3-starts, head-to-head) for the next scheduled game
+- **Hot & Cold** — trailing 15-day batting form for every qualified hitter, with each line measured against that player's own season OPS
+- **League Rankings** — where the club sits among all 30 teams in eight offensive and eight pitching categories
 - **Bullpen Usage** — trailing 7-day reliever/rotation workload: appearances, pitch counts, days of rest, "3 straight days" style flags
 - **Live Game Strip** — score, inning, count, and current matchup while a Phillies game is in progress
 - **Daily Briefing** & **On This Day** — auto-generated cards written by scheduled AI routines each morning, sourced only from verified box scores

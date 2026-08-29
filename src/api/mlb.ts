@@ -73,6 +73,25 @@ export async function fetchBattingStats() {
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
 
+// One trailing date window's hitting line for every Phillies batter, in a single
+// request. `stats=byDateRange` is what makes the Hot & Cold panel cheap: the
+// alternative — a per-player game log, or a boxscore per game like BullpenUsage
+// does — would be a dozen-plus round trips for the same numbers.
+//
+// The response is already sorted by AVG descending and carries `player`, so no
+// hydrate is needed. Note the window is CALENDAR days, not "last N games": every
+// hitter is measured over the same span, so a bench bat's line isn't stretched
+// back across three weeks the way `stats=lastXGames` would stretch it.
+export async function fetchBattingByDateRange(startDate: string, endDate: string) {
+  const data = await get<{ stats: { splits: { player: import('../types/mlb').Player; stat: import('../types/mlb').WindowBattingStats }[] }[] }>(
+    `/stats?stats=byDateRange&group=hitting&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}` +
+      `&startDate=${startDate}&endDate=${endDate}&playerPool=ALL` +
+      `&fields=stats,splits,player,id,fullName,stat,gamesPlayed,plateAppearances,atBats,` +
+      `hits,doubles,triples,homeRuns,rbi,runs,stolenBases,baseOnBalls,strikeOuts,avg,obp,slg,ops`
+  )
+  return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
+}
+
 export async function fetchPitchingStats() {
   const data = await get<{ stats: { splits: { player: import('../types/mlb').Player; stat: import('../types/mlb').PitchingStats }[] }[] }>(
     `/stats?stats=season&group=pitching&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL`
@@ -196,6 +215,23 @@ export async function fetchLeagueRecords() {
 // throwing hand — so a matchup view still has to fetch each starter separately.
 // MLB posts probables about two days out, so most games in this window carry
 // none at all.
+// Season totals for all 30 clubs in one request — the raw material for the
+// League Rankings panel. `/teams/stats` (note: plural, no team id) returns one
+// split per club; ranking happens client-side in utils/rankings.ts rather than
+// reading the response's own `rank` field, which is a single overall figure per
+// team, not a per-category placement.
+//
+// `fields=` lists the union of both groups' stat keys — an unused name is simply
+// ignored by the API, so one list serves the hitting and pitching calls alike.
+export async function fetchTeamStats(group: 'hitting' | 'pitching') {
+  const data = await get<{ stats: { splits: { team: { id: number; name: string }; stat: Record<string, string | number> }[] }[] }>(
+    `/teams/stats?season=${SEASON}&sportIds=1&group=${group}&stats=season` +
+      `&fields=stats,splits,team,id,name,stat,runs,homeRuns,avg,obp,slg,ops,stolenBases,` +
+      `strikeOuts,baseOnBalls,era,whip,saves,hits,inningsPitched`
+  )
+  return (data.stats[0]?.splits ?? []).filter(s => s.team != null)
+}
+
 export async function fetchSchedule(startDate: string, endDate: string) {
   const data = await get<{ dates: { date: string; games: Game[] }[] }>(
     `/schedule?teamId=${PHILLIES_ID}&startDate=${startDate}&endDate=${endDate}&sportId=1&hydrate=linescore,probablePitcher`,

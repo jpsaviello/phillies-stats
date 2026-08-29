@@ -38,7 +38,9 @@ export default function App() {
   // enableGameDetail gates only the Schedule row's click affordance, so flag-off
   // leaves that tab exactly as it was before box scores existed.
   // enableMatchupPreview likewise gates only the pregame panel above that list.
-  // enableBullpenUsage gates only the panel above the Pitching tab's table.
+  // enableBullpenUsage gates only the panel above the Pitching tab's table, and
+  // enableBattingForm the matching Hot & Cold panel above the Batting tab's.
+  // enableLeagueRankings gates only the panel at the foot of the Standings tab.
   // enableRosterTab is the first flag that gates a whole TAB, so flag-off has to
   // remove the nav entry too, not just the panel — see the `hidden` prop below.
   const {
@@ -47,6 +49,8 @@ export default function App() {
     enableGameDetail = true,
     enableMatchupPreview = true,
     enableBullpenUsage = true,
+    enableBattingForm = true,
+    enableLeagueRankings = true,
     enableRosterTab = true,
   } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
@@ -153,6 +157,7 @@ export default function App() {
             signedIn={user !== null}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
+            enableBattingForm={enableBattingForm}
           />
         )}
         {tab === 'pitching' && (
@@ -170,7 +175,7 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
           />
         )}
-        {tab === 'standings' && <Standings />}
+        {tab === 'standings' && <Standings enableLeagueRankings={enableLeagueRankings} />}
         {tab === 'schedule' && (
           <Schedule
             enableGameDetail={enableGameDetail}
