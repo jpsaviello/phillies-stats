@@ -9,7 +9,7 @@ import {
 import type { Game } from '../api/mlb'
 import type { PitchingStats, ProbablePitcher, RecentForm } from '../types/mlb'
 import type { getPhilliesOdds } from '../utils/odds'
-import { recentForm } from '../utils/matchup'
+import { handLabel, recentForm } from '../utils/matchup'
 
 const PHILLIES_ID = 143
 const RECENT_STARTS = 3
@@ -31,6 +31,8 @@ interface Starter {
   pitcher: ProbablePitcher
   teamId: number
   teamName: string
+  /** MLB pitchHand.code ("L" / "R" / "S"); null when MLB has none on file. */
+  hand: string | null
   season: PitchingStats | null
   form: RecentForm | null
 }
@@ -39,19 +41,27 @@ function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
   e.currentTarget.style.display = 'none'
 }
 
-// One starter's two lookups. Season and game log are awaited together but the
-// whole pair degrades to nulls on failure, so a dead upstream for one pitcher
-// still leaves the other side of the matchup rendered.
+// One starter's two lookups. Season line (which also carries the throwing hand)
+// and game log are awaited together but the whole pair degrades to nulls on
+// failure, so a dead upstream for one pitcher still leaves the other side of the
+// matchup rendered.
 async function loadStarter(
   pitcher: ProbablePitcher,
   teamId: number,
   teamName: string
 ): Promise<Starter> {
-  const [season, log] = await Promise.all([
-    fetchPitcherSeason(pitcher.id).catch(() => null),
+  const [meta, log] = await Promise.all([
+    fetchPitcherSeason(pitcher.id).catch(() => ({ hand: null, season: null })),
     fetchGameLog(pitcher.id, 'pitching').catch(() => []),
   ])
-  return { pitcher, teamId, teamName, season, form: recentForm(log, RECENT_STARTS) }
+  return {
+    pitcher,
+    teamId,
+    teamName,
+    hand: meta.hand,
+    season: meta.season,
+    form: recentForm(log, RECENT_STARTS),
+  }
 }
 
 function StarterHead({ starter }: { starter: Starter | null }) {
@@ -83,6 +93,11 @@ function StarterHead({ starter }: { starter: Starter | null }) {
         {starter.pitcher.fullName}
       </div>
       <div className="text-[11px] text-gray-500 truncate leading-tight">{starter.teamName}</div>
+      {handLabel(starter.hand) && (
+        <div className="text-[11px] font-semibold text-gray-600 leading-tight">
+          {handLabel(starter.hand)}
+        </div>
+      )}
     </div>
   )
 }
@@ -141,7 +156,7 @@ export default function MatchupPreview({ game, date, philliesOdds }: Props) {
       // jump once the pitcher lookups resolve.
       <div className="card px-4 py-3 mb-4 max-w-2xl" role="status">
         <span className="sr-only">Loading matchup…</span>
-        <div className="h-[264px] rounded-lg bg-gray-100 animate-pulse" aria-hidden="true" />
+        <div className="h-[280px] rounded-lg bg-gray-100 animate-pulse" aria-hidden="true" />
       </div>
     )
   }
