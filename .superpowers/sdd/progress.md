@@ -1038,3 +1038,29 @@ OUTSTANDING -- needs the user:
     ~292 KB wasted per cold load on phillies-stats.com only; Vercel handles both itself.
     Larger than either part of this feature. Worth one curl against the live ingress to
     confirm the ingress controller isn't compressing on its own, then its own spec.
+# Progress Ledger: ui-quality-of-life
+
+Plan: docs/superpowers/plans/2026-08-28-ui-quality-of-life.md
+Spec: docs/superpowers/specs/2026-08-28-ui-quality-of-life-design.md
+Base: b9913d6 (develop)
+
+Task 1: complete (src/utils/search.ts — normalize + matchesQuery, diacritic strip via NFD)
+Task 2: complete (src/components/PlayerSearch.tsx)
+Task 3: complete (src/components/ScrollX.tsx — right-edge fade, ResizeObserver)
+  - Also added Feedback.tsx `NoMatches`, kept distinct from EmptyState (clearable filter vs empty data)
+Task 4: complete (BattingTable + PitchingTable — filter after sort, unfiltered `selected` lookup preserved)
+Task 5: complete (Roster — filter before groupRoster so section counts match what renders)
+Task 6: complete (Schedule jump-to-today/next-game, ring flash, no auto-scroll)
+Task 7: complete (BackToTop + src/utils/motion.ts, mounted in App beside ChatWidget)
+
+Verification (webapp-testing, both servers, 1280x900 + 375x700):
+  - Batting `kyle sch` -> Kyle Schwarber only, "1 of 20"; `zzzz` -> NoMatches; Clear and Escape both restore 20 rows
+  - Pitching `sanchez` and `SÁNCHEZ` both -> Cristopher Sánchez (diacritic case proven both directions)
+  - Roster `sanchez` -> ACTIVE ROSTER (1) / Pitchers / Cristopher Sánchez, "1 of 45"; other sections drop out
+  - Schedule: "Jump to today" centers Aug 28 @ Angels row with ring (1 ringed row)
+  - ScrollX at 375px: fade present (scrollWidth 905 vs client 343), gone at full-right, returns on scroll back
+  - BackToTop: absent at scrollY 0, present at 1500, no vertical overlap with chat FAB (btt y 780-820, chat y 828-884)
+  - build + oxlint clean
+Pre-existing, unrelated: `/api/odds` 502 `{"error":"Odds API 401"}` — the local ODDS_API_KEY is rejected upstream.
+  Schedule already does fetchOdds().catch(() => []), so odds simply don't render. Not touched by this work.
+All tasks complete. Uncommitted working-tree changes (user stages/commits).

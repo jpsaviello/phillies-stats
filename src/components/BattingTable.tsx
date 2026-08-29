@@ -4,8 +4,11 @@ import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import type { BattingStats, Player } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import GameLogModal from './GameLogModal'
+import PlayerSearch from './PlayerSearch'
+import ScrollX from './ScrollX'
 import StarButton from './StarButton'
-import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
+import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
+import { matchesQuery } from '../utils/search'
 
 interface Split {
   player: Player
@@ -32,6 +35,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
   // Bumping reloadKey re-runs the fetch; it's what the error state's Try again
   // button drives.
   const [reloadKey, setReloadKey] = useState(0)
+
+  // Component state rather than a URL param: navigate() pushes a history entry,
+  // so a per-keystroke `q` would make Back walk the search backwards a letter at
+  // a time. See PlayerSearch.
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -80,7 +88,13 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
     { key: 'ops', label: 'OPS', defaultDir: 'desc' },
   ]
 
+  // Filtered after sorting and after the atBats gate, so the denominator in
+  // "8 of 26" is the number of rows this tab would have shown anyway.
+  const rows = sorted.filter(s => matchesQuery(s.player.fullName, query))
+
   // Previously this rendered a header row over a blank body with no explanation.
+  // Keyed on `sorted`, not `rows`: an empty table has nothing to search, so the
+  // search box is not rendered at all in that case.
   if (sorted.length === 0) {
     return <EmptyState>No batters have recorded an at-bat yet this season.</EmptyState>
   }
@@ -90,7 +104,18 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
 
   return (
     <>
-    <div className="overflow-x-auto">
+    <PlayerSearch
+      value={query}
+      onChange={setQuery}
+      shown={rows.length}
+      total={sorted.length}
+      label="Search batters"
+      placeholder="Search batters…"
+    />
+    {rows.length === 0 ? (
+      <NoMatches query={query} noun="batters" onClear={() => setQuery('')} />
+    ) : (
+    <ScrollX>
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -133,7 +158,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {sorted.map(({ player, stat }) => (
+          {rows.map(({ player, stat }) => (
             <tr
               key={player.id}
               // Same keyboard treatment as Schedule.tsx's clickable game rows —
@@ -177,7 +202,8 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite }: 
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollX>
+    )}
     {selected && (
       <GameLogModal
         personId={selected.player.id}

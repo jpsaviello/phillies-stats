@@ -66,3 +66,23 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
 export function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className="p-8 text-center text-gray-500">{children}</div>
 }
+
+// The search boxes' "nothing matched" state. Distinct from EmptyState: that one
+// means the data itself is empty (no at-bats recorded yet), which the reader can
+// do nothing about, while this one is a filter the reader can clear from here.
+export function NoMatches({ query, onClear, noun }: { query: string; onClear: () => void; noun: string }) {
+  return (
+    <div className="p-8 text-center">
+      <p className="text-gray-500">
+        No {noun} match “{query}”.
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+      >
+        Clear search
+      </button>
+    </div>
+  )
+}

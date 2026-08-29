@@ -5,8 +5,11 @@ import type { RosterPlayer } from '../types/mlb'
 import type { Favorite } from '../types/favorites'
 import { formatSeasonLine, groupRoster, handedness, seasonLine } from '../utils/roster'
 import GameLogModal from './GameLogModal'
+import PlayerSearch from './PlayerSearch'
+import ScrollX from './ScrollX'
 import StarButton from './StarButton'
-import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
+import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
+import { matchesQuery } from '../utils/search'
 import type { BattingStats, PitchingStats } from '../types/mlb'
 
 interface Props {
@@ -29,6 +32,8 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
   // Read from the URL, same as the Batting/Pitching tables — see the note there.
   const { player: openPlayerId } = useRoute()
   const [reloadKey, setReloadKey] = useState(0)
+  // Component state, not a URL param — see the note in BattingTable.
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -46,10 +51,18 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
   if (loading) return <TableSkeleton rows={14} cols={5} />
   if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
 
-  const sections = groupRoster(players)
-  if (sections.length === 0) {
+  // Keyed on the UNFILTERED list: "no roster yet" is a data condition the reader
+  // can do nothing about, and it must not be reachable by typing a query.
+  if (players.length === 0) {
     return <EmptyState>No roster is available for the {SEASON} season yet.</EmptyState>
   }
+
+  // Filtered BEFORE grouping, so section counts ("Active Roster (26)") and the
+  // position subgroups describe what is actually rendered rather than the roster
+  // they were drawn from. Sections left with nobody drop out on their own —
+  // groupRoster already filters zero-count sections.
+  const matched = players.filter(p => matchesQuery(p.person.fullName, query))
+  const sections = groupRoster(matched)
 
   const starredIds = new Set(favorites.map(f => f.playerId))
 
@@ -72,6 +85,17 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
 
   return (
     <>
+      <PlayerSearch
+        value={query}
+        onChange={setQuery}
+        shown={matched.length}
+        total={players.length}
+        label="Search the roster"
+        placeholder="Search the roster…"
+      />
+      {sections.length === 0 ? (
+        <NoMatches query={query} noun="players" onClear={() => setQuery('')} />
+      ) : (
       <div className="space-y-8">
         {sections.map(section => (
           <section key={section.id}>
@@ -87,7 +111,7 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
                 Designation only — MLB's roster feed carries no injury details or return dates.
               </p>
             )}
-            <div className="mt-3 overflow-x-auto">
+            <ScrollX className="mt-3">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -118,10 +142,11 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollX>
           </section>
         ))}
       </div>
+      )}
       {selected && (
         <GameLogModal
           personId={selected.id}

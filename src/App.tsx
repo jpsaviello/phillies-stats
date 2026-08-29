@@ -14,6 +14,7 @@ import Roster from './components/Roster'
 import Standings from './components/Standings'
 import Schedule from './components/Schedule'
 import ChatWidget from './components/ChatWidget'
+import BackToTop from './components/BackToTop'
 import FavoritesCard from './components/FavoritesCard'
 import { initRoute, setTab, useRoute } from './hooks/useRoute'
 import { fetchConfig } from './api/mlb'
@@ -179,6 +180,8 @@ export default function App() {
       </main>
       {/* Mounted once, outside the tab conditionals, so chat history survives tab switches. */}
       <ChatWidget />
+      {/* Self-hides until the page is scrolled; sits above the chat FAB. */}
+      <BackToTop />
     </div>
   )
 }
