@@ -37,7 +37,7 @@ allthingsphils.com
 
 `allthingsphils.com` is the custom domain now fronting production (it replaced
 `phillies-stats.vercel.app` — same Vercel deployment, different hostname) and
-covers the optional odds fetch (step 2, item 6) and the post-push production
+covers the optional odds fetch (step 2, item 7) and the post-push production
 check (step 7). No Vercel token or org/project IDs are needed — deploy happens
 automatically when the routine pushes to `develop` (see step 6), not via a CLI
 call, so there is nothing to authenticate.
@@ -66,18 +66,18 @@ Everything comes from `statsapi.mlb.com` (public, no key). Team id `143`, season
 2. **Boxscore** of the most recent completed game: `/api/v1/game/<gamePk>/boxscore`
    (this endpoint is `api/v1`; `api/v1.1` is the live feed).
 3. **Linescore** of that same game: `/api/v1/game/<gamePk>/linescore` — inning-by-inning runs, for describing how the game actually turned.
-3a. **Scoring plays** of that same game: `/api/v1/game/<gamePk>/playByPlay`. The
+4. **Scoring plays** of that same game: `/api/v1/game/<gamePk>/playByPlay`. The
    top-level `scoringPlays` array holds indexes into `allPlays`; each of those
    plays carries `about.inning`, `about.halfInning`, `result.description` (the
    full sentence, e.g. "Bryce Harper doubles (28) ... Garrett Stubbs scores.")
    and the running `result.awayScore`/`result.homeScore`. **This is the only
    source for which run happened in which inning, who drove it in, and who
    scored** — see the rule in step 3.
-4. **Standings:** `/api/v1/standings?leagueId=104&season=2026&standingsTypes=regularSeason`.
+5. **Standings:** `/api/v1/standings?leagueId=104&season=2026&standingsTypes=regularSeason`.
    The NL East is division id `204`; `division.name` is often absent, so match on the id.
-5. **Season totals**, only if you cite one (e.g. "his 15th home run"):
+6. **Season totals**, only if you cite one (e.g. "his 15th home run"):
    `/api/v1/stats?stats=season&group=hitting&teamId=143&season=2026&sportId=1&playerPool=all&limit=100`
-6. **Odds** (optional): `https://allthingsphils.com/api/odds`. Omit the
+7. **Odds** (optional): `https://allthingsphils.com/api/odds`. Omit the
    betting line if it returns non-200 or has no entry for the matchup — games
    more than a day out are usually not priced yet.
 
@@ -102,7 +102,7 @@ line, including a player who never appeared in the game. Do not repeat it.
   second on a Harper double and Stott homered in the third, when Stott homered in
   the second and Harper doubled Stubbs home in the third. Every "in the Nth
   inning", every "answered in the bottom half", and the order runs are narrated in
-  must come from a `scoringPlays` entry (step 2, item 3a) and match its
+  must come from a `scoringPlays` entry (step 2, item 4) and match its
   `about.inning` / `about.halfInning`. Walk that array in order and describe the
   scoring in that order.
 - **Runner and count details are play-by-play facts too.** Who was on base, who
