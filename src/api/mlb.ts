@@ -1,4 +1,4 @@
-import type { GameLogSplit, StatSplit } from '../types/mlb'
+import type { GameLogSplit, HitData, StatSplit } from '../types/mlb'
 import { cached, NO_CACHE, type CacheOptions } from '../utils/cache'
 
 const BASE = '/api/mlb'
@@ -451,6 +451,20 @@ export interface GameBoxscore {
       teams?: { home?: LinescoreSide; away?: LinescoreSide }
     }
     boxscore?: { teams?: { home?: BoxscoreTeam; away?: BoxscoreTeam } }
+    // Batted-ball data for the spray chart. Present on the SAME request the box
+    // score already makes -- it was simply trimmed away by BOXSCORE_FIELDS
+    // before the Game Story feature, so it costs no extra round trip.
+    //
+    // hitData hangs off a play EVENT, not the play: one at-bat has many pitches
+    // and at most one of them put a ball in play.
+    plays?: {
+      allPlays?: {
+        result?: { event?: string }
+        about?: { inning?: number; isTopInning?: boolean }
+        matchup?: { batter?: { id: number; fullName: string } }
+        playEvents?: { hitData?: HitData }[]
+      }[]
+    }
     // Absent for games that haven't produced a decision yet.
     decisions?: {
       winner?: { id: number; fullName: string }
@@ -461,17 +475,58 @@ export interface GameBoxscore {
 }
 
 // Same trick as LIVE_FEED_FIELDS: the raw feed is ~860KB, and this field list
-// cuts it to ~39KB — still one request for the entire modal.
+// cuts it to ~72KB — still one request for the entire modal, box score and
+// spray chart together. (It was ~39KB before the batted-ball fields on the last
+// two lines were added; measured 41,777 -> 71,682 bytes on gamePk 825038.)
 const BOXSCORE_FIELDS =
   'gameData,status,abstractGameState,detailedState,datetime,officialDate,' +
   'teams,home,away,id,name,teamName,abbreviation,liveData,linescore,innings,num,' +
   'runs,hits,errors,scheduledInnings,boxscore,players,person,fullName,position,' +
   'stats,batting,pitching,seasonStats,atBats,rbi,baseOnBalls,strikeOuts,homeRuns,' +
   'doubles,triples,avg,era,inningsPitched,earnedRuns,pitchers,battingOrder,' +
-  'decisions,winner,loser,save,note'
+  'decisions,winner,loser,save,note,' +
+  'plays,allPlays,playEvents,hitData,launchSpeed,launchAngle,totalDistance,' +
+  'trajectory,hardness,location,coordinates,coordX,coordY,matchup,batter,' +
+  'result,event,about,inning,isTopInning'
 
 export async function fetchBoxscore(gamePk: number): Promise<GameBoxscore> {
   return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`, BOXSCORE)
+}
+
+/**
+ * One at-bat's win probability entry, as MLB reports it.
+ *
+ * Both probability fields are stated for the HOME team. The Phillies are the
+ * road club in half their games, so these must be normalized before anything is
+ * plotted -- see toPhilliesProbability() in src/utils/gameStory.ts.
+ */
+export interface WinProbEntry {
+  atBatIndex?: number
+  homeTeamWinProbability?: number
+  homeTeamWinProbabilityAdded?: number
+  result?: { description?: string; event?: string }
+  about?: { inning?: number; halfInning?: string; captivatingIndex?: number }
+}
+
+// Trims the response from ~1.03MB to ~23KB (measured on gamePk 825038).
+const WIN_PROB_FIELDS =
+  'result,description,event,about,inning,halfInning,captivatingIndex,' +
+  'homeTeamWinProbability,homeTeamWinProbabilityAdded,atBatIndex'
+
+/**
+ * The game's win probability, one entry per at-bat.
+ *
+ * Two things here are unlike every other endpoint in this file. It returns a
+ * BARE ARRAY rather than an object wrapper. And it is the only /game/ path that
+ * lives on api/v1 -- v1.1 returns 404, and the value appears nowhere in the live
+ * feed -- which is why MLB_ALLOWED in server/src/core.ts matches it with an
+ * ordered predicate ahead of the general /game/ -> v1.1 rule.
+ *
+ * BOXSCORE ttl (1 min) for the same reason the box score carries it: a finished
+ * game's curve never changes, but a game in progress is served from this URL too.
+ */
+export async function fetchWinProbability(gamePk: number): Promise<WinProbEntry[]> {
+  return get(`/game/${gamePk}/winProbability?fields=${WIN_PROB_FIELDS}`, BOXSCORE)
 }
 
 // Trimmed to just the pitching lines — BullpenUsage needs numbers from every

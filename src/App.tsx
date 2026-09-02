@@ -38,6 +38,9 @@ export default function App() {
   // enableGameDetail gates only the Schedule row's click affordance, so flag-off
   // leaves that tab exactly as it was before box scores existed.
   // enableMatchupPreview likewise gates only the pregame panel above that list.
+  // enableGameStory gates only the two visual sections INSIDE that modal. It is
+  // nested under enableGameDetail on purpose: the charts are the novel half and
+  // must be killable without taking the box score down with them.
   // enableBullpenUsage gates only the panel above the Pitching tab's table, and
   // enableBattingForm the matching Hot & Cold panel above the Batting tab's.
   // enableLeagueRankings gates only the panel at the foot of the Standings tab.
@@ -48,6 +51,7 @@ export default function App() {
     enableOnThisDay = true,
     enableGameDetail = true,
     enableMatchupPreview = true,
+    enableGameStory = true,
     enableBullpenUsage = true,
     enableBattingForm = true,
     enableLeagueRankings = true,
@@ -180,6 +184,7 @@ export default function App() {
           <Schedule
             enableGameDetail={enableGameDetail}
             enableMatchupPreview={enableMatchupPreview}
+            enableGameStory={enableGameStory}
           />
         )}
       </main>

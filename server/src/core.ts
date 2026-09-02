@@ -67,16 +67,28 @@ export function resolveCacheControl(
 }
 
 const MLB_V1 = 'https://statsapi.mlb.com/api/v1'
-// Path prefixes the frontend actually uses, each mapped to its API base;
-// anything else is rejected so this can't be used as an open relay. The live
-// game feed is the one endpoint that lives under v1.1 instead of v1.
-const MLB_ALLOWED: [prefix: string, base: string][] = [
-  ['/teams/', MLB_V1],
-  ['/stats', MLB_V1],
-  ['/standings', MLB_V1],
-  ['/schedule', MLB_V1],
-  ['/people/', MLB_V1],
-  ['/game/', 'https://statsapi.mlb.com/api/v1.1'],
+const MLB_V1_1 = 'https://statsapi.mlb.com/api/v1.1'
+// Paths the frontend actually uses, each mapped to its API base; anything else
+// is rejected so this can't be used as an open relay.
+//
+// Matched with a predicate rather than a bare prefix, and ORDERED MOST-SPECIFIC
+// FIRST, because two endpoints under /game/ live on different API versions and
+// a prefix alone cannot tell them apart:
+//
+//   /game/{pk}/feed/live       -> v1.1 only (v1 has no live feed)
+//   /game/{pk}/winProbability  -> v1 only   (v1.1 returns 404)
+//
+// `find` takes the FIRST match, so putting the general /game/ rule ahead of the
+// winProbability one silently sends it to v1.1 and reintroduces that 404. Same
+// ordering constraint mlbCachePolicy() documents for its /feed/live branch.
+const MLB_ALLOWED: [test: (path: string) => boolean, base: string][] = [
+  [p => p.startsWith('/game/') && p.endsWith('/winProbability'), MLB_V1],
+  [p => p.startsWith('/game/'), MLB_V1_1],
+  [p => p.startsWith('/teams/'), MLB_V1],
+  [p => p.startsWith('/stats'), MLB_V1],
+  [p => p.startsWith('/standings'), MLB_V1],
+  [p => p.startsWith('/schedule'), MLB_V1],
+  [p => p.startsWith('/people/'), MLB_V1],
 ]
 
 // Cache-Control for a proxied MLB path, mirroring the per-endpoint TTLs in
@@ -101,16 +113,17 @@ function mlbCachePolicy(path: string): string {
   // LiveGameStrip polls the schedule every 60s to decide whether a game has
   // started; a longer window would delay the live strip appearing by that much.
   if (path.startsWith('/schedule')) return 'public, max-age=60, stale-while-revalidate=240'
-  // A box score can belong to a game still in progress. Currently unreachable --
-  // every /game/ path this app requests is /feed/live, caught above -- but kept
-  // as the correct policy for a future non-live game path such as the
-  // /game/{pk}/boxscore endpoint chat.ts already uses server-side.
+  // Reached by /game/{pk}/winProbability (GameDetailModal's Game Story section),
+  // the first non-/feed/live game path this app requests. 60s is right for the
+  // same reason the box score carries it: a finished game's curve never changes,
+  // but the same URL during a game in progress does. Mirrors the BOXSCORE client
+  // TTL fetchWinProbability uses.
   if (path.startsWith('/game/')) return 'public, max-age=60'
   return 'public, max-age=300, stale-while-revalidate=1500'
 }
 
 export async function mlbProxy(path: string, search: string): Promise<RouteResult> {
-  const match = MLB_ALLOWED.find(([p]) => path.startsWith(p))
+  const match = MLB_ALLOWED.find(([test]) => test(path))
   if (!match) {
     return { status: 403, body: { error: 'path not allowed' } }
   }

@@ -289,3 +289,59 @@ export interface PitcherWorkload {
   daysSinceLast: number | null
   flags: string[]
 }
+
+/**
+ * One at-bat on the win probability curve, already NORMALIZED to the Phillies.
+ *
+ * MLB reports probability for the HOME team; `philliesWinProb` and `added` have
+ * both been flipped when the Phillies were the road club, so nothing downstream
+ * of toPhilliesProbability() has to know which side they batted on. See
+ * src/utils/gameStory.ts for why this matters more than it looks like it does.
+ */
+export interface WinProbPoint {
+  atBatIndex: number
+  inning: number
+  halfInning: string
+  /** 0-100, from the Phillies' perspective. */
+  philliesWinProb: number
+  /** Swing this at-bat caused, positive = good for the Phillies. */
+  added: number
+  description: string
+}
+
+/**
+ * One batted ball, flattened out of a game feed's play events.
+ *
+ * `hit.coordinates` is the only field guaranteed present — battedBalls() drops
+ * anything without it. Every measurement (launchSpeed, launchAngle,
+ * totalDistance) can be absent for an individual ball, so each is optional and
+ * each render path needs a fallback.
+ */
+export interface BattedBall {
+  batterId: number
+  batterName: string
+  /** result.event, e.g. "Double", "Groundout", "Home Run". */
+  event: string
+  inning: number
+  isTopInning: boolean
+  isPhillies: boolean
+  hit: HitData
+}
+
+/**
+ * Statcast-adjacent batted-ball measurements from a play event.
+ *
+ * CRITICAL: `coordinates` and `totalDistance` are NOT on a common scale — the
+ * coordinate is where the ball was FIELDED, totalDistance is the projected
+ * flight. Position dots from `coordinates` only; the measurements are labels.
+ * See the game-story design spec, trap #2.
+ */
+export interface HitData {
+  launchSpeed?: number
+  launchAngle?: number
+  totalDistance?: number
+  trajectory?: string
+  hardness?: string
+  location?: string
+  coordinates?: { coordX?: number; coordY?: number }
+}

@@ -1081,3 +1081,107 @@ Task 6 (verification): complete — tsc -b + oxlint clean; webapp-testing agains
   - Failure paths driven by aborting each request in turn: byDateRange fails -> panel hides, table keeps its 20 rows; season stats fail -> panel still renders (dashes in ±OPS) and the table shows its error state; teams/stats pitching fails -> Offense card stands alone; both fail -> block hides and the standings are untouched.
   - Regression check: the game-log modal still opens from a batting row and Back still closes it after the single-return refactor.
 All tasks complete.
+
+================================================================================
+FEATURE: game-story (2026-09-02)
+  Spec: docs/superpowers/specs/2026-09-02-game-story-design.md
+  Plan: docs/superpowers/plans/2026-09-02-game-story.md
+  Base: feature/pitcher-handedness @ e203ff9
+
+Task 1 (backend, MLB_ALLOWED -> predicates): complete. server/src/core.ts. Tuple type
+  is now [test: (path)=>boolean, base], ordered most-specific-first, with
+  /game/**/winProbability -> v1 ahead of /game/ -> v1.1. mlbCachePolicy() unchanged;
+  its /game/ 60s branch is simply no longer unreachable, and the comment saying it was
+  has been corrected. VERIFIED live against the running dev server:
+    winProbability  200, cache-control: public, max-age=60      (was 404 before)
+    feed/live       200, cache-control: no-store                (still v1.1)
+    schedule        200, max-age=60, swr=240                    (unchanged)
+    teams/          200                                          (unchanged)
+    /draft          403                                          (still rejected)
+Task 2 (types): complete, but SPLIT DIFFERENTLY FROM THE PLAN. The plan put all five
+  types in src/types/mlb.ts. The house split is response shapes in src/api/mlb.ts
+  (LiveFeed, GameBoxscore, BullpenBoxscore all live there) and derived domain types in
+  src/types/mlb.ts (BullpenOuting, PitcherWorkload). Followed that instead:
+  WinProbEntry + the GameBoxscore.liveData.plays extension -> api/mlb.ts;
+  WinProbPoint, BattedBall, HitData -> types/mlb.ts.
+Task 3 (API): complete. fetchWinProbability (BOXSCORE ttl, bare-array response noted),
+  WIN_PROB_FIELDS (1,033,568 -> 22,729 B), BOXSCORE_FIELDS widened for hitData
+  (41,777 -> 71,682 B, still one request).
+Task 4 (pure logic): complete. src/utils/gameStory.ts.
+Task 5 (WinProbabilityChart): complete. Task 6 (SprayChart): complete.
+Task 7 (mount): complete. enableGameStory threaded App -> Schedule -> GameDetailModal;
+  separate cancellation-guarded useEffect for win probability.
+Task 8 (checks): vite build, oxlint, server tsc, and api/index.ts standalone typecheck
+  all clean.
+
+REPLAY VERIFICATION (free, no browser) -- src/utils/gameStory.ts run under tsx against
+  real statsapi JSON for gamePk 825038:
+  - Phillies AWAY. Curve 53.6% -> 100.0%. Forcing the wrong side gives 0.0%, which is
+    the trap-1 inversion made visible.
+  - Turning points in game order: Top 1st +11.4% Turner double / Bot 5th -8.7% Lawlar
+    homer / Bot 7th +7.7% Perdomo challenge. Signs correct for a road game.
+  - 57 batted balls, 33 PHI / 24 opp. PHI hits by outcomeClass = 13, which MATCHES the
+    official linescore's 13 hits -- an independent check that the half-inning side
+    assignment and the hit classification are both right.
+
+BROWSER VERIFICATION (webapp-testing, both servers, 1280x900 + 375x700):
+  - Road win 825038: 54% -> 100%.  Home win 823427: 52% -> 100%.  Road loss 823019:
+    54% -> 0%. Home AND road, win AND loss -- the plan required this because an
+    all-home sample would pass vacuously.
+  - Section order in the DOM: win probability -> spray chart -> batting -> pitching.
+  - Turning points rendered +11.4% / -8.7% / +7.7%, matching the offline replay exactly.
+    Hardest hit: Bohm 108 mph 418 ft, Turner 103 mph 415 ft.
+  - Spray toggle: Phillies 33 balls/13 hits -> D-backs 24/6.
+  - 0px horizontal overflow at 1280 and 375. Deep link to ?game= restores the modal
+    cold. Escape closes and leaves the Schedule tab intact. Zero console errors on
+    every run.
+  - Flag off (enableGameStory temporarily defaulted false): both SVGs and both headings
+    gone, box score and 7-1 linescore intact, zero errors. Default restored to true.
+
+DEFECT FOUND AND FIXED BY THE VISUAL CHECK (numbers alone missed it):
+  The first SprayChart derived the outfield fence from feet via FT_PER_UNIT, giving a
+  330-ft pole at ~112 coordinate units. Two of Bohm's and Turner's doubles plotted
+  OUTSIDE the wall. Root cause is the same coordinate-vs-totalDistance mismatch the
+  spec documents, one step further out: FT_PER_UNIT is calibrated from the mound and
+  bases and only holds near the plate. Fixed by measuring the batted-ball envelope in
+  coordinate units across five 2026 games (247 balls): home runs 152.1-178.2 units,
+  deepest fly out 165.3, deepest grounder 75.0. Fence now POLE_U=152 / CF_U=178, so
+  deep flies die in front of it and a home run may legitimately land beyond it.
+  Re-verified: 0 of 99 batted balls outside the fence across three games, 0 NaN dots.
+  The infield is still drawn from feet, which is correct and stays.
+  NOTE: one dot legitimately renders BEHIND home plate (y>203) -- checked, it is a real
+  Realmuto foul pop with location "2", trajectory "popup". Not a bug.
+
+Task 10 (docs): CLAUDE.md -- server/MLB_ALLOWED description now says the allowlist is
+  predicate-based and ordered; components list gains both charts; the HTTP-caching
+  paragraph's "currently unreachable /game/ branch" claim corrected; new Game Story
+  section covering all four load-bearing decisions.
+
+LD FLAG: DONE (via the launchdarkly-flag-create skill, project `default`).
+  `enable-game-story`, boolean, temporary, no tags, name "Enable Game Story" -- matching
+  the four sibling app flags exactly. Targeting turned ON in production (version 4).
+  Left OFF in `test`, matching enable-game-detail, which has never been toggled there;
+  confirmed the app reads PRODUCTION by matching .env.local's client-side ID against
+  get-environment (6a6bb40190fd280b9e23959c, and the browser's own ld: localStorage key).
+
+  NOT OPTIONAL, and easy to miss: created with clientSideAvailability.usingEnvironmentId
+  = true. This app uses the React client-side SDK, which only receives flags exposed to
+  client-side SDKs. Without it the flag is silently ABSENT from useFlags(), and because
+  the code default is `= true` the feature would still render -- the flag would look
+  fine while being permanently unable to switch anything off. get-flag does not report
+  this field, so it was verified empirically instead.
+
+  VERIFIED END-TO-END (safe window: the feature code is not deployed to production, so
+  no visitor was affected):
+    - Browser's LD bootstrap cache lists enable-game-story with value true -> the flag
+      really is delivered, not just falling back to the code default. The same payload
+      confirms enable-matchup-preview / enable-roster-tab / enable-batting-form /
+      enable-league-rankings still do not exist in LD, as CLAUDE.md says.
+    - Toggled OFF in production: LD served false, both SVGs gone (0 and 0), modal still
+      open, box score and linescore intact. Toggled back ON immediately.
+
+OUTSTANDING -- needs the user:
+  - Deploy: k8s needs a full pipeline.sh this time (Task 1 changes the backend image,
+    imagePullPolicy: Never). Vercel needs only the push.
+
+All tasks complete. Uncommitted working tree -- staging/committing/pushing is the user's.

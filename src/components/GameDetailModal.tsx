@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchBoxscore, teamLogoUrl } from '../api/mlb'
-import type { BoxscorePlayer, BoxscoreTeam, GameBoxscore } from '../api/mlb'
+import { fetchBoxscore, fetchWinProbability, teamLogoUrl } from '../api/mlb'
+import type { BoxscorePlayer, BoxscoreTeam, GameBoxscore, WinProbEntry } from '../api/mlb'
 import { formatDate } from '../utils/date'
+import { battedBalls, toPhilliesProbability } from '../utils/gameStory'
+import SprayChart from './SprayChart'
+import WinProbabilityChart from './WinProbabilityChart'
 
 const PHILLIES_ID = 143
 
 interface Props {
   gamePk: number
+  enableGameStory: boolean
   onClose: () => void
 }
 
@@ -194,10 +198,11 @@ function LineScore({ feed }: { feed: GameBoxscore }) {
   )
 }
 
-export default function GameDetailModal({ gamePk, onClose }: Props) {
+export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Props) {
   const [feed, setFeed] = useState<GameBoxscore | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [winProb, setWinProb] = useState<WinProbEntry[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -208,6 +213,20 @@ export default function GameDetailModal({ gamePk, onClose }: Props) {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [gamePk])
+
+  // Deliberately a SEPARATE effect with no error state of its own, following the
+  // game-log/splits split in GameLogModal: win probability is a bonus section,
+  // and a failure here must never blank the box score the user actually opened.
+  // The chart simply doesn't render.
+  useEffect(() => {
+    if (!enableGameStory) return
+    let cancelled = false
+    setWinProb(null)
+    fetchWinProbability(gamePk)
+      .then(data => { if (!cancelled) setWinProb(data) })
+      .catch(() => { if (!cancelled) setWinProb([]) })
+    return () => { cancelled = true }
+  }, [gamePk, enableGameStory])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -253,6 +272,23 @@ export default function GameDetailModal({ gamePk, onClose }: Props) {
         .join(' · '),
     }
   }, [feed])
+
+  // Both sections normalize to the Phillies here, once, so neither chart has to
+  // know which side they batted on.
+  const philliesAreHome = feed?.gameData.teams.home.id === PHILLIES_ID
+  const opponentName = useMemo(() => {
+    if (feed == null) return ''
+    const { home, away } = feed.gameData.teams
+    const opponent = philliesAreHome ? away : home
+    return opponent.teamName ?? opponent.name
+  }, [feed, philliesAreHome])
+
+  const winProbPoints = useMemo(
+    () => (winProb == null ? [] : toPhilliesProbability(winProb, philliesAreHome)),
+    [winProb, philliesAreHome]
+  )
+
+  const balls = useMemo(() => (feed == null ? [] : battedBalls(feed, PHILLIES_ID)), [feed])
 
   const decisions = feed?.liveData.decisions
   const decisionParts = [
@@ -304,6 +340,15 @@ export default function GameDetailModal({ gamePk, onClose }: Props) {
                     <span key={part}>{part}</span>
                   ))}
                 </div>
+              )}
+              {enableGameStory && winProbPoints.length > 1 && (
+                <WinProbabilityChart points={winProbPoints} opponentName={opponentName} />
+              )}
+              {enableGameStory && balls.length > 0 && (
+                <SprayChart balls={balls} opponentName={opponentName} />
+              )}
+              {enableGameStory && (winProbPoints.length > 1 || balls.length > 0) && (
+                <div className="mt-6 mb-5 border-b border-gray-100" />
               )}
               {ordered.length > 0 ? (
                 ordered.map(team => (

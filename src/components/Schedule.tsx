@@ -14,13 +14,14 @@ const PHILLIES_ID = 143
 interface Props {
   enableGameDetail: boolean
   enableMatchupPreview: boolean
+  enableGameStory: boolean
 }
 
 function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
 }
 
-export default function Schedule({ enableGameDetail, enableMatchupPreview }: Props) {
+export default function Schedule({ enableGameDetail, enableMatchupPreview, enableGameStory }: Props) {
   const [dates, setDates] = useState<{ date: string; games: Game[] }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -223,7 +224,11 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview }: Pro
     </div>
     </div>
     {selectedGame != null && (
-      <GameDetailModal gamePk={selectedGame} onClose={() => dismiss({ game: null })} />
+      <GameDetailModal
+        gamePk={selectedGame}
+        enableGameStory={enableGameStory}
+        onClose={() => dismiss({ game: null })}
+      />
     )}
     </>
   )
