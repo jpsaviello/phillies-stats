@@ -4,6 +4,7 @@ import type { Game, OddsGame } from '../api/mlb'
 import { getPhilliesOdds } from '../utils/odds'
 import { firstPitch } from '../utils/gameTime'
 import { scrollBehavior } from '../utils/motion'
+import { easternToday, formatDate, shiftDate } from '../utils/date'
 import GameDetailModal from './GameDetailModal'
 import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import MatchupPreview from './MatchupPreview'
@@ -15,10 +16,6 @@ interface Props {
   enableGameDetail: boolean
   enableMatchupPreview: boolean
   enableGameStory: boolean
-}
-
-function formatDate(iso: string) {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
 }
 
 export default function Schedule({ enableGameDetail, enableMatchupPreview, enableGameStory }: Props) {
@@ -56,15 +53,13 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
   useEffect(() => {
     setLoading(true)
     setError(null)
-    const now = new Date()
-    const start = new Date(now)
-    start.setDate(now.getDate() - 14)
-    const end = new Date(now)
-    end.setDate(now.getDate() + 14)
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    // Two weeks either side of the BASEBALL day, not the visitor's own. MLB
+    // dates every game by its Eastern calendar day, so a fan on the west coast
+    // watching a night game is already on tomorrow's date locally and would be
+    // handed a window shifted a day off the schedule they are looking at.
+    const today = easternToday()
     Promise.all([
-      fetchSchedule(fmt(start), fmt(end)),
+      fetchSchedule(shiftDate(today, -14), shiftDate(today, 14)),
       fetchOdds().catch(() => [] as OddsGame[]),
     ])
       .then(([scheduleData, oddsData]) => {
@@ -82,8 +77,10 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
   if (error) return <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
   if (!dates.length) return <EmptyState>No games in this window.</EmptyState>
 
-  const _d = new Date()
-  const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
+  // Same definition of "today" the fetch above used, so the jump anchor and the
+  // upcoming-game pick can't land on a different day than the window they came
+  // from.
+  const today = easternToday()
 
   const oddsMap = new Map<string, OddsGame>()
   for (const game of odds) {
@@ -179,7 +176,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
                 },
                 role: 'button',
                 tabIndex: 0,
-                'aria-label': `Box score: ${isHome ? 'vs' : '@'} ${opponent}, ${formatDate(date)}`,
+                'aria-label': `Box score: ${isHome ? 'vs' : '@'} ${opponent}, ${formatDate(date, { month: 'short', day: 'numeric', weekday: 'short' })}`,
               })}
               // Hover is now reserved for rows that actually open something —
               // every row used to tint its border, and the clickable ones were
@@ -188,7 +185,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
               className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-red-50 hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
             >
               <div className="text-sm text-gray-500 w-24 shrink-0">
-                {formatDate(date)}
+                {formatDate(date, { month: 'short', day: 'numeric', weekday: 'short' })}
                 {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
               </div>
               <div className="text-sm text-gray-500 w-6 text-center">{isHome ? 'vs' : '@'}</div>

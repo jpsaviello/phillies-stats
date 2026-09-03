@@ -1,10 +1,34 @@
-// Shared by the routine-fed cards (DailyBriefing, OnThisDayCard), which both
-// measure a written-for date against today and render a formatted date label.
+// The app's date vocabulary. Everything that needs to know "what day is it in
+// baseball terms" comes through here rather than reaching for `new Date()`.
 
-// Team-local date: a briefing written at 8 AM ET must not be measured against
-// tomorrow's UTC date. en-CA gives YYYY-MM-DD, matching the JSON date format.
+/**
+ * The timezone the schedule is published in. Every date MLB sends — a game's
+ * `officialDate`, a game log entry, the date a routine wrote a briefing for —
+ * is an Eastern calendar date, so that is the only clock this app may measure
+ * "today" against.
+ */
+const BASEBALL_TZ = 'America/New_York'
+
+/**
+ * The Eastern calendar date containing `at` — the "baseball day".
+ *
+ * This is the app's single definition of today, and it takes the instant as an
+ * argument so it can be exercised without mocking the clock. Reaching for the
+ * visitor's own timezone instead is wrong in both directions and quietly so: a
+ * fan in Los Angeles at 9:30 PM is already on tomorrow's date in ET and would
+ * be shown the wrong day's game, while one in London is a full day ahead for
+ * most of their evening.
+ *
+ * en-CA gives YYYY-MM-DD, matching the format MLB's schedule endpoint takes and
+ * the format the routine-written JSON files carry.
+ */
+export function baseballDay(at: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: BASEBALL_TZ }).format(at)
+}
+
+/** Today's baseball day. Thin alias for the overwhelmingly common call. */
 export function easternToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
+  return baseballDay()
 }
 
 export function daysBehind(date: string, today: string): number {

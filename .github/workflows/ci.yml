@@ -37,6 +37,23 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+  frontend-test:
+    name: Frontend tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Unit tests over the pure baseball math (innings notation, ET date
+      # handling, tiebreakers, win-probability normalization, ranking). They
+      # need no browser and no dev server — the webapp-testing verification
+      # this repo requires before a feature is called done is a separate,
+      # manual step and this job is not a substitute for it.
+      - run: npm test
+
   backend-build:
     name: Backend build (server/)
     runs-on: ubuntu-latest
