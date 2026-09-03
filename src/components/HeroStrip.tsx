@@ -33,6 +33,20 @@ const PREGAME_STATES = ['Scheduled', 'Pre-Game', 'Warmup']
  */
 type Status = 'loading' | 'ready' | 'failed'
 
+interface Props {
+  /**
+   * 'season' drops the Last Game and Next Game cards.
+   *
+   * Used on the Today tab, where both are pure duplication: that tab leads with
+   * the live-or-next game in full and recaps the last one below it, so the
+   * strip would state the same two facts a few hundred pixels above in smaller
+   * type. On every other tab the strip is the only game context there is, so it
+   * keeps all four. Halves the strip's height on a phone, where the 2x2 grid is
+   * the tallest thing above the tab bar.
+   */
+  variant?: 'full' | 'season'
+}
+
 interface Leader {
   player: Player
   value: string
@@ -105,7 +119,7 @@ function Card({ label, status, children }: { label: string; status: Status; chil
   )
 }
 
-export default function HeroStrip() {
+export default function HeroStrip({ variant = 'full' }: Props) {
   const [record, setRecord] = useState<StandingsRecord | null>(null)
   const [recordStatus, setRecordStatus] = useState<Status>('loading')
 
@@ -133,7 +147,12 @@ export default function HeroStrip() {
       .catch(() => setRecordStatus('failed'))
   }, [])
 
+  const showGames = variant === 'full'
+
   useEffect(() => {
+    // Nothing on screen needs the schedule in the season variant, so it isn't
+    // fetched. Switching to another tab flips `variant` and this runs then.
+    if (!showGames) return
     // Odds already fail soft into an empty list — they decorate the Next Game
     // card and must never be able to take the game itself down.
     Promise.all([
@@ -146,7 +165,7 @@ export default function HeroStrip() {
         setScheduleStatus('ready')
       })
       .catch(() => setScheduleStatus('failed'))
-  }, [today])
+  }, [today, showGames])
 
   useEffect(() => {
     Promise.all([fetchBattingStats(), fetchPitchingStats()])
@@ -222,7 +241,8 @@ export default function HeroStrip() {
   // Only when there is nothing at all to say does the strip disappear, which is
   // the behavior it always had for a total outage. A single failed chain now
   // costs its own cards and nothing else.
-  if (recordStatus === 'failed' && scheduleStatus === 'failed' && statsStatus === 'failed') return null
+  const scheduleDown = !showGames || scheduleStatus === 'failed'
+  if (recordStatus === 'failed' && scheduleDown && statsStatus === 'failed') return null
 
   const last = lastGame && gameView(lastGame.game)
   const next = nextGame && gameView(nextGame.game)
@@ -231,7 +251,9 @@ export default function HeroStrip() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Two cards would sprawl across a 7xl row, so the season variant caps
+          its own width rather than leaving a gap where the game cards were. */}
+      <div className={`grid grid-cols-2 gap-3 ${showGames ? 'lg:grid-cols-4' : 'lg:max-w-2xl'}`}>
         {/* recordStatus is already 'failed' when the response carried no
             Phillies row, so there is nothing extra to check here. */}
         <Card label="Record" status={recordStatus}>
@@ -249,6 +271,7 @@ export default function HeroStrip() {
           )}
         </Card>
 
+        {showGames && (
         <Card label="Last Game" status={scheduleStatus === 'ready' && !lastGame ? 'failed' : scheduleStatus}>
           {lastGame && last && (
             <>
@@ -271,7 +294,9 @@ export default function HeroStrip() {
             </>
           )}
         </Card>
+        )}
 
+        {showGames && (
         <Card label="Next Game" status={scheduleStatus === 'ready' && !nextGame ? 'failed' : scheduleStatus}>
           {nextGame && next && nextDate && (
             <>
@@ -297,6 +322,7 @@ export default function HeroStrip() {
             </>
           )}
         </Card>
+        )}
 
         <Card label="Team Leaders" status={statsStatus}>
           <div className="mt-1.5 space-y-1.5">

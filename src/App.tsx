@@ -4,8 +4,7 @@ import Header from './components/Header'
 import AllStarBanner from './components/AllStarBanner'
 import LaunchDarklyDemoBanner from './components/LaunchDarklyDemoBanner'
 import HeroStrip from './components/HeroStrip'
-import DailyBriefing from './components/DailyBriefing'
-import OnThisDayCard from './components/OnThisDayCard'
+import TodayInPhils from './components/TodayInPhils'
 import LiveGameStrip from './components/LiveGameStrip'
 import Nav from './components/Nav'
 import Today from './components/Today'
@@ -137,20 +136,17 @@ export default function App() {
       {/* Self-hides unless a Phillies game is live; mounted outside the tab
           conditionals so its polling survives tab switches. */}
       <LiveGameStrip />
-      <HeroStrip />
+      {/* The season variant on Today: that tab leads with the live-or-next game
+          and recaps the last one, so the strip's two game cards would repeat
+          both a few hundred pixels above in smaller type. */}
+      <HeroStrip variant={tab === 'today' ? 'season' : 'full'} />
       {/* Self-hides unless you're signed in with at least one starred player. */}
       <FavoritesCard signedIn={user !== null} favorites={favorites} />
-      {/* Both self-hide when they have nothing fresh to show, and each owns its
-          own fetch and collapse state. They share a row from sm up rather than
-          stacking, because both are one-line headlines at rest and the stack
-          above the tab bar is already several screens tall on a phone. flex-1
-          on each child means a lone survivor still fills the row. */}
-      {(enableDailyBriefing || enableOnThisDay) && (
-        <div className="max-w-7xl mx-auto px-4 pt-3 flex flex-col sm:flex-row gap-3">
-          {enableDailyBriefing && <DailyBriefing />}
-          {enableOnThisDay && <OnThisDayCard />}
-        </div>
-      )}
+      {/* One module, two rows — each still owns its own fetch, expanded state
+          and staleness cutoff, and each still self-hides independently. It was
+          two stacked cards, which cost two borders and two section labels
+          before the tab bar on a phone. */}
+      <TodayInPhils showBriefing={enableDailyBriefing} showOnThisDay={enableOnThisDay} />
       <Nav
         active={tab}
         onChange={setTab}
