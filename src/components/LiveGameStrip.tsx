@@ -6,7 +6,7 @@ import {
   teamLogoUrl,
   type LiveFeed,
 } from '../api/mlb'
-import { shiftDate } from '../utils/date'
+import { easternToday, shiftDate } from '../utils/date'
 
 // Cheap gate: today's schedule (~1KB) tells us whether a game is live before
 // we ever touch the feed. The feed itself refreshes faster while a game is on.
@@ -18,10 +18,6 @@ const FEED_POLL_MS = 15_000
 // finished games too, which makes live rendering testable on demand.
 const overridePk =
   Number(new URLSearchParams(window.location.search).get('liveGamePk')) || null
-
-function fmtDate(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
   e.currentTarget.style.display = 'none'
@@ -36,7 +32,7 @@ export default function LiveGameStrip() {
 
     const check = () => {
       if (document.hidden) return
-      const today = fmtDate(new Date())
+      const today = easternToday()
       // A night game that started before local midnight keeps MLB's
       // `officialDate` pinned to the day it started, so it drops out of a
       // single-day query for "today" the moment the clock rolls over even
