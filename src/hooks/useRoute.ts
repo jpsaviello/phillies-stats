@@ -18,10 +18,17 @@ import { useSyncExternalStore } from 'react'
  * not part of the hash, and remains the debug hook LiveGameStrip documents.
  */
 
-export type Tab = 'batting' | 'pitching' | 'roster' | 'standings' | 'schedule'
+export type Tab = 'today' | 'batting' | 'pitching' | 'roster' | 'standings' | 'schedule'
 
-const TABS: Tab[] = ['batting', 'pitching', 'roster', 'standings', 'schedule']
-const DEFAULT_TAB: Tab = 'batting'
+const TABS: Tab[] = ['today', 'batting', 'pitching', 'roster', 'standings', 'schedule']
+
+/**
+ * The landing tab. This was 'batting' — a season-long table several cards below
+ * the fold — which meant the app opened on the one thing that cannot answer
+ * "what's happening tonight". Today leads with the live or next game instead;
+ * the tables are a click away and every one of them is still directly linkable.
+ */
+const DEFAULT_TAB: Tab = 'today'
 
 export interface Route {
   tab: Tab

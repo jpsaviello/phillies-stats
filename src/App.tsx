@@ -8,6 +8,7 @@ import DailyBriefing from './components/DailyBriefing'
 import OnThisDayCard from './components/OnThisDayCard'
 import LiveGameStrip from './components/LiveGameStrip'
 import Nav from './components/Nav'
+import Today from './components/Today'
 import BattingTable from './components/BattingTable'
 import PitchingTable from './components/PitchingTable'
 import Roster from './components/Roster'
@@ -156,6 +157,16 @@ export default function App() {
         hidden={enableRosterTab ? [] : ['roster']}
       />
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* The default route. Reuses the same three flags the Schedule tab
+            passes down, since it renders the same matchup panel and opens the
+            same box score modal. */}
+        {tab === 'today' && (
+          <Today
+            enableGameDetail={enableGameDetail}
+            enableMatchupPreview={enableMatchupPreview}
+            enableGameStory={enableGameStory}
+          />
+        )}
         {tab === 'batting' && (
           <BattingTable
             signedIn={user !== null}

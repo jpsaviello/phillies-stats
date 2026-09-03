@@ -187,7 +187,16 @@ export default function HeroStrip() {
    * opening days already fall back to.
    */
   const leaders = useMemo<{ label: string; leader: Leader | null }[]>(() => {
-    const teamGames = record ? record.wins + record.losses : 0
+    // With no standings, the closest honest proxy for team games played is the
+    // most games any one hitter has appeared in — a lower bound, and within a
+    // handful of the real figure for any everyday player. Falling back to zero
+    // instead would floor both thresholds at 1 and collapse the qualification
+    // gate entirely, which in September promotes a call-up's 4-for-11 to team
+    // batting leader. That pool is the right one on opening weekend and badly
+    // wrong in month five, and standings being down says nothing about which.
+    const teamGames = record
+      ? record.wins + record.losses
+      : batting.reduce((most, s) => Math.max(most, s.stat.gamesPlayed ?? 0), 0)
 
     // Approximates the official 3.1 PA/game qualification rule.
     const qualified = batting.filter(s => s.stat.atBats >= Math.max(1, 2 * teamGames))

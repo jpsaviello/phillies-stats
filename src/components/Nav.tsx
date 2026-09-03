@@ -15,6 +15,8 @@ interface NavProps {
 }
 
 const tabs: { id: Tab; label: string }[] = [
+  // First, and the default route — the day's game before the season's tables.
+  { id: 'today', label: 'Today' },
   { id: 'batting', label: 'Batting' },
   { id: 'pitching', label: 'Pitching' },
   { id: 'roster', label: 'Roster' },
