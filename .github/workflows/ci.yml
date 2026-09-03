@@ -54,6 +54,32 @@ jobs:
       # manual step and this job is not a substitute for it.
       - run: npm test
 
+  frontend-smoke:
+    name: Frontend smoke (playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Only Chromium: the suite is a smoke check, not a cross-browser matrix,
+      # and the other engines triple the install time for no extra signal.
+      - run: npx playwright install --with-deps chromium
+      # Hermetic. Every /api/** call is replayed from tests/fixtures and every
+      # external host is stubbed, so this job needs no backend, no API keys and
+      # no reachable statsapi.mlb.com — it cannot go red because MLB had a bad
+      # afternoon. Playwright starts the Vite dev server itself.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        # Traces are recorded on the retry of a failed test; useless when green.
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   backend-build:
     name: Backend build (server/)
     runs-on: ubuntu-latest

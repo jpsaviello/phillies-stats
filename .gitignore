@@ -39,3 +39,10 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# Playwright smoke tests: reports and per-run artifacts. The fixtures under
+# tests/fixtures/ ARE committed — they're what makes the suite hermetic.
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

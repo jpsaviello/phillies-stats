@@ -11,6 +11,8 @@ npm run build       # type-check then bundle the frontend (tsc -b && vite build)
 npm run lint        # run Oxlint
 npm test            # run the unit tests once (vitest run)
 npm run test:watch  # re-run them on change
+npm run test:e2e    # browser smoke tests (Playwright, hermetic — needs no backend)
+npm run test:e2e:record  # re-record the smoke tests' API fixtures (DOES need both servers)
 npm run preview     # serve the production build locally (still proxies /api to :8080)
 ```
 
@@ -195,9 +197,19 @@ Two layers, and neither replaces the other.
 
 **Unit tests (Vitest, added 2026-09-03).** `npm test` runs every `src/**/*.test.ts`; the suites live in `src/utils/__tests__/` beside the code they cover, which also means `tsconfig.app.json`'s `include: ["src"]` type-checks them as part of `npm run build` (that already caught a widened literal union in a fixture). They cover the **pure baseball math only** — no React, no DOM, no fetch — so `vitest.config.ts` sets `environment: 'node'`. It also pins `TZ` to `America/Los_Angeles`: several suites exist to prove the date helpers work in Eastern regardless of where the machine sits, and on an ET machine those assertions would pass without discriminating anything. What's covered is the traps documented throughout this file — innings notation, the home/away win-probability flip, the Hot & Cold rounding threshold, per-category ranking direction, MLB's `"-"` and `".---"` sentinels, the tiebreaker chain, and the Today tab's headline selection (which is how the live-game branch is tested without waiting for a live game).
 
+**Browser smoke tests (Playwright, added 2026-09-03).** `npm run test:e2e` runs `tests/e2e/` in Chromium at two viewports — a `desktop` project and a `mobile` one pinned to 375px, the width every mobile decision in this app was made against. Four files, matching the four things worth catching automatically: `tabs.spec.ts` (every tab renders its own panel, the tables have rows, an unknown hash falls back to the default), `links.spec.ts` (cold `?player=` and `?game=` deep links, row clicks, Back closing a modal instead of leaving the site), `signed-out.spec.ts` (no stars, no "Your Players", every stat still visible — the promise the account features were added on), and `mobile.spec.ts` (no horizontal page overflow on any tab, every nav tab reachable, the sticky nav still there after scrolling).
+
+**The suite is hermetic, and that is the whole design.** Every `/api/**` call is replayed from `tests/fixtures/` and every external host — LaunchDarkly, mlbstatic — is stubbed, so it needs no backend, no `ODDS_API_KEY`/`DATABASE_URL`, and no reachable `statsapi.mlb.com`. A smoke suite that goes red because MLB had a bad afternoon gets muted within a week, and a muted suite is worse than none. Verified by running the whole thing green with the backend process killed.
+
+Four details are load-bearing. **The clock is frozen** (`FROZEN_NOW`, 2026-09-03 14:00 ET) via `page.clock.setFixedTime` — the app derives its request URLs from the current baseball day, so without this a fixture recorded today stops matching tomorrow's URL and the suite rots overnight. It is `setFixedTime` and **not** `clock.install()`: install also fakes `setTimeout`/`requestAnimationFrame`, which React's scheduler leans on, and faking those stalls rendering. **Route registration order is reversed** — Playwright matches the LAST registered route first, so in `tests/support/app.ts` the broad `*.launchdarkly.com` catch-all is registered BEFORE the specific `evalx`/`goals` handlers, or the catch-all answers everything and the flag payload never arrives. **The API stub matches on `pathname.startsWith('/api/')`, never the glob `**/api/**`**, which also matches Vite's own dev-server requests for `src/api/*.ts` and would intercept the app's source on its way to the browser. And **an uncovered API call fails loudly** (a 599 plus an entry in `missingFixtures` that the specs assert is empty) rather than falling through to the network, which is what stops the suite quietly becoming live-API-dependent.
+
+Fixtures are recorded through the app's own backend proxy by `npm run test:e2e:record`, which DOES need both dev servers and a reachable statsapi. It opens the modals by deep link rather than by clicking a row — clicking would capture whatever happened to sort first that day, and the specs ask for specific ids (`SAMPLE` in `tests/support/app.ts`, shared by both so they cannot drift). Re-run it when a component starts calling a new endpoint; the suite names the missing fixture when that happens.
+
+Note the specs target `tbody tr[role="button"]` for a clickable player row, not a bare `tbody tr`: the Batting tab renders Hot & Cold's own table above the stats table, so the first `tbody tr` on the page opens nothing.
+
 **Everything else is still manual.** Nothing tests a component, a fetch, or a rendered page. So: this repo uses the `webapp-testing` skill (`.claude/skills/webapp-testing/SKILL.md`) — a Playwright-based toolkit for driving the app in a real headless browser (navigate, click, screenshot, read console output).
 
-**Every finished feature must be verified with `webapp-testing` before being considered done** — not just lint/typecheck. Use `scripts/with_server.py` to manage the `npm run dev` lifecycle, write a small Playwright script that exercises the actual user flow (click through to the changed UI, screenshot it, check for console errors), and confirm the result visually rather than assuming it works from source review alone.
+**Every finished feature must be verified with `webapp-testing` before being considered done** — not just lint/typecheck. Start the servers yourself (`npm run dev:server` and `npm run dev`), write a small Playwright script that exercises the actual user flow (click through to the changed UI, screenshot it, check for console errors), and confirm the result visually rather than assuming it works from source review alone.
 
 Requires the `playwright` Python package and its Chromium browser binary to be installed locally (`pip install playwright && playwright install chromium`) — already set up in this environment as of 2026-07-08.
 
@@ -205,17 +217,18 @@ Requires the `playwright` Python package and its Chromium browser binary to be i
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every PR into `develop` and on push to `develop`. Seven independent jobs, each its own GitHub check:
+`.github/workflows/ci.yml` runs on every PR into `develop` and on push to `develop`. Eight independent jobs, each its own GitHub check:
 
 - **frontend-build** — `npm ci && npm run build` (`tsc -b && vite build`). The main signal: nothing else in CI type-checks the frontend or proves it bundles.
 - **frontend-lint** — `npm ci && npm run lint` (Oxlint).
 - **frontend-test** — `npm ci && npm test` (Vitest). Covers the pure utils only; it is not a substitute for the `webapp-testing` pass a finished feature still requires.
+- **frontend-smoke** — `npm ci && npx playwright install --with-deps chromium && npm run test:e2e`. Hermetic (fixtures, no backend, no keys, no MLB), so it is a real signal rather than a flake generator; uploads the Playwright report on failure.
 - **backend-build** — `npm ci && npm run build` inside `server/`. Easy to forget this needs its own check: `server/` is a separate `package.json` with its own `tsc` build (see Architecture), and before this workflow nothing verified it compiled short of `pipeline.sh` or a live Vercel build failing.
 - **dependency-drift** — `node scripts/check-dep-drift.mjs`, no install needed (it only reads both `package.json` files). Root `package.json` deliberately duplicates `@anthropic-ai/sdk` and `pg` so Vercel's root-level install can resolve them when bundling `api/index.ts` (see "On Vercel" below) — this catches the two copies drifting apart, which Vercel's build wouldn't error on, it would just silently bundle the stale version.
 - **k8s-validate** — renders `k8s/base` and `k8s/overlays/local` with `kubectl kustomize` (pure client-side, no cluster needed) and schema-validates the output plus the standalone `k8s/monitoring/grafana-ingress.yaml` with `kubeconform`. Catches a broken kustomization or a malformed manifest before it reaches `pipeline.sh`.
 - **secret-scan** — runs the open-source `gitleaks` CLI directly via its official Docker image (`docker run zricethezav/gitleaks:latest detect`) against the checked-out tree, **not** the `gitleaks-action` wrapper — that wrapper gates some repository-ownership types behind a paid license, and the plain binary needs none of that. `.gitleaks.toml` extends the bundled default ruleset with a narrow allowlist for confirmed false positives (verified by hand against the actual file each time one's added, `regexTarget = "line"` so the match isn't dependent on how much of the line a rule captures) — the first two entries are the `DISMISS_KEY` localStorage key name (`AllStarBanner.tsx` and its design doc) and a progress-log line narrating that a placeholder, not a real key, was appended to `.env.local`. Widen an entry only to the exact string that triggered it — never allowlist a whole path just to quiet the tool.
 
-**What this doesn't cover:** the unit tests reach the pure utils and nothing else (see Testing above) — no component, fetch or rendered page is exercised anywhere in CI, so these jobs prove the app builds, lints clean, passes its math tests and ships no committed secret, not that any feature behaves correctly. `webapp-testing` verification before calling a feature done is still required and CI is not a substitute for it.
+**What this doesn't cover:** the smoke tests prove every tab renders, deep links resolve and nothing overflows on a phone, but they assert against RECORDED data — they cannot catch a change in what MLB actually returns, and they check that a panel appears rather than that its numbers are right (that is the unit tests' job, and they reach the pure utils only). `webapp-testing` verification before calling a feature done is still required and CI is not a substitute for it.
 
 ## Automated routines
 
