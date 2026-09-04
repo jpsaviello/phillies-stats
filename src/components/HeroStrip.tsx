@@ -251,9 +251,12 @@ export default function HeroStrip({ variant = 'full' }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-6">
-      {/* Two cards would sprawl across a 7xl row, so the season variant caps
-          its own width rather than leaving a gap where the game cards were. */}
-      <div className={`grid grid-cols-2 gap-3 ${showGames ? 'lg:grid-cols-4' : 'lg:max-w-2xl'}`}>
+      {/* The season variant keeps the strip's full width and splits it between
+          two cards rather than capping itself narrow. Every other module above
+          the nav — the banners, Today in Phils, the nav itself — is this wide,
+          and a strip that stopped halfway was the one thing on the page that
+          didn't line up with anything. */}
+      <div className={`grid grid-cols-2 gap-3 ${showGames ? 'lg:grid-cols-4' : ''}`}>
         {/* recordStatus is already 'failed' when the response carried no
             Phillies row, so there is nothing extra to check here. */}
         <Card label="Record" status={recordStatus}>

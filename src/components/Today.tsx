@@ -156,7 +156,11 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
 
   return (
     <>
-      <div className="space-y-6">
+      {/* One column, the same `max-w-2xl` the Standings and Schedule tabs use.
+          Every section here — including MatchupPreview, which carries that cap
+          itself — then shares a right edge. Without it the tab alternated
+          between full-width cards and the 2xl matchup panel down the page. */}
+      <div className="max-w-2xl space-y-6">
         {/* ---- What's on now ------------------------------------------- */}
         {headline && head && (
           <section className="card p-5">
