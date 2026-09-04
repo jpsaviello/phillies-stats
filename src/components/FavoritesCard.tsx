@@ -78,7 +78,7 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
   const hidden = favorites.length - shown.length
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-3">
+    <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
       <div className="card px-4 py-3">
         <div className="card-label">
           Your Players
@@ -116,7 +116,7 @@ export default function FavoritesCard({ signedIn, favorites }: Props) {
                           <span className="font-display text-[10px] uppercase tracking-wider text-gray-500">
                             {label}
                           </span>
-                          <span className="font-display text-sm font-bold text-phillies-navy tabular-nums">
+                          <span className="font-display text-sm font-bold text-mark tabular-nums">
                             {value}
                           </span>
                         </span>

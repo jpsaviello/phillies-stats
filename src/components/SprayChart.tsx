@@ -8,7 +8,7 @@ interface Props {
 }
 
 const RED = '#E81828' // SVG attribute literal; canonical token is --color-phillies-red in src/index.css
-const OUT_GRAY = '#9ca3af'
+const OUT_GRAY = 'var(--color-gray-400)'
 
 // --- Infield: drawn from real distances, via the FT_PER_UNIT calibration that
 // the mound and bases confirm (see gameStory.ts). ---
@@ -100,7 +100,7 @@ export default function SprayChart({ balls, opponentName }: Props) {
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-display text-lg uppercase tracking-wide text-phillies-navy">Spray Chart</h3>
+          <h3 className="font-display text-lg uppercase tracking-wide text-mark">Spray Chart</h3>
           <p className="mt-0.5 text-xs text-gray-500">
             Every ball put in play. Dot size is exit velocity.
           </p>
@@ -128,17 +128,17 @@ export default function SprayChart({ balls, opponentName }: Props) {
               `${hits} of which went for hits. The hardest-hit balls are listed below.`
             }
           >
-            <path d={`${FENCE} L${HOME_PLATE.x},${HOME_PLATE.y} Z`} fill="#f0fdf4" stroke="none" />
-            <path d={FENCE} fill="none" stroke="#d1d5db" strokeWidth="1.2" />
-            <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={LF_POLE.x} y2={LF_POLE.y} stroke="#d1d5db" strokeWidth="1" />
-            <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={RF_POLE.x} y2={RF_POLE.y} stroke="#d1d5db" strokeWidth="1" />
+            <path d={`${FENCE} L${HOME_PLATE.x},${HOME_PLATE.y} Z`} className="fill-green-50" stroke="none" />
+            <path d={FENCE} fill="none" className="stroke-gray-300" strokeWidth="1.2" />
+            <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={LF_POLE.x} y2={LF_POLE.y} className="stroke-gray-300" strokeWidth="1" />
+            <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={RF_POLE.x} y2={RF_POLE.y} className="stroke-gray-300" strokeWidth="1" />
             <path
               d={`M${HOME_PLATE.x},${HOME_PLATE.y} L${FIRST_BASE.x.toFixed(1)},${FIRST_BASE.y.toFixed(1)} L${SECOND_BASE.x},${SECOND_BASE.y.toFixed(1)} L${THIRD_BASE.x.toFixed(1)},${THIRD_BASE.y.toFixed(1)} Z`}
               fill="none"
-              stroke="#d1d5db"
+              className="stroke-gray-300"
               strokeWidth="1"
             />
-            <circle cx={MOUND.x} cy={MOUND.y} r="1.6" fill="#e5e7eb" />
+            <circle cx={MOUND.x} cy={MOUND.y} r="1.6" className="fill-gray-200" />
 
             {shown.map((b, i) => {
               const c = b.hit.coordinates
@@ -150,7 +150,7 @@ export default function SprayChart({ balls, opponentName }: Props) {
                   cy={c?.coordY}
                   r={radius(b.hit.launchSpeed)}
                   fill={isHit ? RED : 'none'}
-                  stroke={isHit ? '#fff' : OUT_GRAY}
+                  stroke={isHit ? 'var(--color-panel)' : OUT_GRAY}
                   strokeWidth={isHit ? 0.7 : 1}
                   opacity={isHit ? 0.9 : 0.75}
                 >

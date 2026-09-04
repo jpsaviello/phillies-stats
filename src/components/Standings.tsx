@@ -70,7 +70,7 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
                 return (
                   <tr
                     key={r.team.id}
-                    className={isPhillies ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}
+                    className={isPhillies ? 'bg-hover font-semibold' : 'hover:bg-gray-50'}
                   >
                     {/* flex on a span, not the <td> — see WildCardStandings. */}
                     <td className="px-4 py-3 text-gray-900">

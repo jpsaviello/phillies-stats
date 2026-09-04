@@ -53,7 +53,7 @@ export default function ScrollX({ children, className = '' }: Props) {
       {more && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-panel to-transparent"
         />
       )}
     </div>

@@ -32,7 +32,7 @@ function RankTable({ title, rows }: { title: string; rows: RankedCategory[] }) {
                     so it gets the display face — the same treatment PlayoffPush
                     gives its headline figures. */}
                 <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                  <span className="font-display text-base text-phillies-navy">{ordinal(row.rank)}</span>
+                  <span className="font-display text-base text-mark">{ordinal(row.rank)}</span>
                   <span className="ml-1 text-xs text-gray-500">of {row.of}</span>
                 </td>
               </tr>

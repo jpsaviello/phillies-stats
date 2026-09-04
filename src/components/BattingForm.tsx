@@ -36,7 +36,7 @@ function FormRow({ form }: { form: HitterForm }) {
           tables: the delta sits in the last column, so reaching it on a phone
           would otherwise scroll the name out of view. Needs its own background
           — the rows beneath show through a transparent sticky cell. */}
-      <td className="sticky left-0 bg-white px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
+      <td className="sticky left-0 bg-panel px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
         {form.name}
       </td>
       <td className="px-3 py-3 text-center tabular-nums">{form.games}</td>

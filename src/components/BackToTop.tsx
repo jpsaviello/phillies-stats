@@ -34,7 +34,7 @@ export default function BackToTop() {
       aria-label="Back to top"
       title="Back to top"
       onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}
-      className="fixed bottom-20 right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-phillies-navy shadow-lg transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+      className="fixed bottom-20 right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-panel-raised text-mark shadow-[0_3px_10px_rgb(0_0_0/0.22)] transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
     >
       <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M10 15.5V5M10 5l-5 5M10 5l5 5" strokeLinecap="round" strokeLinejoin="round" />

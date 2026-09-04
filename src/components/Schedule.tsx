@@ -129,7 +129,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
           <button
             type="button"
             onClick={jumpToAnchor}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
           >
             {/* The list runs oldest first over today ± 14 days, so without this
                 the tab opens on a game from two weeks ago. */}
@@ -181,12 +181,12 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
               // Hover is now reserved for rows that actually open something —
               // every row used to tint its border, and the clickable ones were
               // distinguished only by a 40%-opacity border, so the affordance
-              // read as noise. Matches the tables' hover:bg-red-50.
-              className={`flex items-center gap-4 px-4 py-3 bg-white rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-l-4 border-l-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-red-50 hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
+              // read as noise. Matches the tables' hover:bg-hover.
+              className={`flex items-center gap-4 px-4 py-3 bg-panel rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-hover hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
             >
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date, { month: 'short', day: 'numeric', weekday: 'short' })}
-                {isToday && <span className="ml-2 text-xs font-bold text-phillies-red uppercase">Today</span>}
+                {isToday && <span className="ml-2 text-xs font-bold text-live uppercase">Today</span>}
               </div>
               <div className="text-sm text-gray-500 w-6 text-center">{isHome ? 'vs' : '@'}</div>
               <img

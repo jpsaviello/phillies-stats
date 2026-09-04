@@ -149,7 +149,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                           mouse-only. */}
                       <button
                         type="button"
-                        className={`inline-flex items-center gap-0.5 uppercase rounded hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${active ? 'text-phillies-red' : ''}`}
+                        className={`inline-flex items-center gap-0.5 uppercase rounded hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${active ? 'text-live' : ''}`}
                         onClick={() =>
                           setSort(prev =>
                             prev.key === c.key
@@ -177,7 +177,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                   role="button"
                   tabIndex={0}
                   aria-label={`Game log for ${player.fullName}`}
-                  className="group hover:bg-red-50 transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
+                  className="group hover:bg-hover transition-colors cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red"
                   onClick={() => navigate({ player: player.id })}
                   onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -191,7 +191,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                       sit outside the frozen region and break the geometry.
                       group-hover mirrors the row tint — an opaque background is
                       required for the sticky cell, so it can't inherit the row's. */}
-                  <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-red-50 transition-colors">
+                  <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-panel group-hover:bg-hover transition-colors">
                     <span className="flex items-center gap-1.5">
                       {signedIn && (
                         <StarButton

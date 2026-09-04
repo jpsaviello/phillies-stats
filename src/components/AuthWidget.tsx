@@ -157,12 +157,12 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
             // text-gray-900 is load-bearing: the modal renders inside the header,
             // which sets text-white, so anything without an explicit color would
             // inherit white on this white panel — including input carets.
-            className="w-full max-w-sm rounded-lg bg-white p-6 text-gray-900 shadow-2xl"
+            className="w-full max-w-sm bg-panel-raised p-6 text-gray-900 border-2 border-rule-heavy"
             // Clicks inside the panel must not reach the backdrop's close handler.
             onClick={e => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-xl uppercase tracking-wide text-phillies-navy">
+              <h2 className="font-display text-xl uppercase tracking-wide text-mark">
                 {mode === 'signup' ? 'Create Account' : 'Sign In'}
               </h2>
               <button
@@ -200,7 +200,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
                   autoComplete="email"
                   autoFocus
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
@@ -222,7 +222,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
                   maxLength={200}
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   placeholder={mode === 'signup' ? 'At least 8 characters' : ''}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
@@ -247,7 +247,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
                 type="button"
                 onClick={switchMode}
                 disabled={submitting}
-                className="font-semibold text-phillies-navy underline disabled:opacity-50"
+                className="font-semibold text-mark underline disabled:opacity-50"
               >
                 {mode === 'signup' ? 'Sign in' : 'Sign up'}
               </button>

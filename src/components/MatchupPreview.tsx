@@ -19,7 +19,7 @@ const RECENT_STARTS = 3
 // phillies-red, the club's own brand color, so the *opponent* lit up in Phillies
 // red whenever he was outpitching us — and picking a winner per row editorializes
 // on a panel whose job is to lay the two lines side by side and let you read them.
-const CELL = 'py-1 text-center font-display tabular-nums text-phillies-navy'
+const CELL = 'py-1 text-center font-display tabular-nums text-mark'
 
 interface Props {
   game: Game
@@ -89,7 +89,7 @@ function StarterHead({ starter }: { starter: Starter | null }) {
           onError={hideOnError}
         />
       </div>
-      <div className="font-display text-sm font-bold text-phillies-navy text-center leading-tight">
+      <div className="font-display text-sm font-bold text-mark text-center leading-tight">
         {starter.pitcher.fullName}
       </div>
       <div className="text-[11px] text-gray-500 truncate leading-tight">{starter.teamName}</div>

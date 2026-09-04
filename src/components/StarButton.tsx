@@ -16,7 +16,7 @@ export default function StarButton({ starred, playerName, onToggle }: Props) {
       // shifting layout — it sits inside a clickable row, so a mis-tap opened
       // the game-log modal instead of starring.
       className={`shrink-0 leading-none transition-colors p-2 -m-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${
-        starred ? 'text-phillies-red' : 'text-gray-500 hover:text-gray-600'
+        starred ? 'text-live' : 'text-gray-500 hover:text-gray-600'
       }`}
       onClick={e => {
         // The whole <tr> opens GameLogModal — without this, every star click

@@ -30,7 +30,7 @@ function Card({ label, children }: { label: string; children: React.ReactNode })
 }
 
 function Stat({ children }: { children: React.ReactNode }) {
-  return <div className="font-display text-2xl leading-tight text-phillies-navy">{children}</div>
+  return <div className="font-display text-2xl leading-tight text-mark">{children}</div>
 }
 
 export default function PlayoffPush({ divisionRecords, records, notes, loading }: Props) {
@@ -153,7 +153,7 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
       {schedule && schedule.total > 0 && (
         <div className="mt-3 card px-4 py-3 text-sm">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-gray-700">
-            <span className="font-display text-xl text-phillies-navy tabular-nums">
+            <span className="font-display text-xl text-mark tabular-nums">
               {schedule.total}
             </span>
             <span>games left</span>
