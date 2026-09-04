@@ -153,14 +153,34 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
   // Same rule the Schedule tab uses: a game that hasn't started has no
   // linescore, batting order or decisions, so there is nothing to open.
   const lastClickable = enableGameDetail && lastGame !== null
+  // Both columns need content before the tab splits in two; otherwise a lone
+  // card would sit in the left half with nothing beside it.
+  const twoUp = Boolean(headline && head) && (lastGame !== null || recent.length > 0)
 
   return (
     <>
-      {/* One column, the same `max-w-2xl` the Standings and Schedule tabs use.
-          Every section here — including MatchupPreview, which carries that cap
-          itself — then shares a right edge. Without it the tab alternated
-          between full-width cards and the 2xl matchup panel down the page. */}
-      <div className="max-w-2xl space-y-6">
+      {/*
+        Two columns from `lg` up, one below it.
+
+        The tab reads future-on-the-left, past-on-the-right: tonight's game and
+        its pitching matchup beside last night's result and the recent run. A
+        single 2xl column was correctly aligned but left half a desktop screen
+        empty, and widening the cards instead would only have stretched sparse
+        ones — the next-game card is a logo, a team name and a time.
+
+        Stacked below `lg` the source order is unchanged, so the phone layout is
+        exactly what it was — but `grid-cols-1` and `min-w-0` are load-bearing,
+        not decoration. A grid item defaults to `min-width: auto` and so refuses
+        to shrink below its own content, which the previous `space-y-6` block
+        flow never did: without both, the widest child (the Last N pill row)
+        pushed the track past the viewport and put 43px of horizontal scroll on
+        the page at 375px. Tailwind's `grid-cols-1` emits `minmax(0, 1fr)`,
+        which is the half that lets the track shrink at all. When only one column has content — an off day with
+        nothing scheduled, or the season's first game — the grid drops to a
+        single 2xl column rather than stranding one card beside a void.
+      */}
+      <div className={`grid grid-cols-1 gap-6 lg:items-start ${twoUp ? 'lg:grid-cols-2' : 'max-w-2xl'}`}>
+        <div className="space-y-6 min-w-0">
         {/* ---- What's on now ------------------------------------------- */}
         {headline && head && (
           <section className="card p-5">
@@ -220,6 +240,9 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
           <MatchupPreview game={headline.game} date={headline.date} philliesOdds={headlineOdds} />
         )}
 
+        </div>
+
+        <div className="space-y-6 min-w-0">
         {/* ---- Last game ----------------------------------------------- */}
         {lastGame && last && (
           <section className="card p-5">
@@ -325,6 +348,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
             <p className="mt-2 text-xs text-gray-500">Most recent first.</p>
           </section>
         )}
+        </div>
       </div>
 
       {selectedGame != null && (
