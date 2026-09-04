@@ -16,6 +16,7 @@ import Schedule from './components/Schedule'
 import ChatWidget from './components/ChatWidget'
 import BackToTop from './components/BackToTop'
 import FavoritesCard from './components/FavoritesCard'
+import Footer from './components/Footer'
 import { initRoute, setTab, useRoute } from './hooks/useRoute'
 import { fetchConfig } from './api/mlb'
 import { fetchCurrentUser } from './api/auth'
@@ -211,6 +212,9 @@ export default function App() {
           />
         )}
       </main>
+      {/* Attribution, on every tab — the claims describe where all of this
+          app's data comes from, which does not change with the route. */}
+      <Footer />
       {/* Mounted once, outside the tab conditionals, so chat history survives tab switches. */}
       <ChatWidget />
       {/* Self-hides until the page is scrolled; sits above the chat FAB. */}
