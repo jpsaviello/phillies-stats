@@ -30,7 +30,7 @@ export default function WildCardStandings({ records, notes, loading }: WildCardR
             const isPhillies = r.team.id === PHILLIES_ID
             return (
               <Fragment key={r.team.id}>
-                <tr className={isPhillies ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}>
+                <tr className={isPhillies ? 'bg-hover font-semibold' : 'hover:bg-gray-50'}>
                   {/* Positional, not r.wildCardRank — the API's rank ignores tiebreakers, so
                       after reordering its numbers would print out of sequence (2, 4, 3). */}
                   <td className="px-4 py-3 text-gray-500 tabular-nums">{i + 1}</td>

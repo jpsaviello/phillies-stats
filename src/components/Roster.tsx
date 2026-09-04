@@ -99,7 +99,7 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
       <div className="space-y-8">
         {sections.map(section => (
           <section key={section.id}>
-            <h2 className="font-display text-xl font-bold uppercase tracking-wide text-phillies-navy">
+            <h2 className="font-display text-xl font-bold uppercase tracking-wide text-mark">
               {section.title}{' '}
               <span className="text-gray-400 font-semibold">({section.count})</span>
             </h2>
@@ -174,11 +174,11 @@ interface GroupProps {
 function RosterGroup({ label, players, signedIn, starredIds, onToggleFavorite, onOpen }: GroupProps) {
   return (
     <>
-      <tr className="bg-white">
+      <tr className="bg-panel">
         <th
           scope="colgroup"
           colSpan={6}
-          className="px-4 pt-4 pb-1 text-left font-display text-xs font-semibold uppercase tracking-wider text-phillies-red"
+          className="px-4 pt-4 pb-1 text-left font-display text-xs font-semibold uppercase tracking-wider text-live"
         >
           {label}
         </th>
@@ -196,7 +196,7 @@ function RosterGroup({ label, players, signedIn, starredIds, onToggleFavorite, o
             aria-label={clickable ? `Game log for ${p.person.fullName}` : undefined}
             className={`group transition-colors ${
               clickable
-                ? 'hover:bg-red-50 cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red'
+                ? 'hover:bg-hover cursor-pointer focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-phillies-red'
                 : ''
             }`}
             onClick={clickable ? () => onOpen(p) : undefined}
@@ -213,7 +213,7 @@ function RosterGroup({ label, players, signedIn, starredIds, onToggleFavorite, o
           >
             {/* Star lives inside the sticky cell, not in a column of its own —
                 a column to its left would sit outside the frozen region. */}
-            <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-white group-hover:bg-red-50 transition-colors">
+            <td className="px-4 py-2.5 font-medium text-gray-900 sticky left-0 bg-panel group-hover:bg-hover transition-colors">
               <span className="flex items-center gap-1.5">
                 {signedIn && (
                   <StarButton

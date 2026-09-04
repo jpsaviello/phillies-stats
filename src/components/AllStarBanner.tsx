@@ -24,14 +24,14 @@ export default function AllStarBanner() {
   }
 
   return (
-    <div className="bg-yellow-400 text-gray-900">
+    <div className="bg-panel text-gray-900 border-y border-rule-heavy">
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
         {/* The dismiss button is a sibling of the scrolling region, not inside
             it: with the roster in the same overflow-x-auto row, `ml-auto` did
             nothing once the content overflowed and the × sat off-screen at
             mobile widths, unreachable without scrolling the banner sideways. */}
         <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap flex-1 min-w-0">
-          <span aria-hidden="true">★</span>
+          <span aria-hidden="true" className="text-live">★</span>
           <span className="font-semibold">2026 NL All-Stars:</span>
           <span>
             {ALL_STARS_2026.map((player, i) => (

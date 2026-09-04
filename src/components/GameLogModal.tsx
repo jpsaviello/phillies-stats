@@ -47,7 +47,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <div className="card-label">{label}</div>
-      <div className="font-display text-2xl font-bold text-phillies-navy tabular-nums mt-0.5">{value}</div>
+      <div className="font-display text-2xl font-bold text-mark tabular-nums mt-0.5">{value}</div>
     </div>
   )
 }
@@ -102,12 +102,12 @@ export default function GameLogModal({ personId, playerName, group, seasonStat, 
         role="dialog"
         aria-modal="true"
         aria-label={`${playerName} game log`}
-        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+        className="bg-panel-raised border-2 border-rule-heavy max-w-3xl w-full max-h-[80vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Sticky so the close button stays reachable — this panel scrolls
             through splits, a chart and ten game rows. Matches GameDetailModal. */}
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="sticky top-0 bg-panel z-10 flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <img
               src={playerHeadshotUrl(personId)}

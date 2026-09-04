@@ -27,23 +27,40 @@ const tabs: { id: Tab; label: string }[] = [
 export default function Nav({ active, onChange, hidden = [] }: NavProps) {
   const visible = tabs.filter(t => !hidden.includes(t.id))
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
-        {visible.map(tab => (
-          <button
-            key={tab.id}
-            // Active state was conveyed by colour and a border alone.
-            aria-current={active === tab.id ? 'page' : undefined}
-            onClick={() => onChange(tab.id)}
-            className={`shrink-0 whitespace-nowrap px-3 sm:px-5 py-3 font-display text-sm sm:text-base font-semibold uppercase tracking-wide border-b-2 transition-colors ${
-              active === tab.id
-                ? 'border-phillies-red text-phillies-navy'
-                : 'border-transparent text-gray-500 hover:text-phillies-navy'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+    // The masthead's last row, and its closing rule. Heavy, because this is
+    // the boundary between the chrome and the tab's own content — and it has
+    // to keep reading as that boundary once it sticks and detaches.
+    <nav className="bg-panel border-b-2 border-rule-heavy sticky top-0 z-10">
+      <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto">
+        {visible.map(tab => {
+          const isActive = active === tab.id
+          return (
+            <button
+              key={tab.id}
+              // Active state was conveyed by colour and a border alone.
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onChange(tab.id)}
+              className={`group relative shrink-0 whitespace-nowrap px-3 sm:px-5 py-3 font-display text-sm sm:text-base font-semibold uppercase tracking-[0.08em] transition-colors ${
+                isActive ? 'text-mark' : 'text-gray-500 hover:text-mark'
+              }`}
+            >
+              {tab.label}
+              {/* The one authored motion moment in the app: the active tab's
+                  rule draws in from the left rather than cutting on, which
+                  confirms the navigation the reader just made. Keyed on the
+                  tab id so it replays per selection, and it starts from a
+                  visible resting state — reduced-motion drops the animation,
+                  never the rule. */}
+              {isActive && (
+                <span
+                  key={tab.id}
+                  aria-hidden="true"
+                  className="rule-draw absolute inset-x-0 bottom-0 h-[3px] bg-phillies-red"
+                />
+              )}
+            </button>
+          )
+        })}
       </div>
     </nav>
   )

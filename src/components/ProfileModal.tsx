@@ -73,7 +73,7 @@ function updateFrom(form: FormState): ProfileUpdate {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50'
+  'w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50'
 const labelClass = 'mb-1 block text-sm font-medium text-gray-700'
 
 // Modal mechanics (backdrop click, Escape, role="dialog", stopPropagation,
@@ -279,11 +279,11 @@ export default function ProfileModal({
         aria-label="Your profile"
         // text-gray-900 is load-bearing: this modal renders inside the header,
         // which sets text-white — see AuthWidget for the same note.
-        className="flex h-full w-full flex-col overflow-y-auto bg-white text-gray-900 shadow-2xl sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-lg sm:rounded-lg"
+        className="flex h-full w-full flex-col overflow-y-auto bg-panel-raised text-gray-900 border-rule-heavy sm:border-2 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-lg"
         onClick={e => e.stopPropagation()}
       >
-        <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-          <h2 className="font-display text-xl uppercase tracking-wide text-phillies-navy">
+        <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-panel px-6 py-4">
+          <h2 className="font-display text-xl uppercase tracking-wide text-mark">
             Your Profile
           </h2>
           <button
@@ -493,7 +493,7 @@ export default function ProfileModal({
                     type="checkbox"
                     checked={form.notifyDailyBriefing}
                     onChange={e => setForm({ ...form, notifyDailyBriefing: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-phillies-red focus:ring-phillies-red"
+                    className="h-4 w-4 rounded border-gray-300 text-live focus:ring-phillies-red"
                   />
                   Email me the daily briefing
                 </label>
@@ -502,7 +502,7 @@ export default function ProfileModal({
                     type="checkbox"
                     checked={form.notifyOnThisDay}
                     onChange={e => setForm({ ...form, notifyOnThisDay: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-phillies-red focus:ring-phillies-red"
+                    className="h-4 w-4 rounded border-gray-300 text-live focus:ring-phillies-red"
                   />
                   Email me "On this day"
                 </label>
@@ -511,7 +511,7 @@ export default function ProfileModal({
                     type="checkbox"
                     checked={form.notifyGameReminders}
                     onChange={e => setForm({ ...form, notifyGameReminders: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-phillies-red focus:ring-phillies-red"
+                    className="h-4 w-4 rounded border-gray-300 text-live focus:ring-phillies-red"
                   />
                   Remind me before game time
                 </label>

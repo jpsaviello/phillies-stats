@@ -70,7 +70,7 @@ export default function ChatWidget() {
         type="button"
         aria-label="Open chat"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-phillies-red text-white shadow-lg transition-transform hover:scale-110"
+        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-phillies-red text-white shadow-[0_3px_10px_rgb(0_0_0/0.28)] transition-transform hover:scale-110"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +90,7 @@ export default function ChatWidget() {
     <div
       role="dialog"
       aria-label="Phillies chat"
-      className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-h-[70vh] sm:rounded-lg flex flex-col bg-white shadow-2xl border border-gray-200 overflow-hidden"
+      className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-h-[70vh] flex flex-col bg-panel-raised border-2 border-rule-heavy overflow-hidden"
     >
       <div className="flex items-center justify-between bg-phillies-navy px-4 py-3 text-white">
         <h2 className="font-display text-lg uppercase tracking-wide">Phils Chat</h2>
@@ -125,7 +125,7 @@ export default function ChatWidget() {
                 key={q}
                 type="button"
                 onClick={() => submitQuestion(q)}
-                className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm text-phillies-navy hover:bg-gray-50"
+                className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm text-mark hover:bg-gray-50"
               >
                 {q}
               </button>

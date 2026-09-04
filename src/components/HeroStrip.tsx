@@ -106,10 +106,10 @@ function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
  */
 function Card({ label, status, children }: { label: string; status: Status; children: React.ReactNode }) {
   return (
-    <div className="card px-4 py-3">
+    <div className="bg-panel border border-rule -ml-px -mt-px px-3 py-2 sm:px-4 sm:py-3">
       <div className="card-label">{label}</div>
       {status === 'loading' ? (
-        <div className="h-8 mt-2 rounded bg-gray-200 animate-pulse" />
+        <div className="h-7 sm:h-8 mt-1.5 sm:mt-2 bg-gray-200 animate-pulse" />
       ) : status === 'failed' ? (
         <div className="font-display text-xl font-bold text-gray-400 mt-1">—</div>
       ) : (
@@ -250,19 +250,19 @@ export default function HeroStrip({ variant = 'full' }: Props) {
   const nextIsLive = nextGame && !PREGAME_STATES.includes(nextGame.game.status.detailedState)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-6">
+    <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
       {/* The season variant keeps the strip's full width and splits it between
           two cards rather than capping itself narrow. Every other module above
           the nav — the banners, Today in Phils, the nav itself — is this wide,
           and a strip that stopped halfway was the one thing on the page that
           didn't line up with anything. */}
-      <div className={`grid grid-cols-2 gap-3 ${showGames ? 'lg:grid-cols-4' : ''}`}>
+      <div className={`grid grid-cols-2 ${showGames ? 'lg:grid-cols-4' : ''}`}>
         {/* recordStatus is already 'failed' when the response carried no
             Phillies row, so there is nothing extra to check here. */}
         <Card label="Record" status={recordStatus}>
           {record && (
             <>
-              <div className="font-display text-3xl font-bold text-phillies-navy tabular-nums mt-1">
+              <div className="font-display text-2xl sm:text-3xl font-bold text-mark tabular-nums mt-0.5 sm:mt-1">
                 {record.wins}–{record.losses}
               </div>
               <div className="text-sm text-gray-500 mt-0.5">
@@ -278,7 +278,7 @@ export default function HeroStrip({ variant = 'full' }: Props) {
         <Card label="Last Game" status={scheduleStatus === 'ready' && !lastGame ? 'failed' : scheduleStatus}>
           {lastGame && last && (
             <>
-              <div className="font-display text-xl font-bold text-phillies-navy tabular-nums mt-1">
+              <div className="font-display text-lg sm:text-xl font-bold text-mark tabular-nums mt-0.5 sm:mt-1">
                 <span className={last.won ? 'text-green-600' : 'text-red-600'}>{last.won ? 'W' : 'L'}</span>{' '}
                 {last.philliesScore}–{last.oppScore}
               </div>
@@ -310,7 +310,7 @@ export default function HeroStrip({ variant = 'full' }: Props) {
                   className="w-6 h-6 shrink-0"
                   onError={hideOnError}
                 />
-                <span className="font-display text-xl font-bold text-phillies-navy truncate">
+                <span className="font-display text-lg sm:text-xl font-bold text-mark truncate">
                   {next.isHome ? 'vs' : '@'} {next.opponent}
                 </span>
               </div>
@@ -340,7 +340,7 @@ export default function HeroStrip({ variant = 'full' }: Props) {
                       onError={hideOnError}
                     />
                     <span className="card-label w-8 shrink-0">{label}</span>
-                    <span className="font-display font-bold text-phillies-navy tabular-nums">{leader.value}</span>
+                    <span className="font-display font-bold text-mark tabular-nums">{leader.value}</span>
                     <span className="text-sm text-gray-600 truncate">{lastName(leader.player)}</span>
                   </>
                 ) : (

@@ -50,7 +50,7 @@ export default function PlayerSearch({ value, onChange, shown, total, label, pla
               onChange('')
             }
           }}
-          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+          className="w-full rounded-lg border border-gray-300 bg-panel py-2 pl-9 pr-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
         />
         {value !== '' && (
           <button

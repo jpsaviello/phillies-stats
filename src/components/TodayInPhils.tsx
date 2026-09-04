@@ -80,7 +80,7 @@ function StoryRow({ kind, icon, headline, badge, children, divided }: RowProps) 
         type="button"
         onClick={() => setExpanded(v => !v)}
         aria-expanded={expanded}
-        className="w-full px-4 py-2.5 text-left hover:bg-phillies-cream transition-colors"
+        className="w-full px-4 py-2 text-left hover:bg-stock transition-colors"
       >
         <div className="flex items-center gap-2 min-w-0">
           <span aria-hidden="true" className="shrink-0">{icon}</span>
@@ -88,7 +88,7 @@ function StoryRow({ kind, icon, headline, badge, children, divided }: RowProps) 
           <span className="sr-only">{kind}:</span>
           {/* truncate keeps every row exactly one line tall at rest, which is
               the entire point of merging the two cards. */}
-          <span className="font-display font-bold text-phillies-navy truncate">{headline}</span>
+          <span className="font-display font-bold text-mark truncate">{headline}</span>
           <span className="card-label ml-auto shrink-0 hidden sm:inline">{badge}</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -153,7 +153,7 @@ export default function TodayInPhils({ showBriefing, showOnThisDay }: Props) {
           badge: onThisDay.historicalDate.slice(0, 4),
           body: (
             <>
-              <div className="font-display text-xs uppercase tracking-wider text-phillies-red">
+              <div className="font-display text-xs uppercase tracking-wider text-live">
                 {formatDate(onThisDay.historicalDate, { month: 'long', day: 'numeric', year: 'numeric' })}
               </div>
               <Paragraphs recap={onThisDay.recap} />
@@ -166,9 +166,9 @@ export default function TodayInPhils({ showBriefing, showOnThisDay }: Props) {
   if (rows.length === 0) return null
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-3">
+    <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
       <div className="card overflow-hidden">
-        <div className="px-4 pt-3 pb-1">
+        <div className="px-4 pt-2 pb-1">
           <span className="card-label">Today in Phils</span>
         </div>
         {rows.map((row, i) => (

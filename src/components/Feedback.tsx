@@ -55,7 +55,7 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+        className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
       >
         Try again
       </button>
@@ -79,7 +79,7 @@ export function NoMatches({ query, onClear, noun }: { query: string; onClear: ()
       <button
         type="button"
         onClick={onClear}
-        className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+        className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
       >
         Clear search
       </button>

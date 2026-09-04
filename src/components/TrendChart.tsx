@@ -88,15 +88,13 @@ export default function TrendChart({ points, yFormat, label }: Props) {
     const tx = flip ? c.px - 8 : c.px + 8
     return (
       <g>
-        <line x1={c.px} y1={MARGIN.top} x2={c.px} y2={baseline} stroke="#d1d5db" strokeWidth="1" />
-        <circle cx={c.px} cy={c.py} r="5" fill={RED} stroke="#fff" strokeWidth="2" />
+        <line x1={c.px} y1={MARGIN.top} x2={c.px} y2={baseline} className="stroke-gray-300" strokeWidth="1" />
+        <circle cx={c.px} cy={c.py} r="5" fill={RED} className="stroke-panel" strokeWidth="2" />
         <text
           x={tx}
           y={Math.max(c.py - 10, MARGIN.top + 10)}
           textAnchor={flip ? 'end' : 'start'}
-          className="text-[12px] font-semibold"
-          fill="#111827"
-          stroke="#fff"
+          className="text-[12px] font-semibold fill-gray-900 stroke-panel"
           strokeWidth="3"
           paintOrder="stroke"
         >
@@ -106,9 +104,7 @@ export default function TrendChart({ points, yFormat, label }: Props) {
           x={tx}
           y={Math.max(c.py - 10, MARGIN.top + 10) + 13}
           textAnchor={flip ? 'end' : 'start'}
-          className="text-[10px]"
-          fill="#6b7280"
-          stroke="#fff"
+          className="text-[10px] fill-gray-500 stroke-panel"
           strokeWidth="3"
           paintOrder="stroke"
         >
@@ -127,14 +123,14 @@ export default function TrendChart({ points, yFormat, label }: Props) {
     >
       {ticks.map(t => (
         <g key={t}>
-          <line x1={MARGIN.left} y1={y(t)} x2={MARGIN.left + PLOT_W} y2={y(t)} stroke="#e5e7eb" strokeWidth="1" />
-          <text x={MARGIN.left - 6} y={y(t) + 3} textAnchor="end" className="text-[10px] tabular-nums" fill="#9ca3af">
+          <line x1={MARGIN.left} y1={y(t)} x2={MARGIN.left + PLOT_W} y2={y(t)} className="stroke-gray-200" strokeWidth="1" />
+          <text x={MARGIN.left - 6} y={y(t) + 3} textAnchor="end" className="text-[10px] tabular-nums fill-gray-400">
             {yFormat(t)}
           </text>
         </g>
       ))}
       {monthTicks.map(m => (
-        <text key={m.month} x={x(m.i)} y={baseline + 16} textAnchor="middle" className="text-[10px]" fill="#9ca3af">
+        <text key={m.month} x={x(m.i)} y={baseline + 16} textAnchor="middle" className="text-[10px] fill-gray-400">
           {monthLabel(points[m.i].date)}
         </text>
       ))}
@@ -142,8 +138,8 @@ export default function TrendChart({ points, yFormat, label }: Props) {
       <path d={linePath} fill="none" stroke={RED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {hover === null && (
         <>
-          <circle cx={lastC.px} cy={lastC.py} r="4" fill={RED} stroke="#fff" strokeWidth="2" />
-          <text x={lastC.px + 8} y={lastC.py + 4} className="text-[12px] font-semibold" fill="#374151">
+          <circle cx={lastC.px} cy={lastC.py} r="4" fill={RED} className="stroke-panel" strokeWidth="2" />
+          <text x={lastC.px + 8} y={lastC.py + 4} className="text-[12px] font-semibold fill-gray-700">
             {yFormat(last.value)}
           </text>
         </>

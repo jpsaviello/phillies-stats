@@ -38,7 +38,7 @@ function WorkloadRow({ workload }: { workload: PitcherWorkload }) {
           them on a phone otherwise scrolls the name out of view. Needs its own
           background (a sticky cell would show the rows beneath it through a
           transparent one) plus group-hover to keep the row highlight. */}
-      <td className="sticky left-0 bg-white px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
+      <td className="sticky left-0 bg-panel px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
         {workload.name}
       </td>
       <td className="px-4 py-3 text-center tabular-nums">

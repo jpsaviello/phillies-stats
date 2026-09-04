@@ -129,24 +129,40 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-phillies-cream">
-      <Header user={user} onAuthChange={setUser} profile={profile} onProfileChange={setProfile} />
-      <LaunchDarklyDemoBanner />
-      {showAllStarBanner && <AllStarBanner />}
-      {/* Self-hides unless a Phillies game is live; mounted outside the tab
-          conditionals so its polling survives tab switches. */}
-      <LiveGameStrip />
-      {/* The season variant on Today: that tab leads with the live-or-next game
-          and recaps the last one, so the strip's two game cards would repeat
-          both a few hundred pixels above in smaller type. */}
-      <HeroStrip variant={tab === 'today' ? 'season' : 'full'} />
-      {/* Self-hides unless you're signed in with at least one starred player. */}
-      <FavoritesCard signedIn={user !== null} favorites={favorites} />
-      {/* One module, two rows — each still owns its own fetch, expanded state
-          and staleness cutoff, and each still self-hides independently. It was
-          two stacked cards, which cost two borders and two section labels
-          before the tab bar on a phone. */}
-      <TodayInPhils showBriefing={enableDailyBriefing} showOnThisDay={enableOnThisDay} />
+    <div className="min-h-screen bg-stock">
+      {/* One masthead, not seven stacked blocks. Each of these still owns its
+          own fetch and still self-hides independently — nothing about their
+          failure behavior changed — but they now read as rows of one ruled
+          object rather than as separate cards each with its own border, label
+          and air. The nav is this object's last row and carries its closing
+          rule, which is why there is no border here.
+
+          The win here is coherence, not height: measured on the Batting tab,
+          chrome above the content went 498px → 486px at 1280 and 614px → 553px
+          at 375. The remaining cost is HeroStrip's four cells (244px of the
+          553 on a phone), which are still a 2x2 grid of stacked label/value
+          boxes. Collapsing those to single-line ruled rows is the next real
+          saving and was left out of this pass deliberately — it changes what
+          each cell can show, which is a content decision, not a style one. */}
+      <div className="bg-panel">
+        <Header user={user} onAuthChange={setUser} profile={profile} onProfileChange={setProfile} />
+        <LaunchDarklyDemoBanner />
+        {showAllStarBanner && <AllStarBanner />}
+        {/* Self-hides unless a Phillies game is live; mounted outside the tab
+            conditionals so its polling survives tab switches. */}
+        <LiveGameStrip />
+        {/* The season variant on Today: that tab leads with the live-or-next game
+            and recaps the last one, so the strip's two game cards would repeat
+            both a few hundred pixels above in smaller type. */}
+        <HeroStrip variant={tab === 'today' ? 'season' : 'full'} />
+        {/* Self-hides unless you're signed in with at least one starred player. */}
+        <FavoritesCard signedIn={user !== null} favorites={favorites} />
+        {/* One module, two rows — each still owns its own fetch, expanded state
+            and staleness cutoff, and each still self-hides independently. It was
+            two stacked cards, which cost two borders and two section labels
+            before the tab bar on a phone. */}
+        <TodayInPhils showBriefing={enableDailyBriefing} showOnThisDay={enableOnThisDay} />
+      </div>
       <Nav
         active={tab}
         onChange={setTab}

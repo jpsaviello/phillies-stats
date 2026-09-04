@@ -64,7 +64,7 @@ function TeamBoxscore({ team, label }: { team: BoxscoreTeam; label: string }) {
           className="w-5 h-5 shrink-0"
           onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
         />
-        <h3 className="font-display text-sm font-bold uppercase tracking-wide text-phillies-navy">
+        <h3 className="font-display text-sm font-bold uppercase tracking-wide text-mark">
           {label}
         </h3>
       </div>
@@ -175,7 +175,7 @@ function LineScore({ feed }: { feed: GameBoxscore }) {
         <tbody className="divide-y divide-gray-100">
           {sides.map(side => (
             <tr key={side.key}>
-              <td className="py-1.5 pr-3 font-display font-bold text-phillies-navy">{side.label}</td>
+              <td className="py-1.5 pr-3 font-display font-bold text-mark">{side.label}</td>
               {innings.map(inning => (
                 <td key={inning.num} className="py-1.5 px-2 text-center tabular-nums text-gray-700">
                   {inning[side.key]?.runs ?? '-'}
@@ -303,12 +303,12 @@ export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Pr
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+        className="bg-panel-raised border-2 border-rule-heavy max-w-3xl w-full max-h-[80vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-label="Game box score"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-panel">
           <div className="min-w-0">
             <h2 className="font-semibold text-gray-900 truncate">
               {header?.title ?? 'Box score'}

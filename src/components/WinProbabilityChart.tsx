@@ -12,7 +12,7 @@ const MARGIN = { top: 12, right: 14, bottom: 22, left: 34 }
 const PLOT_W = VIEW_W - MARGIN.left - MARGIN.right
 const PLOT_H = VIEW_H - MARGIN.top - MARGIN.bottom
 const RED = '#E81828' // SVG attribute literal; canonical token is --color-phillies-red in src/index.css
-const GRAY = '#9ca3af'
+const GRAY = 'var(--color-gray-400)'
 
 function pct(v: number): string {
   return `${Math.round(v)}%`
@@ -59,7 +59,7 @@ export default function WinProbabilityChart({ points, opponentName }: Props) {
 
   return (
     <section className="mt-6">
-      <h3 className="font-display text-lg uppercase tracking-wide text-phillies-navy">Win Probability</h3>
+      <h3 className="font-display text-lg uppercase tracking-wide text-mark">Win Probability</h3>
       <p className="mt-0.5 text-xs text-gray-500">
         Phillies' chance to win, after every plate appearance.
       </p>
@@ -90,10 +90,10 @@ export default function WinProbabilityChart({ points, opponentName }: Props) {
               y1={y(t)}
               x2={MARGIN.left + PLOT_W}
               y2={y(t)}
-              stroke={t === 50 ? '#d1d5db' : '#f3f4f6'}
+              className={t === 50 ? 'stroke-gray-300' : 'stroke-gray-100'}
               strokeWidth="1"
             />
-            <text x={MARGIN.left - 6} y={y(t) + 3} textAnchor="end" className="text-[10px] tabular-nums" fill="#9ca3af">
+            <text x={MARGIN.left - 6} y={y(t) + 3} textAnchor="end" className="text-[10px] tabular-nums fill-gray-400">
               {t}
             </text>
           </g>
@@ -106,7 +106,7 @@ export default function WinProbabilityChart({ points, opponentName }: Props) {
             y1={MARGIN.top}
             x2={x(m.i)}
             y2={MARGIN.top + PLOT_H}
-            stroke="#f3f4f6"
+            className="stroke-gray-100"
             strokeWidth="1"
           />
         ))}
@@ -125,18 +125,17 @@ export default function WinProbabilityChart({ points, opponentName }: Props) {
         {coords
           .filter(c => swingIndex.has(c.p.atBatIndex))
           .map(c => (
-            <circle key={c.p.atBatIndex} cx={c.px} cy={c.py} r="4" fill={RED} stroke="#fff" strokeWidth="2" />
+            <circle key={c.p.atBatIndex} cx={c.px} cy={c.py} r="4" fill={RED} className="stroke-panel" strokeWidth="2" />
           ))}
 
-        <text x={MARGIN.left} y={MARGIN.top + PLOT_H + 15} className="text-[10px]" fill="#9ca3af">
+        <text x={MARGIN.left} y={MARGIN.top + PLOT_H + 15} className="text-[10px] fill-gray-400">
           First pitch
         </text>
         <text
           x={MARGIN.left + PLOT_W}
           y={MARGIN.top + PLOT_H + 15}
           textAnchor="end"
-          className="text-[10px]"
-          fill="#9ca3af"
+          className="text-[10px] fill-gray-400"
         >
           Final
         </text>
@@ -153,7 +152,7 @@ export default function WinProbabilityChart({ points, opponentName }: Props) {
                 </span>
                 <span
                   className={`w-14 shrink-0 text-right tabular-nums font-semibold ${
-                    s.added > 0 ? 'text-phillies-red' : 'text-gray-500'
+                    s.added > 0 ? 'text-live' : 'text-gray-500'
                   }`}
                 >
                   {signed(s.added)}

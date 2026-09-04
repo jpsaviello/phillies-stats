@@ -186,7 +186,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
           <section className="card p-5">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="card-label">
-                {isLive ? <span className="text-phillies-red">Live now</span> : 'Next game'}
+                {isLive ? <span className="text-live">Live now</span> : 'Next game'}
               </h2>
               <span className="text-sm text-gray-500">
                 {formatDate(headline.date, { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -201,7 +201,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                 onError={hideOnError}
               />
               <div className="min-w-0">
-                <div className="font-display text-2xl sm:text-3xl font-bold text-phillies-navy truncate">
+                <div className="font-display text-2xl sm:text-3xl font-bold text-mark truncate">
                   {head.isHome ? 'vs' : '@'} {head.opponent}
                 </div>
                 <div className="text-sm text-gray-600 mt-0.5 tabular-nums">
@@ -224,7 +224,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
               <button
                 type="button"
                 onClick={() => openGame(headline.game.gamePk)}
-                className="mt-4 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+                className="mt-4 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
               >
                 View box score
               </button>
@@ -255,7 +255,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                 onError={hideOnError}
               />
               <div className="min-w-0 flex-1">
-                <div className="font-display text-xl font-bold text-phillies-navy truncate">
+                <div className="font-display text-xl font-bold text-mark truncate">
                   <span className={last.won ? 'text-green-600' : 'text-red-600'}>{last.won ? 'W' : 'L'}</span>{' '}
                   {last.philliesScore}–{last.oppScore}
                 </div>
@@ -268,7 +268,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                 <button
                   type="button"
                   onClick={() => openGame(lastGame.game.gamePk)}
-                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-phillies-navy transition-colors hover:border-phillies-red hover:text-phillies-red focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
                 >
                   Box score
                 </button>
@@ -308,7 +308,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
           <section className="card p-5">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="card-label">Last {recent.length}</h2>
-              <span className="font-display font-bold text-phillies-navy tabular-nums">
+              <span className="font-display font-bold text-mark tabular-nums">
                 {recentRecord.wins}–{recentRecord.losses}
               </span>
             </div>
@@ -324,7 +324,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                         onClick={() => openGame(game.gamePk)}
                         aria-label={`Box score: ${label}`}
                         className={`rounded-md px-2 py-1 font-display text-sm font-bold tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40 ${
-                          view.won ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-red-50 text-red-700 hover:bg-red-100'
+                          view.won ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-hover text-red-700 hover:bg-red-100'
                         }`}
                       >
                         {view.won ? 'W' : 'L'} {view.philliesScore}–{view.oppScore}
@@ -333,7 +333,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                       <span
                         title={label}
                         className={`inline-block rounded-md px-2 py-1 font-display text-sm font-bold tabular-nums ${
-                          view.won ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                          view.won ? 'bg-green-50 text-green-700' : 'bg-hover text-red-700'
                         }`}
                       >
                         {view.won ? 'W' : 'L'} {view.philliesScore}–{view.oppScore}

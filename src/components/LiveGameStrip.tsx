@@ -85,11 +85,11 @@ export default function LiveGameStrip() {
   const outs = linescore.outs ?? 0
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-6">
-      <div className="card border-l-4 border-l-phillies-red px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+    <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
+      <div className="card border-2 border-phillies-red px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-phillies-red animate-pulse" />
-          <span className="font-display text-xs uppercase tracking-wider text-phillies-red font-bold">
+          <span className="font-display text-xs uppercase tracking-wider text-live font-bold">
             Live
           </span>
         </div>
@@ -102,13 +102,13 @@ export default function LiveGameStrip() {
               className="w-8 h-8"
               onError={hideOnError}
             />
-            <span className="font-display text-3xl font-bold text-phillies-navy tabular-nums">
+            <span className="font-display text-3xl font-bold text-mark tabular-nums">
               {linescore.teams.away.runs ?? 0}
             </span>
           </div>
           <span className="text-gray-500 text-sm">–</span>
           <div className="flex items-center gap-2">
-            <span className="font-display text-3xl font-bold text-phillies-navy tabular-nums">
+            <span className="font-display text-3xl font-bold text-mark tabular-nums">
               {linescore.teams.home.runs ?? 0}
             </span>
             <img
@@ -124,7 +124,7 @@ export default function LiveGameStrip() {
           <div className="card-label">
             Inning
           </div>
-          <div className="font-display text-xl font-bold text-phillies-navy">
+          <div className="font-display text-xl font-bold text-mark">
             {linescore.inningState} {linescore.currentInning}
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function LiveGameStrip() {
           <div className="card-label">
             Count
           </div>
-          <div className="font-display text-xl font-bold text-phillies-navy tabular-nums">
+          <div className="font-display text-xl font-bold text-mark tabular-nums">
             {linescore.balls ?? 0}-{linescore.strikes ?? 0} · {outs} {outs === 1 ? 'out' : 'outs'}
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function LiveGameStrip() {
                 <div className="card-label">
                   AB
                 </div>
-                <div className="text-sm text-phillies-navy font-medium">
+                <div className="text-sm text-mark font-medium">
                   {matchup.batter.fullName}
                 </div>
               </div>
@@ -167,7 +167,7 @@ export default function LiveGameStrip() {
                 <div className="card-label">
                   P
                 </div>
-                <div className="text-sm text-phillies-navy font-medium">
+                <div className="text-sm text-mark font-medium">
                   {matchup.pitcher.fullName}
                 </div>
               </div>
