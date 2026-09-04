@@ -46,3 +46,10 @@ terraform.rc
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Locally linked agent skills. `npx impeccable link` symlinks this to a checkout
+# OUTSIDE the repo, so committing it would push a link that resolves to nothing
+# on every other machine. Each developer links it themselves. If you ever
+# install the skill as real files here and want them committed, drop this line
+# or use `git add -f`.
+.claude/skills/impeccable
