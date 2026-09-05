@@ -336,7 +336,11 @@ export default function HeroStrip({ variant = 'full' }: Props) {
                     <img
                       src={playerHeadshotUrl(leader.player.id)}
                       alt={leader.player.fullName}
-                      className="w-6 h-6 rounded-full shrink-0 object-cover"
+                      // Hidden below `sm`: in a half-width cell at 375px the
+                      // headshot and its gap ate 32 of the ~171px the row had,
+                      // which truncated the one thing the row exists to say —
+                      // "Schwarber" rendered as "Sch…" beside a picture of him.
+                      className="hidden sm:block w-6 h-6 rounded-full shrink-0 object-cover"
                       onError={hideOnError}
                     />
                     <span className="card-label w-8 shrink-0">{label}</span>

@@ -117,9 +117,23 @@ thing being read. If a label competes with its own value, the label is wrong.
 Two widths, and only two. Everything in the masthead — header, banners, live
 strip, summary strip, favorites, story rows, and the nav — is `max-w-7xl mx-auto
 px-4`, so they share a left and right edge on every tab. Below the nav each tab
-holds ONE width for its whole length: `max-w-2xl` for the reading-column tabs
-(Standings, Schedule), the full `max-w-7xl` for the table tabs, and that same
-full width for Today as a two-column grid from `lg` up.
+holds ONE width for its whole length: the full `max-w-7xl` for the table tabs,
+and that same full width for Today and Standings as a two-column grid from `lg`
+up; Schedule is a `max-w-2xl mx-auto` reading column, because a game list is
+linear and reads down rather than across.
+
+**A reading column is centred, never merely capped.** `max-w-2xl` on its own
+left-aligns inside a `max-w-7xl` parent, which on a 1280px screen puts the
+content hard against the left edge with more than half the viewport empty
+beside it — the single loudest "unfinished page" signal this app had. Either
+centre the column or split the width; do not leave it hanging.
+
+**Tables drop columns by priority, they do not shrink.** Below `sm` each stats
+table renders only the columns that carry its claim — AVG and OPS on the batting
+table, ERA and WHIP on the pitching one, ±OPS in Hot & Cold — and holds the
+counting detail back until there is width for it. Ranking the columns is the
+design decision; a table that keeps all seventeen and lets the reader scroll has
+simply moved the decision onto them, and puts the column it sorts by off screen.
 
 The masthead is one object, not a stack. Its rows are separated by hairlines and
 carry no individual borders; the sticky nav is its last row and carries its
@@ -158,7 +172,14 @@ is real scorekeeping notation.
   the reader came for.
 - **Nav** — sticky, `bg-panel`, 2px heavy bottom rule so it still reads as the
   chrome boundary once it detaches. Active tab: `--color-mark` text plus a 3px
-  red rule that draws in from the left.
+  red rule that draws in from the left. Below `sm` every tab takes an equal
+  share of the bar (`flex-1`) and the row does not scroll: as a fixed-width
+  scroller it measured 484px against a 375px viewport, so two of the six
+  destinations were off screen with nothing indicating they existed.
+- **Section head** — the heading over a tab's primary content, with optional
+  fine print naming what the reader can do there. Carries the affordance for
+  anything a row opens: a clickable row announces itself to a mouse and to a
+  screen reader, and to nobody reading on a phone.
 - **Summary cell** — `bg-panel`, 1px rule, collapsed borders, label over figure.
   Owns its own loading and failed presentations: a pulse, then an em-dash. A
   failed cell never becomes an error.
@@ -184,3 +205,6 @@ AI-generated tell; use rule weight or a full 1px live rule instead.
 **Don't** write a `dark:` class. Re-point a token instead.
 **Don't** name a token for a color it isn't. The row hover was `bg-red-50` while
 resolving to a warm tint, which lied to every reader after the first.
+**Don't** cap a reading column without centring it. See Layout.
+**Don't** ship a row that opens something without saying so in text. Cursor and
+hover tint reach a mouse only, and this app is read on a phone on game day.

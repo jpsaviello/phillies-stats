@@ -179,7 +179,7 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
         nothing scheduled, or the season's first game — the grid drops to a
         single 2xl column rather than stranding one card beside a void.
       */}
-      <div className={`grid grid-cols-1 gap-6 lg:items-start ${twoUp ? 'lg:grid-cols-2' : 'max-w-2xl'}`}>
+      <div className={`grid grid-cols-1 gap-6 lg:items-start ${twoUp ? 'lg:grid-cols-2' : 'max-w-2xl mx-auto'}`}>
         <div className="space-y-6 min-w-0">
         {/* ---- What's on now ------------------------------------------- */}
         {headline && head && (
@@ -237,7 +237,14 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
             error. It fetches each starter's line itself; the game and its odds
             come from the window above. */}
         {enableMatchupPreview && headline && !isLive && (
-          <MatchupPreview game={headline.game} date={headline.date} philliesOdds={headlineOdds} />
+          <MatchupPreview
+            game={headline.game}
+            date={headline.date}
+            philliesOdds={headlineOdds}
+            // The headline card directly above states opponent, day and first
+            // pitch already; the panel repeated all three in fine print.
+            showContext={false}
+          />
         )}
 
         </div>

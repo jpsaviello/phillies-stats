@@ -31,7 +31,14 @@ export default function Nav({ active, onChange, hidden = [] }: NavProps) {
     // the boundary between the chrome and the tab's own content — and it has
     // to keep reading as that boundary once it sticks and detaches.
     <nav className="bg-panel border-b-2 border-rule-heavy sticky top-0 z-10">
-      <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto">
+      {/* Below `sm` every tab takes an equal share of the bar and nothing
+          scrolls. The row used to be an `overflow-x-auto` flex of fixed-width
+          tabs, which measured 484px against a 375px viewport: Standings and
+          Schedule sat entirely off-screen with no scrollbar, no fade and no
+          other affordance, so two of the six destinations effectively did not
+          exist on a phone. `flex-1` distributes instead, and the type steps
+          down just far enough for the longest label to fit its share. */}
+      <div className="max-w-7xl mx-auto flex sm:px-4">
         {visible.map(tab => {
           const isActive = active === tab.id
           return (
@@ -40,7 +47,7 @@ export default function Nav({ active, onChange, hidden = [] }: NavProps) {
               // Active state was conveyed by colour and a border alone.
               aria-current={isActive ? 'page' : undefined}
               onClick={() => onChange(tab.id)}
-              className={`group relative shrink-0 whitespace-nowrap px-3 sm:px-5 py-3 font-display text-sm sm:text-base font-semibold uppercase tracking-[0.08em] transition-colors ${
+              className={`group relative flex-1 sm:flex-none sm:shrink-0 whitespace-nowrap px-1 sm:px-5 py-3 font-display text-[13px] sm:text-base font-semibold uppercase tracking-[0.02em] sm:tracking-[0.08em] transition-colors ${
                 isActive ? 'text-mark' : 'text-gray-500 hover:text-mark'
               }`}
             >

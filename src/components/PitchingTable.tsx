@@ -6,6 +6,7 @@ import type { Favorite } from '../types/favorites'
 import BullpenUsage from './BullpenUsage'
 import GameLogModal from './GameLogModal'
 import PlayerSearch from './PlayerSearch'
+import SectionHead from './SectionHead'
 import ScrollX from './ScrollX'
 import StarButton from './StarButton'
 import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
@@ -65,16 +66,19 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
       return sort.dir === 'asc' ? av - bv : bv - av
     })
 
-  const cols: { key: keyof PitchingStats; label: string; defaultDir: 'asc' | 'desc' }[] = [
-    { key: 'gamesPlayed', label: 'G', defaultDir: 'desc' },
-    { key: 'gamesStarted', label: 'GS', defaultDir: 'desc' },
-    { key: 'wins', label: 'W', defaultDir: 'desc' },
-    { key: 'losses', label: 'L', defaultDir: 'desc' },
-    { key: 'saves', label: 'SV', defaultDir: 'desc' },
+  // `wide` columns are held back until `sm` — see the matching note in
+  // BattingTable. ERA, WHIP, K and IP are what a reader opens this table for,
+  // and at 375px they all sat off the right edge.
+  const cols: { key: keyof PitchingStats; label: string; defaultDir: 'asc' | 'desc'; wide?: true }[] = [
+    { key: 'gamesPlayed', label: 'G', defaultDir: 'desc', wide: true },
+    { key: 'gamesStarted', label: 'GS', defaultDir: 'desc', wide: true },
+    { key: 'wins', label: 'W', defaultDir: 'desc', wide: true },
+    { key: 'losses', label: 'L', defaultDir: 'desc', wide: true },
+    { key: 'saves', label: 'SV', defaultDir: 'desc', wide: true },
     { key: 'inningsPitched', label: 'IP', defaultDir: 'desc' },
-    { key: 'hits', label: 'H', defaultDir: 'desc' },
-    { key: 'homeRuns', label: 'HR', defaultDir: 'desc' },
-    { key: 'baseOnBalls', label: 'BB', defaultDir: 'desc' },
+    { key: 'hits', label: 'H', defaultDir: 'desc', wide: true },
+    { key: 'homeRuns', label: 'HR', defaultDir: 'desc', wide: true },
+    { key: 'baseOnBalls', label: 'BB', defaultDir: 'desc', wide: true },
     { key: 'strikeOuts', label: 'K', defaultDir: 'desc' },
     { key: 'era', label: 'ERA', defaultDir: 'asc' },
     { key: 'whip', label: 'WHIP', defaultDir: 'asc' },
@@ -103,6 +107,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
         <EmptyState>No pitchers have thrown an inning yet this season.</EmptyState>
       ) : (
         <>
+          <SectionHead title="Season Pitching" hint="Select a pitcher for game logs, splits and a rolling trend." />
           <PlayerSearch
             value={query}
             onChange={setQuery}
@@ -119,7 +124,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
                   {/* Wider only when the star is rendered — see BattingTable. */}
-                  <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
+                  <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-40 sm:min-w-44' : 'min-w-32 sm:min-w-36'}`}>Player</th>
                   {cols.map(c => {
                     const active = sort.key === c.key
                     return (
@@ -127,7 +132,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                         key={c.key}
                         scope="col"
                         aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="px-3 py-3 text-center font-medium whitespace-nowrap"
+                        className={`px-2 sm:px-3 py-3 text-center font-medium whitespace-nowrap ${c.wide ? 'hidden sm:table-cell' : ''}`}
                       >
                         {/* Real <button>, sort arrow — see the matching comment in BattingTable. */}
                         <button
@@ -178,10 +183,21 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                           />
                         )}
                         {player.fullName}
+                        {/* Disclosure indicator — see BattingTable. */}
+                        <svg
+                          viewBox="0 0 20 20"
+                          aria-hidden="true"
+                          className="ml-auto h-3.5 w-3.5 shrink-0 text-gray-400 transition-colors group-hover:text-live"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                        >
+                          <path d="M7.5 4.5L13 10l-5.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </span>
                     </td>
                     {cols.map(c => (
-                      <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                      <td key={c.key} className={`px-2 sm:px-3 py-2.5 text-center tabular-nums ${c.wide ? 'hidden sm:table-cell' : ''} ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                         {stat[c.key]}
                       </td>
                     ))}

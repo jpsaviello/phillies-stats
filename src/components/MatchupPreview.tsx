@@ -25,6 +25,13 @@ interface Props {
   game: Game
   date: string
   philliesOdds: ReturnType<typeof getPhilliesOdds>
+  /**
+   * Whether to restate the opponent and first pitch in this panel's header.
+   *
+   * True on the Schedule tab, where this panel is the first thing on the page.
+   * False on Today, where the headline card immediately above already says it.
+   */
+  showContext?: boolean
 }
 
 interface Starter {
@@ -102,7 +109,7 @@ function StarterHead({ starter }: { starter: Starter | null }) {
   )
 }
 
-export default function MatchupPreview({ game, date, philliesOdds }: Props) {
+export default function MatchupPreview({ game, date, philliesOdds, showContext = true }: Props) {
   const [starters, setStarters] = useState<{ phi: Starter | null; opp: Starter | null } | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -198,9 +205,15 @@ export default function MatchupPreview({ game, date, philliesOdds }: Props) {
           opponent is worse than spending a second line on it. */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="card-label">Next Up</span>
-        <span className="text-xs text-gray-500">
-          {isHome ? 'vs' : '@'} {them.team.name} · {when}
-        </span>
+        {/* Suppressed when the caller has already named the game directly above
+            this panel. On the Today tab the headline card states the opponent,
+            the day and first pitch in full-size type, and this line repeated all
+            three a few pixels below it. */}
+        {showContext && (
+          <span className="text-xs text-gray-500">
+            {isHome ? 'vs' : '@'} {them.team.name} · {when}
+          </span>
+        )}
       </div>
 
       <table className="w-full mt-2">
