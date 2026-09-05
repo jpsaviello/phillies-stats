@@ -40,11 +40,11 @@ function FormRow({ form }: { form: HitterForm }) {
         {form.name}
       </td>
       <td className="px-3 py-3 text-center tabular-nums">{form.games}</td>
-      <td className="px-3 py-3 text-center tabular-nums">{form.atBats}</td>
-      <td className="px-3 py-3 text-center tabular-nums">{form.hits}</td>
+      <td className="hidden sm:table-cell px-3 py-3 text-center tabular-nums">{form.atBats}</td>
+      <td className="hidden sm:table-cell px-3 py-3 text-center tabular-nums">{form.hits}</td>
       <td className="px-3 py-3 text-center tabular-nums">{form.homeRuns}</td>
-      <td className="px-3 py-3 text-center tabular-nums">{form.rbi}</td>
-      <td className="px-3 py-3 text-center tabular-nums">{form.avg}</td>
+      <td className="hidden sm:table-cell px-3 py-3 text-center tabular-nums">{form.rbi}</td>
+      <td className="hidden sm:table-cell px-3 py-3 text-center tabular-nums">{form.avg}</td>
       <td className="px-3 py-3 text-center font-semibold text-gray-900 tabular-nums">{form.ops}</td>
       <td className="px-3 py-3 text-center tabular-nums text-gray-600">
         {delta === null ? <span className="text-gray-400">—</span> : delta}
@@ -129,11 +129,11 @@ export default function BattingForm({ seasonSplits }: Props) {
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th scope="col" className="sticky left-0 bg-gray-50 px-4 py-3 text-left font-medium">Batter</th>
               <th scope="col" className="px-3 py-3 text-center font-medium">G</th>
-              <th scope="col" className="px-3 py-3 text-center font-medium">AB</th>
-              <th scope="col" className="px-3 py-3 text-center font-medium">H</th>
+              <th scope="col" className="hidden sm:table-cell px-3 py-3 text-center font-medium">AB</th>
+              <th scope="col" className="hidden sm:table-cell px-3 py-3 text-center font-medium">H</th>
               <th scope="col" className="px-3 py-3 text-center font-medium">HR</th>
-              <th scope="col" className="px-3 py-3 text-center font-medium">RBI</th>
-              <th scope="col" className="px-3 py-3 text-center font-medium">AVG</th>
+              <th scope="col" className="hidden sm:table-cell px-3 py-3 text-center font-medium">RBI</th>
+              <th scope="col" className="hidden sm:table-cell px-3 py-3 text-center font-medium">AVG</th>
               <th scope="col" className="px-3 py-3 text-center font-medium">OPS</th>
               {/* Abbreviated in the header, spelled out in the footnote: the
                   column is the whole point of the panel and "vs Season OPS"

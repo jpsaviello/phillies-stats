@@ -8,6 +8,7 @@ import { easternToday, formatDate, shiftDate } from '../utils/date'
 import GameDetailModal from './GameDetailModal'
 import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import MatchupPreview from './MatchupPreview'
+import SectionHead from './SectionHead'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
@@ -106,6 +107,11 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
     ?? flat.find(({ date }) => date > today)?.date
   const anchorIsToday = anchorDate === today
   let anchorPlaced = false
+  // The list runs oldest first across today ± 14 days, so it changes meaning
+  // partway down: every row above the boundary carries a result, every row
+  // below it carries a first pitch. Nothing marked that change, so 25 rows read
+  // as one undifferentiated list. Drawn once, before the first unplayed game.
+  let upcomingMarked = false
 
   let upcomingOdds: ReturnType<typeof getPhilliesOdds> = null
   if (upcoming && upcoming.date === today) {
@@ -115,7 +121,12 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
   }
 
   return (
-    <>
+    /* One centred reading column for the whole tab, matchup panel included.
+       The list was `max-w-2xl` with no `mx-auto`, so on a 1280px screen it sat
+       hard against the left edge with half the viewport empty beside it. A game
+       list is linear, so it stays one column — it is centred rather than split
+       the way Standings and Today are. */
+    <div className="max-w-2xl mx-auto">
     {enableMatchupPreview && upcoming && (
       <MatchupPreview
         game={upcoming.game}
@@ -123,20 +134,23 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
         philliesOdds={upcomingOdds}
       />
     )}
-    <div className="max-w-2xl">
-      {anchorDate && (
-        <div className="mb-3 flex justify-end">
+    <div>
+      <SectionHead
+        title="Schedule"
+        hint={enableGameDetail ? 'Select a played game for its box score and win probability.' : undefined}
+      >
+        {anchorDate && (
           <button
             type="button"
             onClick={jumpToAnchor}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
+            className="shrink-0 self-start rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-mark transition-colors hover:border-phillies-red hover:text-live focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
           >
             {/* The list runs oldest first over today ± 14 days, so without this
                 the tab opens on a game from two weeks ago. */}
             {anchorIsToday ? 'Jump to today' : 'Jump to next game'}
           </button>
-        </div>
-      )}
+        )}
+      </SectionHead>
     <div className="space-y-2">
       {dates.map(({ date, games }) =>
         games.map(game => {
@@ -152,6 +166,8 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
           // ref to its second game and leave the first scrolled off screen.
           const isAnchor = date === anchorDate && !anchorPlaced
           if (isAnchor) anchorPlaced = true
+          const startsUpcoming = !isFinished && !upcomingMarked
+          if (startsUpcoming) upcomingMarked = true
 
           const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
           const oddsGame = oddsMap.get(oddsKey)
@@ -162,7 +178,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
           // game — the modal shows the innings played so far.
           const clickable = enableGameDetail && game.status.abstractGameState !== 'Preview'
 
-          return (
+          const row = (
             <div
               key={game.gamePk}
               ref={isAnchor ? anchorRef : undefined}
@@ -216,6 +232,17 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
               )}
             </div>
           )
+
+          if (!startsUpcoming) return row
+          return (
+            <div key={`upcoming-${game.gamePk}`} className="space-y-2">
+              <div aria-hidden="true" className="flex items-center gap-3 pt-4">
+                <span className="card-label whitespace-nowrap">Upcoming</span>
+                <span className="h-px flex-1 bg-rule" />
+              </div>
+              {row}
+            </div>
+          )
         })
       )}
     </div>
@@ -227,6 +254,6 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
         onClose={() => dismiss({ game: null })}
       />
     )}
-    </>
+    </div>
   )
 }

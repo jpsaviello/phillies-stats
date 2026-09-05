@@ -6,6 +6,7 @@ import type { Favorite } from '../types/favorites'
 import BattingForm from './BattingForm'
 import GameLogModal from './GameLogModal'
 import PlayerSearch from './PlayerSearch'
+import SectionHead from './SectionHead'
 import ScrollX from './ScrollX'
 import StarButton from './StarButton'
 import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
@@ -71,21 +72,27 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
       return sort.dir === 'desc' ? bv - av : av - bv
     })
 
-  const cols: { key: keyof BattingStats; label: string; defaultDir: 'asc' | 'desc' }[] = [
+  // `wide` columns are held back until `sm`. At 375px the table ran 17 columns
+  // and the viewport reached only Player, POS, G, AB, R and H — every rate stat
+  // a reader opens a batting table for (HR, RBI, AVG, OBP, SLG, OPS) sat off
+  // screen, including AVG, the column the table sorts by on arrival. The split
+  // keeps the counting line a fan scans first and defers the rest to a width
+  // that can hold it; nothing is removed, and `sm` up is unchanged.
+  const cols: { key: keyof BattingStats; label: string; defaultDir: 'asc' | 'desc'; wide?: true }[] = [
     { key: 'gamesPlayed', label: 'G', defaultDir: 'desc' },
-    { key: 'atBats', label: 'AB', defaultDir: 'desc' },
-    { key: 'runs', label: 'R', defaultDir: 'desc' },
-    { key: 'hits', label: 'H', defaultDir: 'desc' },
-    { key: 'doubles', label: '2B', defaultDir: 'desc' },
-    { key: 'triples', label: '3B', defaultDir: 'desc' },
+    { key: 'atBats', label: 'AB', defaultDir: 'desc', wide: true },
+    { key: 'runs', label: 'R', defaultDir: 'desc', wide: true },
+    { key: 'hits', label: 'H', defaultDir: 'desc', wide: true },
+    { key: 'doubles', label: '2B', defaultDir: 'desc', wide: true },
+    { key: 'triples', label: '3B', defaultDir: 'desc', wide: true },
     { key: 'homeRuns', label: 'HR', defaultDir: 'desc' },
     { key: 'rbi', label: 'RBI', defaultDir: 'desc' },
-    { key: 'stolenBases', label: 'SB', defaultDir: 'desc' },
-    { key: 'baseOnBalls', label: 'BB', defaultDir: 'desc' },
-    { key: 'strikeOuts', label: 'K', defaultDir: 'desc' },
+    { key: 'stolenBases', label: 'SB', defaultDir: 'desc', wide: true },
+    { key: 'baseOnBalls', label: 'BB', defaultDir: 'desc', wide: true },
+    { key: 'strikeOuts', label: 'K', defaultDir: 'desc', wide: true },
     { key: 'avg', label: 'AVG', defaultDir: 'desc' },
-    { key: 'obp', label: 'OBP', defaultDir: 'desc' },
-    { key: 'slg', label: 'SLG', defaultDir: 'desc' },
+    { key: 'obp', label: 'OBP', defaultDir: 'desc', wide: true },
+    { key: 'slg', label: 'SLG', defaultDir: 'desc', wide: true },
     { key: 'ops', label: 'OPS', defaultDir: 'desc' },
   ]
 
@@ -115,6 +122,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
         <EmptyState>No batters have recorded an at-bat yet this season.</EmptyState>
       ) : (
         <>
+        <SectionHead title="Season Batting" hint="Select a batter for game logs, splits and a rolling trend." />
         <PlayerSearch
           value={query}
           onChange={setQuery}
@@ -133,8 +141,8 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                 {/* Wider only when the star is rendered — it eats ~22px of the cell,
                     which wrapped most names onto two lines at 375px. Signed-out
                     stays at the original min-w-36. */}
-                <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-44' : 'min-w-36'}`}>Player</th>
-                <th scope="col" className="px-3 py-3 text-center font-medium">POS</th>
+                <th scope="col" className={`px-4 py-3 text-left font-medium sticky left-0 bg-gray-50 ${signedIn ? 'min-w-40 sm:min-w-44' : 'min-w-32 sm:min-w-36'}`}>Player</th>
+                <th scope="col" className="hidden sm:table-cell px-3 py-3 text-center font-medium">POS</th>
                 {cols.map(c => {
                   const active = sort.key === c.key
                   return (
@@ -142,7 +150,7 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                       key={c.key}
                       scope="col"
                       aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      className="px-3 py-3 text-center font-medium whitespace-nowrap"
+                      className={`px-2 sm:px-3 py-3 text-center font-medium whitespace-nowrap ${c.wide ? 'hidden sm:table-cell' : ''}`}
                     >
                       {/* A real <button> rather than a click handler on the <th>: the
                           header was previously keyboard-dead, so sorting was
@@ -201,11 +209,26 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
                         />
                       )}
                       {player.fullName}
+                      {/* Disclosure indicator. The row opens a modal, which a
+                          mouse learns from the cursor and hover tint and a
+                          screen reader from role="button", but which was
+                          invisible to anyone reading on a phone. Authored SVG
+                          in the same 1.8 stroke as the search icon. */}
+                      <svg
+                        viewBox="0 0 20 20"
+                        aria-hidden="true"
+                        className="ml-auto h-3.5 w-3.5 shrink-0 text-gray-400 transition-colors group-hover:text-live"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      >
+                        <path d="M7.5 4.5L13 10l-5.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-center text-gray-500">{player.primaryPosition?.abbreviation}</td>
+                  <td className="hidden sm:table-cell px-3 py-2.5 text-center text-gray-500">{player.primaryPosition?.abbreviation}</td>
                   {cols.map(c => (
-                    <td key={c.key} className={`px-3 py-2.5 text-center tabular-nums ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                    <td key={c.key} className={`px-2 sm:px-3 py-2.5 text-center tabular-nums ${c.wide ? 'hidden sm:table-cell' : ''} ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                       {stat[c.key]}
                     </td>
                   ))}

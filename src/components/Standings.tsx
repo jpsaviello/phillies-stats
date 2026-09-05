@@ -40,8 +40,28 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
   // The panel and the wild card table both fail silently on their own, so they
   // render alongside the division table rather than inside its loading/error
   // states — a standings failure doesn't take either of them down.
+  // WildCardStandings renders null on exactly this condition, so the parent can
+  // tell whether the right-hand column will have anything in it before laying
+  // the grid out — the same question Today answers with `twoUp`.
+  const showWildCard = !race.loading && race.records.length > 0
+  const twoUp = showWildCard || enableLeagueRankings
+
   return (
-    <div className="max-w-2xl space-y-8">
+    /*
+      Two columns from `lg` up, one below it.
+
+      The tab reads division-on-the-left, race-on-the-right: where the club sits
+      in the NL East beside where it sits in the wild card and among all 30
+      clubs. It was a single `max-w-2xl` column pinned to the left edge, which
+      left more than half of a 1280px screen empty and read as an unfinished
+      page rather than as a reading column. Same structure and the same
+      reasoning as the Today tab, which solved this first.
+
+      When the right column has nothing to show, the grid drops to one centered
+      column rather than stranding the division table beside a void.
+    */
+    <div className={twoUp ? 'grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start' : 'max-w-2xl mx-auto space-y-8'}>
+      <div className="space-y-8 min-w-0">
       <PlayoffPush divisionRecords={records} {...race} />
       {loading ? (
         <TableSkeleton rows={5} cols={5} />
@@ -90,11 +110,15 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
           </table>
         </div>
       )}
+      </div>
+
+      <div className="space-y-8 min-w-0">
       <WildCardStandings {...race} />
-      {/* Last on the tab and outside the standings fetch's branches: it owns
-          its own two requests and renders nothing when both fail, so a
-          standings error can't take it down and it can't take them down. */}
+      {/* Outside the standings fetch's branches: it owns its own two requests
+          and renders nothing when both fail, so a standings error can't take it
+          down and it can't take them down. */}
       {enableLeagueRankings && <LeagueRankings />}
+      </div>
     </div>
   )
 }

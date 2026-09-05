@@ -34,23 +34,40 @@ function WorkloadRow({ workload }: { workload: PitcherWorkload }) {
   return (
     <tr className="group hover:bg-gray-50">
       {/* Pinned while the row scrolls, same idiom as the Batting/Pitching
-          tables' Player column: the flags sit in the last column, so reaching
-          them on a phone otherwise scrolls the name out of view. Needs its own
-          background (a sticky cell would show the rows beneath it through a
-          transparent one) plus group-hover to keep the row highlight. */}
-      <td className="sticky left-0 bg-panel px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50">
+          tables' Player column: from `sm` up the trail and flags sit out to the
+          right, so reaching them otherwise scrolls the name out of view. Needs
+          its own background (a sticky cell would show the rows beneath it
+          through a transparent one) plus group-hover to keep the row
+          highlight. */}
+      <td className="sticky left-0 bg-panel px-4 py-3 text-gray-900 transition-colors group-hover:bg-gray-50 max-w-[9rem] sm:max-w-none">
         {workload.name}
+        {/* Below `sm` the flags column is off screen entirely, and the flags are
+            the most useful thing the panel says — "3 straight days" is the whole
+            reason to read it. They sit under the name here and the column is
+            hidden, rather than the reader having to scroll to find them. */}
+        {workload.flags.length > 0 && (
+          <span className="mt-1 flex flex-wrap gap-1 sm:hidden">
+            {workload.flags.map(f => (
+              <span
+                key={f}
+                className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600"
+              >
+                {f}
+              </span>
+            ))}
+          </span>
+        )}
       </td>
-      <td className="px-4 py-3 text-center tabular-nums">
+      <td className="px-2 sm:px-4 py-3 text-center tabular-nums">
         {workload.daysSinceLast === null ? <span className="text-gray-400">—</span> : workload.daysSinceLast}
       </td>
-      <td className="px-4 py-3 text-center tabular-nums">{workload.outings.length}</td>
-      <td className="px-4 py-3 text-center tabular-nums">{workload.totalPitches || '—'}</td>
-      <td className="px-4 py-3 text-center tabular-nums">{outsToInnings(workload.totalOuts)}</td>
+      <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{workload.outings.length}</td>
+      <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{workload.totalPitches || '—'}</td>
+      <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{outsToInnings(workload.totalOuts)}</td>
       <td className="hidden sm:table-cell px-4 py-3">
         <OutingTrail workload={workload} />
       </td>
-      <td className="px-4 py-3">
+      <td className="hidden sm:table-cell px-4 py-3">
         {workload.flags.length > 0 && (
           <span className="flex flex-wrap gap-1">
             {workload.flags.map(f => (
@@ -182,12 +199,12 @@ export default function BullpenUsage({ seasonSplits }: Props) {
           <thead>
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th scope="col" className="sticky left-0 bg-gray-50 px-4 py-3 text-left font-medium">Pitcher</th>
-              <th scope="col" className="px-4 py-3 text-center font-medium">Rest</th>
-              <th scope="col" className="px-4 py-3 text-center font-medium">App</th>
-              <th scope="col" className="px-4 py-3 text-center font-medium">Pit</th>
-              <th scope="col" className="px-4 py-3 text-center font-medium">IP</th>
+              <th scope="col" className="px-2 sm:px-4 py-3 text-center font-medium">Rest</th>
+              <th scope="col" className="px-2 sm:px-4 py-3 text-center font-medium">App</th>
+              <th scope="col" className="px-2 sm:px-4 py-3 text-center font-medium">Pit</th>
+              <th scope="col" className="px-2 sm:px-4 py-3 text-center font-medium">IP</th>
               <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left font-medium">Recent</th>
-              <th scope="col" className="px-4 py-3 text-left font-medium"></th>
+              <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left font-medium"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">

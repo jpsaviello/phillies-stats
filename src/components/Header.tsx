@@ -25,7 +25,12 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
             />
           </div>
           <div className="min-w-0">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-wide leading-none truncate">
+            {/* Sized to the width the row actually leaves it. At 375px the
+                logo and the sign-in control take all but ~210px, and the name
+                set at text-2xl needed ~230 — so the masthead of the site read
+                "PHILADELPHIA PHI…". Tracking tightens with it rather than the
+                name being clipped. */}
+            <h1 className="font-display text-xl sm:text-3xl font-bold uppercase tracking-[0.02em] sm:tracking-wide leading-none truncate">
               Philadelphia Phillies
             </h1>
             {/* The scorecard's date line. Eastern, via the app's single
