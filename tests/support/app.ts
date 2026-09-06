@@ -171,6 +171,45 @@ export async function useApp(page: Page): Promise<AppHarness> {
 }
 
 /**
+ * Answers the three per-user endpoints as a signed-in account. Call it right
+ * after `useApp`, which it deliberately does not call itself — Playwright
+ * matches routes last-registered-first, so these must be registered after the
+ * broad fixture handler to win over it for these three paths.
+ *
+ * The recorded `/api/me` answers `{"user": null}` — the state nearly every
+ * visitor is in — so without this the signed-in header, which carries more
+ * chrome in a row that has none to spare at 375px, is never exercised. Nothing
+ * user-specific goes through the request cache, so there is nothing stale here.
+ */
+export async function stubSignedIn(page: Page): Promise<void> {
+  const json = (body: unknown) => (route: Route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+
+  await page.route(
+    url => url.pathname === '/api/me',
+    json({ user: { id: 'test-user', email: 'fan@example.com' } })
+  )
+  await page.route(
+    url => url.pathname === '/api/profile',
+    json({
+      profile: {
+        displayName: 'Test Fan',
+        phone: null,
+        hometown: null,
+        favoritePlayer: null,
+        jerseyNumber: null,
+        fanSince: null,
+        avatarDataUrl: null,
+        notifyGameReminders: false,
+        notifyDailyBriefing: false,
+        notifyOnThisDay: false,
+      },
+    })
+  )
+  await page.route(url => url.pathname === '/api/favorites', json({ favorites: [] }))
+}
+
+/**
  * Navigates to a tab and waits for its content rather than for a network idle:
  * LiveGameStrip polls on a timer, so "no requests in flight" is a state this
  * app can be slow to reach and never a signal that the tab has rendered.

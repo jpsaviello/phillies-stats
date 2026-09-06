@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { gotoTab, useApp } from '../support/app'
+import { gotoTab, stubSignedIn, useApp } from '../support/app'
 
 /** Clickable stats rows only — see the note in links.spec.ts. */
 const ROW = 'tbody tr[role="button"]'
@@ -72,4 +72,54 @@ test('a player modal opens and closes on a phone', async ({ page }) => {
 
   await page.goBack()
   await expect(dialog).toHaveCount(0)
+})
+
+/**
+ * The masthead, signed in — the state that carries the most chrome in that row.
+ *
+ * The club name has no `truncate`, deliberately: a masthead that clips is not a
+ * masthead. The cost is that when the controls beside it grow, the h1 does not
+ * shrink or wrap, it just PAINTS OVER them, silently and only at narrow widths.
+ * That has now shipped twice, most recently when signing in put a third control
+ * (theme, avatar, sign out) in a row with 375px to spend. This is the check the
+ * comments in Header.tsx tell you to run by hand.
+ */
+test('the club name never paints over the header controls', async ({ page }) => {
+  await useApp(page)
+  await stubSignedIn(page)
+  await gotoTab(page, 'today')
+  await page.getByRole('button', { name: /open profile/i }).waitFor({ timeout: 15_000 })
+
+  const header = await page.evaluate(() => {
+    const h1 = document.querySelector('header h1') as HTMLElement
+    const date = document.querySelector('header p') as HTMLElement
+    const controls = h1.closest('.max-w-7xl')!.lastElementChild as HTMLElement
+    return {
+      // scrollWidth > clientWidth means the text is wider than its box and is
+      // therefore drawing outside it.
+      nameOverflow: h1.scrollWidth - h1.clientWidth,
+      dateOverflow: date.scrollWidth - date.clientWidth,
+      nameRight: h1.getBoundingClientRect().right,
+      controlsLeft: controls.getBoundingClientRect().left,
+    }
+  })
+
+  expect(header.nameOverflow, 'club name overflows its box').toBe(0)
+  expect(header.dateOverflow, 'date line overflows its box').toBe(0)
+  expect(header.nameRight).toBeLessThanOrEqual(header.controlsLeft)
+})
+
+test('signing out is reachable from the profile sheet on a phone', async ({ page }) => {
+  // The header's own Sign out button is hidden below `sm` so the club name has
+  // room, which makes this the only way out of the account at 375px.
+  await useApp(page)
+  await stubSignedIn(page)
+  await gotoTab(page, 'today')
+  await page.getByRole('button', { name: /open profile/i }).click()
+
+  const dialog = page.locator('[role="dialog"][aria-label="Your profile"]')
+  await expect(dialog).toBeVisible({ timeout: 15_000 })
+  await dialog.getByRole('button', { name: /^sign out$/i }).click()
+
+  await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible({ timeout: 15_000 })
 })

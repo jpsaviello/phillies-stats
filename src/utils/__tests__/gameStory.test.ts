@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameBoxscore, WinProbEntry } from '../../api/mlb'
 import type { BattedBall } from '../../types/mlb'
-import { MAX_MARKER_RADIUS, SPRAY_FRAME, battedBalls, clipDuration, hardestHit, homeRunClips, indexClipsByPlayId, inningLabel, outcomeClass, toPhilliesProbability, turningPoints, withinSprayFrame } from '../gameStory'
+import { FENCE_CF_U, FENCE_POLE_U, HOME_PLATE, MAX_MARKER_RADIUS, SPRAY_FRAME, battedBalls, clearsFence, clipDuration, hardestHit, homeRunClips, indexClipsByPlayId, inningLabel, outcomeClass, toPhilliesProbability, turningPoints, withinSprayFrame } from '../gameStory'
 
 const PHILLIES = 143
 
@@ -230,19 +230,24 @@ describe('inningLabel', () => {
 
 // The spray chart's frame used to be sized to the FENCE, which silently clipped
 // any ball beyond it — an SVG dot outside the viewBox is not drawn and raises
-// nothing. These are real coordinates from the 2026 season, including the four
-// extremes of a 1,011-ball, 20-game sample and the specific Schwarber home run
-// (823419, 435 ft to right) that was reported missing from the chart.
+// nothing. These are real coordinates from the 2026 season: the extremes of the
+// full-season sample (6,987 balls, 139 games), the four extremes of the earlier
+// 20-game sample, and the specific Schwarber home run (823419, 435 ft to right)
+// that was reported missing from the chart.
 describe('withinSprayFrame', () => {
   const R_MAX = 4.2
 
   it.each([
+    ['460 ft HR to right, 824377', 254.79, 61.71],
+    ['459 ft HR to centre, 823421', 121.84, 12.66],
+    ['pop out behind the plate, 824249', 123.0, 227.54],
+    ['leftmost ball in the season, 823436', 7.1, 128.0],
     ['Schwarber HR to right, 823419', 247.67, 69.6],
     ['deep HR to right, 823429', 244.8, 95.9],
     ['pop out behind the plate, 823423', 122.6, 222.0],
     ['pop out behind the plate, 823420', 127.8, 220.8],
-    ['leftmost ball in sample', 24.9, 120.0],
-    ['shallowest ball in sample', 126.0, 23.7],
+    ['leftmost ball in the 20-game sample', 24.9, 120.0],
+    ['shallowest ball in the 20-game sample', 126.0, 23.7],
   ])('draws %s', (_label, x, y) => {
     expect(withinSprayFrame(x, y, R_MAX)).toBe(true)
   })
@@ -252,11 +257,14 @@ describe('withinSprayFrame', () => {
   // the right edge off that same Schwarber home run. This is the assertion that
   // fails if a future marker grows without the frame growing with it.
   it.each([
+    ['460 ft HR to right, 824377', 254.79, 61.71],
+    ['459 ft HR to centre, 823421', 121.84, 12.66],
+    ['pop out behind the plate, 824249', 123.0, 227.54],
     ['Schwarber HR to right, 823419', 247.67, 69.6],
     ['deep HR to right, 823429', 244.8, 95.9],
     ['pop out behind the plate, 823423', 122.6, 222.0],
-    ['leftmost ball in sample', 24.9, 120.0],
-    ['shallowest ball in sample', 126.0, 23.7],
+    ['leftmost ball in the 20-game sample', 24.9, 120.0],
+    ['shallowest ball in the 20-game sample', 126.0, 23.7],
   ])('draws the full home-run marker for %s', (_label, x, y) => {
     expect(withinSprayFrame(x, y, MAX_MARKER_RADIUS)).toBe(true)
   })
@@ -269,6 +277,79 @@ describe('withinSprayFrame', () => {
   it('rejects a coordinate outside the frame', () => {
     expect(withinSprayFrame(SPRAY_FRAME.minX - 1, 100)).toBe(false)
     expect(withinSprayFrame(100, SPRAY_FRAME.minY - 1)).toBe(false)
+  })
+})
+
+/**
+ * The outfield fence, checked against real coordinates.
+ *
+ * This is the assertion the shipped fence failed for months: calibrated on five
+ * games it drew 242 of the season's 328 home runs INSIDE the wall — a ball the
+ * chart names as a home run in the list directly beneath it, plotted short of
+ * the fence it cleared. Two readers reported it before it was fixed.
+ *
+ * Every coordinate below is real, and the three from 823417 are the game whose
+ * screenshots reported the defect.
+ */
+describe('clearsFence', () => {
+  it.each([
+    ['Hill, 388 ft to left, 823417', 36.99, 68.94],
+    ['Schwarber, 371 ft to right, 823417', 224.21, 84.68],
+    ['Acuna, 414 ft to left-centre, 823417', 57.91, 45.7],
+    ['McCann, 409 ft to left, 825037', 41.55, 59.91],
+    ['Schwarber, 435 ft to right, 823419', 247.67, 69.6],
+    ['460 ft to right, 824377', 254.79, 61.71],
+    ['459 ft to centre, 823421', 121.84, 12.66],
+    ['350 ft down the right-field line, 823671', 222.75, 97.46],
+    ['346 ft to the left-field corner, 823436', 23.33, 102.65],
+  ])('draws %s beyond the wall', (_label, x, y) => {
+    expect(clearsFence(x, y)).toBe(true)
+  })
+
+  // The overlap is real and the fit does not pretend otherwise: a coordinate
+  // records where a ball was FIELDED, so a catch on the track and a shot into
+  // the first row land a few units apart. Eight of the season's 328 home runs
+  // still draw inside the wall, and this is one of them — pinned so the number
+  // is a measured trade-off rather than something that quietly grows back.
+  it('still draws the shortest home runs inside the wall', () => {
+    expect(clearsFence(41.28, 90.96)).toBe(false) // 339 ft down the LF line, 822804
+  })
+
+  // The other half of the fit. A fence tight enough to get every home run out
+  // would put routine fly outs beyond the wall, which is its own visible lie —
+  // these are real outs that must stay in front of it.
+  it.each([
+    ['308 ft fly out to centre, 824378', 143.46, 77.09],
+    ['306 ft fly out to left, 824379', 69.25, 90.21],
+    ['285 ft fly out to right, 823483', 166.21, 92.5],
+    ['276 ft fly out to right, 824377', 180.19, 102.83],
+    ['a ground ball through the infield', 100.0, 150.0],
+  ])('keeps %s inside', (_label, x, y) => {
+    expect(clearsFence(x, y)).toBe(false)
+  })
+
+  // Per-angle optima over the season sample run ~145 units at the poles and
+  // ~168 in dead centre. These pin the shape the constants were fit to, so a
+  // later nudge to one of the three has to face the measurement.
+  it('is shallowest at the poles and deepest in centre', () => {
+    const depth = (x: number, y: number) => Math.hypot(x - HOME_PLATE.x, HOME_PLATE.y - y)
+    // Just outside the wall at each landmark, walked in until it stops clearing.
+    const wallAt = (bearingDeg: number) => {
+      const rad = (bearingDeg * Math.PI) / 180
+      for (let r = 200; r > 60; r -= 0.1) {
+        const x = HOME_PLATE.x + r * Math.sin(rad)
+        const y = HOME_PLATE.y - r * Math.cos(rad)
+        if (!clearsFence(x, y)) return depth(x, y)
+      }
+      return 0
+    }
+    expect(wallAt(0)).toBeCloseTo(FENCE_CF_U, 0)
+    expect(wallAt(-45)).toBeCloseTo(FENCE_POLE_U, 0)
+    expect(wallAt(45)).toBeCloseTo(FENCE_POLE_U, 0)
+    // Symmetric, and the gaps sit between the two.
+    expect(wallAt(-25)).toBeCloseTo(wallAt(25), 0)
+    expect(wallAt(-25)).toBeGreaterThan(FENCE_POLE_U)
+    expect(wallAt(-25)).toBeLessThan(FENCE_CF_U)
   })
 })
 

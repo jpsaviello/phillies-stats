@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react'
 import type { HighlightItem } from '../api/mlb'
 import type { BattedBall, HomeRunClip } from '../types/mlb'
 import {
+  FENCE_PATH,
   FT_PER_UNIT,
   HOME_PLATE,
+  LF_POLE,
+  RF_POLE,
   SPRAY_FRAME,
   hardestHit,
   homeRunClips,
@@ -38,47 +41,12 @@ const THIRD_BASE = { x: HOME_PLATE.x - diag(90), y: HOME_PLATE.y - diag(90) }
 const SECOND_BASE = { x: HOME_PLATE.x, y: HOME_PLATE.y - u(127.3) }
 const MOUND = { x: HOME_PLATE.x, y: HOME_PLATE.y - u(60.5) }
 
-// --- Outfield: measured in COORDINATE UNITS, not converted from feet. ---
+// --- Outfield: the fence lives in gameStory.ts, in COORDINATE UNITS. ---
 //
-// The fence cannot be derived from a distance the way the infield can, because
-// FT_PER_UNIT only holds near the plate — the same coordinate-vs-totalDistance
-// mismatch documented in gameStory.ts. Deriving a 330-foot pole from it drew the
-// fence at ~112 units and put ordinary doubles OUTSIDE the wall.
-//
-// So these come from the batted-ball envelope itself, measured across five 2026
-// games (247 balls in play):
-//
-//   home runs        152.1 - 178.2 units from the plate (n=8)
-//   deepest fly out  165.3
-//   deepest grounder  75.0
-//
-// Poles just under the shortest home run, center just under the longest, which
-// leaves the fence where it physically belongs: deep flies die in front of it,
-// and a home run may legitimately land beyond it.
-//
-// KNOWN, MEASURED, AND DELIBERATELY NOT ACTED ON (2026-09-06). Re-measuring over
-// 1,011 batted balls in 20 games (37 home runs) puts the real home-run range at
-// 143.2 - 192.7 units, and these values draw 28 of those 37 INSIDE the wall. A
-// grid search over the same sample lands at 130 / 174 (3 of 37 inside, 12 of 974
-// other balls beyond). That change was reverted on request and is recorded here
-// only so the next reader does not re-derive it from scratch — the numbers below
-// are the shipped fence, and changing them is a separate decision.
-const POLE_U = 152
-const CF_U = 178
-const POLE_OFF = POLE_U / Math.SQRT2
-const LF_POLE = { x: HOME_PLATE.x - POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
-const RF_POLE = { x: HOME_PLATE.x + POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
-
-// Cubic whose midpoint sits at straightaway-center depth, bulging the fence out
-// from the two poles the way a real outfield does. The control points are what
-// put the t=0.5 midpoint exactly at CF_U.
-const CF_Y = HOME_PLATE.y - CF_U
-const CTRL_Y = (8 * CF_Y - LF_POLE.y - RF_POLE.y) / 6
-const FENCE =
-  `M${LF_POLE.x.toFixed(1)},${LF_POLE.y.toFixed(1)} ` +
-  `C${(LF_POLE.x + 34).toFixed(1)},${CTRL_Y.toFixed(1)} ` +
-  `${(RF_POLE.x - 34).toFixed(1)},${CTRL_Y.toFixed(1)} ` +
-  `${RF_POLE.x.toFixed(1)},${RF_POLE.y.toFixed(1)}`
+// It is fit to outcomes rather than converted from feet, and it is over there
+// rather than here so it can be checked against real coordinates with no
+// browser — see FENCE_PATH's comment for the fit, the sample, and why a fence
+// drawn from a distance in feet puts ordinary doubles outside the wall.
 
 // Exit velocity -> dot radius. The fallback is deliberately mid-scale rather
 // than zero: 1 ball in 57 came back with no launchSpeed in the reference game,
@@ -256,8 +224,8 @@ export default function SprayChart({ balls, opponentName, clips }: Props) {
               `. The home runs and hardest-hit balls are listed below.`
             }
           >
-            <path d={`${FENCE} L${HOME_PLATE.x},${HOME_PLATE.y} Z`} className="fill-green-50" stroke="none" />
-            <path d={FENCE} fill="none" className="stroke-gray-300" strokeWidth="1.2" />
+            <path d={`${FENCE_PATH} L${HOME_PLATE.x},${HOME_PLATE.y} Z`} className="fill-green-50" stroke="none" />
+            <path d={FENCE_PATH} fill="none" className="stroke-gray-300" strokeWidth="1.2" />
             <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={LF_POLE.x} y2={LF_POLE.y} className="stroke-gray-300" strokeWidth="1" />
             <line x1={HOME_PLATE.x} y1={HOME_PLATE.y} x2={RF_POLE.x} y2={RF_POLE.y} className="stroke-gray-300" strokeWidth="1" />
             <path

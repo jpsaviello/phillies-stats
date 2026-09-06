@@ -12,6 +12,10 @@ interface ProfileModalProps {
   profile: Profile | null
   onProfileChange: (profile: Profile) => void
   onClose: () => void
+  // Signing out lives here as well as in the header, and is the ONLY path to it
+  // below `sm` — the header row cannot hold a third control at 375px without
+  // the club name overrunning it (see AuthWidget).
+  onSignOut: () => void
   // Called after a successful account deletion so App can clear user,
   // profile, and favorites in one pass — the same reset sign-out already does.
   onAccountDeleted: () => void
@@ -84,6 +88,7 @@ export default function ProfileModal({
   profile,
   onProfileChange,
   onClose,
+  onSignOut,
   onAccountDeleted,
 }: ProfileModalProps) {
   const [form, setForm] = useState<FormState>(profile !== null ? formFrom(profile) : EMPTY_FORM)
@@ -546,7 +551,21 @@ export default function ProfileModal({
           <section className="space-y-3 border-t border-gray-200 pt-5">
             <h3 className="card-label">Account</h3>
 
-            <form className="space-y-3" onSubmit={handlePasswordSubmit}>
+            {/* First, because it is the one thing here a reader might be
+                looking for in a hurry — and below `sm` it is the only way out
+                of the account, the header's own button being hidden there. */}
+            <div className="flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-sm text-gray-700">{user.email}</p>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-rule px-3 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
+              >
+                Sign out
+              </button>
+            </div>
+
+            <form className="space-y-3 border-t border-gray-200 pt-4" onSubmit={handlePasswordSubmit}>
               <p className="text-sm font-semibold text-gray-700">Change password</p>
               <div>
                 <label htmlFor="profile-current-password" className={labelClass}>

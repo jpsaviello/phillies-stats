@@ -110,10 +110,19 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
             {displayName}
           </span>
         </button>
+        {/* HIDDEN BELOW `sm`, and that is a layout fix rather than a taste call.
+            Signed in, this row carried three controls — theme, avatar, sign out
+            — measuring 175px at 375px, which squeezed the club name's column to
+            104px against the 153px "PHILADELPHIA" actually needs; the h1 has no
+            `truncate`, so it simply painted 49px past its box and over the theme
+            control. Dropping this button below `sm` takes the controls to 88px
+            and gives the name 191px. Sign out is not lost there: it is the first
+            thing in ProfileModal's Account section, one tap behind the avatar,
+            which is where the rest of account management already lives. */}
         <button
           type="button"
           onClick={handleSignOut}
-          className="inline-flex min-h-10 items-center rounded-lg border border-rule px-3 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
+          className="hidden min-h-10 items-center rounded-lg border border-rule px-3 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover sm:inline-flex"
         >
           Sign out
         </button>
@@ -123,6 +132,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
             user={user}
             profile={profile}
             onProfileChange={onProfileChange}
+            onSignOut={handleSignOut}
             onClose={() => setProfileModalOpen(false)}
             onAccountDeleted={() => {
               setProfileModalOpen(false)
