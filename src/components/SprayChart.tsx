@@ -29,28 +29,26 @@ const MOUND = { x: HOME_PLATE.x, y: HOME_PLATE.y - u(60.5) }
 // mismatch documented in gameStory.ts. Deriving a 330-foot pole from it drew the
 // fence at ~112 units and put ordinary doubles OUTSIDE the wall.
 //
-// These are FIT TO OUTCOMES over 1,011 batted balls in 20 games of the 2026
-// season (37 home runs), not read off a tape measure.
+// So these come from the batted-ball envelope itself, measured across five 2026
+// games (247 balls in play):
 //
-// The first calibration used five games (n=8 home runs) and set the poles just
-// under the SHORTEST home run seen and centre just under the LONGEST. On the
-// wider sample that is far too deep: home runs actually run 143.2 - 192.7 units,
-// and 152/178 drew 28 of 37 of them INSIDE the wall — a ball the list below
-// calls a home run, plotted short of the fence it cleared.
+//   home runs        152.1 - 178.2 units from the plate (n=8)
+//   deepest fly out  165.3
+//   deepest grounder  75.0
 //
-// There is real overlap between the deepest outs and the shortest home runs,
-// because a coordinate records where a ball was FIELDED: a catch at the track
-// and a shot into the first row land a few units apart. So no fence separates
-// them perfectly, and these were chosen by grid search to minimise misplacement,
-// weighting a home run drawn inside the wall as the worse error since the text
-// list names it:
+// Poles just under the shortest home run, center just under the longest, which
+// leaves the fence where it physically belongs: deep flies die in front of it,
+// and a home run may legitimately land beyond it.
 //
-//   152 / 178 (before)   28 of 37 home runs inside,  0 of 974 others beyond
-//   130 / 174 (now)       3 of 37 home runs inside, 12 of 974 others beyond
-//
-// Re-fit these against fresh games rather than nudging them by eye.
-const POLE_U = 130
-const CF_U = 174
+// KNOWN, MEASURED, AND DELIBERATELY NOT ACTED ON (2026-09-06). Re-measuring over
+// 1,011 batted balls in 20 games (37 home runs) puts the real home-run range at
+// 143.2 - 192.7 units, and these values draw 28 of those 37 INSIDE the wall. A
+// grid search over the same sample lands at 130 / 174 (3 of 37 inside, 12 of 974
+// other balls beyond). That change was reverted on request and is recorded here
+// only so the next reader does not re-derive it from scratch — the numbers below
+// are the shipped fence, and changing them is a separate decision.
+const POLE_U = 152
+const CF_U = 178
 const POLE_OFF = POLE_U / Math.SQRT2
 const LF_POLE = { x: HOME_PLATE.x - POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
 const RF_POLE = { x: HOME_PLATE.x + POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
