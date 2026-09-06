@@ -56,12 +56,16 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
           </div>
         </div>
         {/* Which way the ink runs, beside the account control.
-            MEASURE BEFORE ADDING A THIRD CONTROL HERE. At 375px this row holds
-            the logo, the two-line club name and ~118px of controls with about
-            12px to spare; a freshness chip was tried here and pushed the
-            masthead into the buttons — the name overflowed its box and printed
-            on top of them. That is why the data-freshness control lives in the
-            footer instead, next to the attribution it belongs with. */}
+            MEASURE BEFORE ADDING ANYTHING HERE. At 375px the logo and these
+            controls leave the club name 191px, and "PHILADELPHIA" needs 153 —
+            with no `truncate` on the h1, anything wider than that does not
+            shrink or wrap, it paints over these buttons. That has happened
+            twice: a freshness chip, which is why the data-freshness control
+            lives in the footer next to the attribution it belongs with; and
+            AuthWidget's Sign out button, which took the signed-in controls to
+            175px and is now hidden below `sm` (sign out moved into
+            ProfileModal's Account section). `mobile.spec.ts` asserts the
+            no-overlap, but only for the states it stubs. */}
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
           <AuthWidget

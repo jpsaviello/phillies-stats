@@ -58,10 +58,11 @@ export const FT_PER_UNIT = 2.94
  * at coordX 247.7, a 435-foot Schwarber shot to right) and three pop outs
  * behind the plate at coordY > 220.
  *
- * Observed envelope over that sample:
+ * Observed envelope over 6,987 batted balls in all 139 completed games of the
+ * 2026 season:
  *
- *   coordX  24.9 .. 247.7
- *   coordY  23.7 .. 222.0
+ *   coordX   7.1 .. 254.8
+ *   coordY  12.7 .. 227.5
  *
  * The bounds below clear that by more than a full MARKER radius on every side,
  * and are symmetric about HOME_PLATE.x so the diamond sits centred. Widen them,
@@ -73,8 +74,16 @@ export const FT_PER_UNIT = 2.94
  * clipped it into a crescent. The same silent failure the frame was widened for
  * the first time, one marker change later: anything that grows a marker has to
  * grow this too, which is what MAX_MARKER_RADIUS below exists to make checkable.
+ *
+ * WIDENED AGAIN 2026-09-06 from (-6, 10, 264, 222), which was fit to a 20-game
+ * sample. Re-measured over the full season, that frame still clipped three
+ * balls: a 460-foot home run to right at coordX 254.8, a 459-foot home run to
+ * centre at coordY 12.7, and a pop out at coordY 227.5 — roughly one every 46
+ * games, and two of the three were home runs, the balls a reader is most likely
+ * to go looking for. The sample, not the frame, was the thing that was too
+ * small.
  */
-export const SPRAY_FRAME = { minX: -6, minY: 10, width: 264, height: 222 }
+export const SPRAY_FRAME = { minX: -16, minY: 0, width: 284, height: 242 }
 
 /**
  * The furthest any drawn marker reaches from its coordinate: the largest dot
@@ -92,6 +101,114 @@ export function withinSprayFrame(x: number, y: number, radius = 0): boolean {
     y - radius >= SPRAY_FRAME.minY &&
     y + radius <= SPRAY_FRAME.minY + SPRAY_FRAME.height
   )
+}
+
+/**
+ * The outfield fence, in COORDINATE UNITS — the line where a batted ball starts
+ * being a home run.
+ *
+ * It lives here rather than in SprayChart for the same reason SPRAY_FRAME does:
+ * it can then be checked against real coordinates with no browser, and this one
+ * has now been wrong in production twice.
+ *
+ * IT CANNOT BE DERIVED FROM A DISTANCE the way the infield can. FT_PER_UNIT only
+ * holds near the plate, so a 330-foot pole converted through it lands at ~112
+ * units and puts ordinary doubles outside the wall. So the fence is FIT TO
+ * OUTCOMES instead, over 6,987 batted balls across all 139 completed Phillies
+ * games of the 2026 season (328 home runs) — the sample to re-derive it against.
+ *
+ * The first calibration used five games (n=8 home runs) and set the poles just
+ * under the SHORTEST home run seen, centre just under the LONGEST. Against the
+ * full season that is far too deep, and it shipped:
+ *
+ *   152 / 178, ctrl 34   242 of 328 home runs (74%) drawn INSIDE the wall
+ *   139 / 166, ctrl 64     8 of 328 home runs (2.4%) inside, 101 of 6,659
+ *                          other balls (1.5%) beyond it
+ *
+ * Home runs and deep outs genuinely overlap, because a coordinate records where
+ * a ball was FIELDED: a catch on the track and a shot into the first row land a
+ * few units apart, and a double off the wall is fielded AT the wall. So no fence
+ * separates them perfectly. These three numbers were grid-searched together to
+ * minimise misplacement, weighting a home run drawn inside the wall as the worse
+ * error — the chart lists it as a home run directly underneath, so that one is
+ * visibly wrong — which is why 101 of the deepest balls in play (59 doubles, 28
+ * fly outs, 9 triples, median projected distance 381 ft) now sit a unit or two
+ * proud of the wall. That is where wall-ball contact belongs.
+ *
+ * CTRL_DX is fit alongside the two radii, not decoration: per-angle optima over
+ * the same sample run ~145 units at the poles and ~168 in dead centre, and at
+ * the previously shipped 34 the curve bulges too hard through the gaps to sit on
+ * that profile at ANY pole/centre pair. Re-fit all three against fresh games
+ * rather than nudging one by eye.
+ */
+export const FENCE_POLE_U = 139
+export const FENCE_CF_U = 166
+const FENCE_CTRL_DX = 64
+
+const POLE_OFF = FENCE_POLE_U / Math.SQRT2
+export const LF_POLE = { x: HOME_PLATE.x - POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
+export const RF_POLE = { x: HOME_PLATE.x + POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
+
+// Cubic whose midpoint sits at straightaway-centre depth, bulging the wall out
+// from the two poles the way a real outfield does. CTRL_Y is what puts the
+// t=0.5 midpoint exactly at FENCE_CF_U.
+const CTRL_Y = (8 * (HOME_PLATE.y - FENCE_CF_U) - LF_POLE.y - RF_POLE.y) / 6
+const CTRL_1 = { x: LF_POLE.x + FENCE_CTRL_DX, y: CTRL_Y }
+const CTRL_2 = { x: RF_POLE.x - FENCE_CTRL_DX, y: CTRL_Y }
+
+/** The fence as an SVG path, pole to pole. */
+export const FENCE_PATH =
+  `M${LF_POLE.x.toFixed(1)},${LF_POLE.y.toFixed(1)} ` +
+  `C${CTRL_1.x.toFixed(1)},${CTRL_Y.toFixed(1)} ` +
+  `${CTRL_2.x.toFixed(1)},${CTRL_Y.toFixed(1)} ` +
+  `${RF_POLE.x.toFixed(1)},${RF_POLE.y.toFixed(1)}`
+
+/** Degrees from straightaway centre; negative toward left field. */
+function bearing(x: number, y: number): number {
+  return (Math.atan2(x - HOME_PLATE.x, HOME_PLATE.y - y) * 180) / Math.PI
+}
+
+function distanceFromPlate(x: number, y: number): number {
+  return Math.hypot(x - HOME_PLATE.x, HOME_PLATE.y - y)
+}
+
+// The fence sampled as (bearing, distance) pairs, ascending by bearing. The
+// region is star-shaped about the plate, so "beyond the wall" is a comparison
+// against the wall's distance at the ball's own bearing — no polygon test.
+const FENCE_PROFILE: Array<[bearing: number, distance: number]> = Array.from(
+  { length: 201 },
+  (_unused, i) => {
+    const t = i / 200
+    const mt = 1 - t
+    const x =
+      mt ** 3 * LF_POLE.x + 3 * mt ** 2 * t * CTRL_1.x + 3 * mt * t ** 2 * CTRL_2.x + t ** 3 * RF_POLE.x
+    const y =
+      mt ** 3 * LF_POLE.y + 3 * mt ** 2 * t * CTRL_1.y + 3 * mt * t ** 2 * CTRL_2.y + t ** 3 * RF_POLE.y
+    return [bearing(x, y), distanceFromPlate(x, y)] as [number, number]
+  }
+).sort((a, b) => a[0] - b[0])
+
+/** How deep the wall is on the bearing a ball was hit to, in coordinate units. */
+export function fenceDistanceAt(bearingDeg: number): number {
+  const first = FENCE_PROFILE[0]
+  const last = FENCE_PROFILE[FENCE_PROFILE.length - 1]
+  if (bearingDeg <= first[0]) return first[1]
+  if (bearingDeg >= last[0]) return last[1]
+  let lo = 0
+  while (lo < FENCE_PROFILE.length - 1 && FENCE_PROFILE[lo + 1][0] < bearingDeg) lo++
+  const [a0, r0] = FENCE_PROFILE[lo]
+  const [a1, r1] = FENCE_PROFILE[lo + 1]
+  return r0 + ((bearingDeg - a0) / (a1 - a0)) * (r1 - r0)
+}
+
+/**
+ * True when a batted-ball coordinate is drawn beyond the outfield wall.
+ *
+ * This is what the fence fit is judged on: a home run must land on the far side
+ * of the line the chart draws, because the list under the chart names it as one.
+ */
+export function clearsFence(x: number, y: number): boolean {
+  return distanceFromPlate(x, y) > fenceDistanceAt(bearing(x, y))
 }
 
 /**
