@@ -12,12 +12,15 @@ interface HeaderProps {
 
 export default function Header({ user, onAuthChange, profile, onProfileChange }: HeaderProps) {
   return (
-    <header className="bg-phillies-navy bg-pinstripe text-white border-b-2 border-phillies-red">
+    <header className="bg-instrument border-b border-phillies-red">
       {/* Tighter on phones: the rest of the masthead's rows stack below this
           one, so every row saved here is a row closer to the stats. */}
       <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="bg-panel rounded-full p-1.5 shrink-0">
+          {/* The mark is drawn for a white ground, so it keeps one. This is
+              the single place the club's cream survives the world change —
+              as a logo lockup, not as the page. */}
+          <div className="bg-phillies-cream rounded-full p-1.5 shrink-0">
             <img
               src="https://www.mlbstatic.com/team-logos/143.svg"
               alt="Phillies"
@@ -25,18 +28,23 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
             />
           </div>
           <div className="min-w-0">
-            {/* Sized to the width the row actually leaves it. At 375px the
-                logo and the sign-in control take all but ~210px, and the name
-                set at text-2xl needed ~230 — so the masthead of the site read
-                "PHILADELPHIA PHI…". Tracking tightens with it rather than the
-                name being clipped. */}
-            <h1 className="font-display text-xl sm:text-3xl font-bold uppercase tracking-[0.02em] sm:tracking-wide leading-none truncate">
-              Philadelphia Phillies
+            {/* Stacked on a phone rather than shrunk or clipped. The logo and
+                the sign-in control leave ~210px at 375px, and "PHILADELPHIA
+                PHILLIES" set on one line needs more than that in any size worth
+                calling a masthead — the previous fix shrank it until it fit,
+                and the wider face this world uses broke that again. Two lines
+                keeps the type at full scale and cannot truncate, which is what
+                a masthead is for. No `truncate`: it can no longer overflow. */}
+            <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-[0.01em] sm:tracking-wide leading-[1.05] sm:leading-none text-gray-900">
+              <span className="block sm:inline">Philadelphia</span>{' '}
+              <span className="block sm:inline">Phillies</span>
             </h1>
             {/* The scorecard's date line. Eastern, via the app's single
                 definition of the baseball day — never the reader's clock,
                 which west of ET still says yesterday during a night game. */}
-            <p className="font-display text-blue-200 text-xs sm:text-sm uppercase tracking-[0.18em] mt-1 tabular">
+            {/* Tracking steps with the face: 0.18em on a phone pushed the date
+                onto a second line in Archivo. */}
+            <p className="font-display text-gray-500 text-[11px] sm:text-sm uppercase tracking-[0.06em] sm:tracking-[0.18em] mt-1 tabular whitespace-nowrap">
               {formatDate(easternToday(), { weekday: 'long', month: 'long', day: 'numeric' })}
               <span className="hidden sm:inline"> · 2026 Season</span>
             </p>

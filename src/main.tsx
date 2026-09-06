@@ -1,9 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { withLDProvider } from 'launchdarkly-react-client-sdk'
-import '@fontsource/barlow-condensed/500.css'
-import '@fontsource/barlow-condensed/600.css'
-import '@fontsource/barlow-condensed/700.css'
+import '@fontsource-variable/archivo'
 import './index.css'
 import App from './App.tsx'
 

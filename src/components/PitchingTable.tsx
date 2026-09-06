@@ -119,7 +119,8 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
           {rows.length === 0 ? (
             <NoMatches query={query} noun="pitchers" onClear={() => setQuery('')} />
           ) : (
-          <ScrollX>
+          <div className="card overflow-hidden">
+        <ScrollX>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -132,7 +133,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                         key={c.key}
                         scope="col"
                         aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className={`px-2 sm:px-3 py-3 text-center font-medium whitespace-nowrap ${c.wide ? 'hidden sm:table-cell' : ''}`}
+                        className={`px-2 sm:px-3 py-3 text-center font-medium whitespace-nowrap ${c.wide ? 'hidden sm:table-cell' : ''} ${active ? 'col-band' : ''}`}
                       >
                         {/* Real <button>, sort arrow — see the matching comment in BattingTable. */}
                         <button
@@ -197,7 +198,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
                       </span>
                     </td>
                     {cols.map(c => (
-                      <td key={c.key} className={`px-2 sm:px-3 py-2.5 text-center tabular-nums ${c.wide ? 'hidden sm:table-cell' : ''} ${sort.key === c.key ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                      <td key={c.key} className={`px-2 sm:px-3 py-2.5 text-center tabular-nums ${c.wide ? 'hidden sm:table-cell' : ''} ${sort.key === c.key ? 'col-band font-semibold text-gray-900' : 'text-gray-700'}`}>
                         {stat[c.key]}
                       </td>
                     ))}
@@ -206,6 +207,7 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
               </tbody>
             </table>
           </ScrollX>
+        </div>
           )}
           {selected && (
             <GameLogModal

@@ -37,7 +37,11 @@ export default function Nav({ active, onChange, hidden = [] }: NavProps) {
           Schedule sat entirely off-screen with no scrollbar, no fade and no
           other affordance, so two of the six destinations effectively did not
           exist on a phone. `flex-1` distributes instead, and the type steps
-          down just far enough for the longest label to fit its share. */}
+          down just far enough for the longest label to fit its share. The
+          size is tuned to the FACE: Archivo is materially wider than the
+          condensed face this world replaced, and carrying the old value over
+          put the row back over the viewport. Re-measure this if the display
+          face ever changes again. */}
       <div className="max-w-7xl mx-auto flex sm:px-4">
         {visible.map(tab => {
           const isActive = active === tab.id
@@ -47,7 +51,7 @@ export default function Nav({ active, onChange, hidden = [] }: NavProps) {
               // Active state was conveyed by colour and a border alone.
               aria-current={isActive ? 'page' : undefined}
               onClick={() => onChange(tab.id)}
-              className={`group relative flex-1 sm:flex-none sm:shrink-0 whitespace-nowrap px-1 sm:px-5 py-3 font-display text-[13px] sm:text-base font-semibold uppercase tracking-[0.02em] sm:tracking-[0.08em] transition-colors ${
+              className={`group relative flex-1 sm:flex-none sm:shrink-0 whitespace-nowrap px-1 sm:px-5 py-3 font-display text-[11px] sm:text-base font-semibold uppercase tracking-[-0.01em] sm:tracking-[0.08em] transition-colors ${
                 isActive ? 'text-mark' : 'text-gray-500 hover:text-mark'
               }`}
             >

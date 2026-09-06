@@ -157,13 +157,13 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
               {schedule.total}
             </span>
             <span>games left</span>
-            <span className="text-gray-300">·</span>
+            <span className="text-gray-400">·</span>
             <span className="tabular-nums">
               {schedule.home} home / {schedule.away} away
             </span>
             {sos !== null && (
               <>
-                <span className="text-gray-300">·</span>
+                <span className="text-gray-400">·</span>
                 <span
                   className="tabular-nums"
                   title="Combined winning percentage of the clubs left on the schedule, weighted by games played against each."
