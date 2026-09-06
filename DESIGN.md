@@ -58,9 +58,9 @@ rather than two that have to be reconciled.
 - **Phillies Navy** (#002D72): a plotted field colour. **No longer a ground.**
   A saturated navy block at the top of a dark canvas fights everything beneath
   it, so the masthead is the panel surface closing on a red rule instead.
-- **Phillies Cream** (#FAF7F0): survives in exactly one place — the disc the
-  club mark sits on, because that mark is drawn for a white ground. It is a
-  logo lockup, never the page.
+- **Phillies Cream** (#FAF7F0): defined, because it is a brand commitment, but
+  used nowhere. The club mark is a red script "P" that reads cleanly on the dark
+  ground, so it sits bare on the instrument bar with no disc behind it.
 
 ### Grounds
 - **Canvas** (#0B0F14 / #EEF1F6): the page, carrying the coordinate grid.
@@ -159,8 +159,8 @@ Two exceptions: **modal layers** (dimmed page plus a 2px heavy rule) and the
 
 Radius is small and precise — 2px through 12px. The old world was radius 0
 because a scorecard has square corners; an instrument's readouts are milled,
-not sheared. `rounded-full` survives where a circle is real: the logo disc,
-avatars, the chat control, status dots.
+not sheared. `rounded-full` survives where a circle is real: avatars, the chat
+control, status dots.
 
 ## Signature interaction
 

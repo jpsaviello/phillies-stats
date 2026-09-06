@@ -17,10 +17,10 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
           one, so every row saved here is a row closer to the stats. */}
       <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          {/* The mark is drawn for a white ground, so it keeps one. This is
-              the single place the club's cream survives the world change —
-              as a logo lockup, not as the page. */}
-          <div className="bg-phillies-cream rounded-full p-1.5 shrink-0">
+          {/* Bare on the instrument bar. The mark is a red script "P" and
+              reads cleanly on the dark ground, so the light disc it used to sit
+              on was chrome the lockup did not need. */}
+          <div className="shrink-0">
             <img
               src="https://www.mlbstatic.com/team-logos/143.svg"
               alt="Phillies"

@@ -32,9 +32,11 @@
 
 @theme {
   /* Brand. Fixed commitments. Red is STATE (live, active, the scale's hot end);
-     navy is a plotted field colour and the sign-in control's ground. Neither is
-     the page's ground any more — a navy masthead block was the old world's
-     device, and a dark canvas has nowhere to put one. */
+     navy is a plotted field colour. Neither is the page's ground any more — a
+     navy masthead block was the old world's device, and a dark canvas has
+     nowhere to put one. Cream is currently used by nothing: the club mark reads
+     on the dark ground unaided. It stays defined because it is one of the three
+     brand colours PRODUCT.md commits to. */
   --color-phillies-red: #E81828;
   --color-phillies-navy: #002D72;
   --color-phillies-cream: #FAF7F0;

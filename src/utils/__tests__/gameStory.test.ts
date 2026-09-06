@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GameBoxscore, WinProbEntry } from '../../api/mlb'
-import { battedBalls, hardestHit, inningLabel, outcomeClass, toPhilliesProbability, turningPoints } from '../gameStory'
+import { SPRAY_FRAME, battedBalls, hardestHit, inningLabel, outcomeClass, toPhilliesProbability, turningPoints, withinSprayFrame } from '../gameStory'
 
 const PHILLIES = 143
 
@@ -204,5 +204,35 @@ describe('inningLabel', () => {
     expect(inningLabel(12, 'top')).toBe('Top 12th')
     expect(inningLabel(13, 'top')).toBe('Top 13th')
     expect(inningLabel(21, 'bottom')).toBe('Bot 21st')
+  })
+})
+
+// The spray chart's frame used to be sized to the FENCE, which silently clipped
+// any ball beyond it — an SVG dot outside the viewBox is not drawn and raises
+// nothing. These are real coordinates from the 2026 season, including the four
+// extremes of a 1,011-ball, 20-game sample and the specific Schwarber home run
+// (823419, 435 ft to right) that was reported missing from the chart.
+describe('withinSprayFrame', () => {
+  const R_MAX = 4.2
+
+  it.each([
+    ['Schwarber HR to right, 823419', 247.67, 69.6],
+    ['deep HR to right, 823429', 244.8, 95.9],
+    ['pop out behind the plate, 823423', 122.6, 222.0],
+    ['pop out behind the plate, 823420', 127.8, 220.8],
+    ['leftmost ball in sample', 24.9, 120.0],
+    ['shallowest ball in sample', 126.0, 23.7],
+  ])('draws %s', (_label, x, y) => {
+    expect(withinSprayFrame(x, y, R_MAX)).toBe(true)
+  })
+
+  it('is symmetric about home plate, so the diamond sits centred', () => {
+    // HOME_PLATE.x is 126; the frame must extend equally either side of it.
+    expect(126 - SPRAY_FRAME.minX).toBe(SPRAY_FRAME.minX + SPRAY_FRAME.width - 126)
+  })
+
+  it('rejects a coordinate outside the frame', () => {
+    expect(withinSprayFrame(SPRAY_FRAME.minX - 1, 100)).toBe(false)
+    expect(withinSprayFrame(100, SPRAY_FRAME.minY - 1)).toBe(false)
   })
 })
