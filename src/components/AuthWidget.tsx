@@ -93,7 +93,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
           type="button"
           aria-label="Open profile"
           onClick={() => setProfileModalOpen(true)}
-          className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-gray-900 hover:bg-hover"
+          className="flex min-h-10 min-w-0 items-center gap-2 rounded-lg px-1.5 text-gray-900 hover:bg-hover"
         >
           {profile?.avatarDataUrl ? (
             <img
@@ -113,7 +113,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
         <button
           type="button"
           onClick={handleSignOut}
-          className="rounded-lg border border-rule px-3 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
+          className="inline-flex min-h-10 items-center rounded-lg border border-rule px-3 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
         >
           Sign out
         </button>
@@ -140,7 +140,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
         type="button"
         aria-label="Sign in"
         onClick={openModal}
-        className="shrink-0 rounded-lg border border-rule px-3 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
+        className="shrink-0 inline-flex min-h-10 items-center rounded-lg border border-rule px-3 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
       >
         Sign In
       </button>

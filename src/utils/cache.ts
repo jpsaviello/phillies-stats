@@ -33,17 +33,30 @@
 
 interface Entry {
   at: number
+  /**
+   * When this value stops being servable — `at + ttl + maxStale`.
+   *
+   * Stored so `oldestServableAt()` can ignore entries that a read would go to
+   * the network for anyway. Without it, a tab visited half an hour ago would
+   * drag the freshness indicator down while its data was, in fact, no longer
+   * being used by anything.
+   *
+   * For NO_CACHE this equals `at`, so a live-feed payload is never counted as
+   * stored data — which is right, since it is dedupe-only and never persisted.
+   */
+  expires: number
   value: unknown
 }
 
 const entries = new Map<string, Entry>()
 const inflight = new Map<string, Promise<unknown>>()
 
-// The `v1` is cheap insurance against a future change to a cached payload's
-// shape. Changes to a *request's* shape are already self-handling: keys embed
-// the full path and query string, so adding a `fields=` parameter yields a
-// different key rather than a stale hit.
-const STORE_PREFIX = 'phl:cache:v1:'
+// The version segment is cheap insurance against a change to a cached payload's
+// shape, and `v2` is it earning its keep: entries written before `expires`
+// existed would read back without one. Changes to a *request's* shape are
+// already self-handling: keys embed the full path and query string, so adding a
+// `fields=` parameter yields a different key rather than a stale hit.
+const STORE_PREFIX = 'phl:cache:v2:'
 const MAX_PERSISTED_BYTES = 512 * 1024
 
 export interface CacheOptions {
@@ -67,7 +80,7 @@ function restore(key: string): Entry | undefined {
     if (raw === null) return undefined
     const parsed = JSON.parse(raw) as Entry
     // Guards a half-written value, or one written by an older shape of this file.
-    if (typeof parsed?.at !== 'number') return undefined
+    if (typeof parsed?.at !== 'number' || typeof parsed?.expires !== 'number') return undefined
     return parsed
   } catch {
     // Unreadable or unavailable storage is just a miss.
@@ -133,7 +146,8 @@ export function cached<T>(key: string, opts: CacheOptions, load: () => Promise<T
     .then(value => {
       // Only successes are stored. A failed request leaves any previous value
       // in place, so a blip doesn't also destroy data we already had.
-      const entry: Entry = { at: Date.now(), value }
+      const now = Date.now()
+      const entry: Entry = { at: now, expires: now + opts.ttl + (opts.maxStale ?? 0), value }
       entries.set(key, entry)
       persist(key, entry, opts.ttl)
       return value
@@ -159,10 +173,11 @@ export function cached<T>(key: string, opts: CacheOptions, load: () => Promise<T
 /**
  * Drops stored values so the next call goes to the network.
  *
- * Currently unused: the error states' "Try again" buttons bump a `reloadKey`,
- * and since only successes are ever stored, a failed fetch left nothing behind
- * to invalidate. Kept because it is the correct primitive the moment something
- * needs to force a refetch of data that *did* succeed.
+ * The error states' "Try again" buttons do not need this — only successes are
+ * ever stored, so a failed fetch leaves nothing behind to invalidate. What does
+ * need it is the refresh control beside the freshness indicator: that data
+ * DID succeed, and without clearing both layers a reload would restore the same
+ * values straight back out of sessionStorage.
  */
 export function invalidate(prefix?: string) {
   // Storage has to be cleared too, or a retry button silently does nothing: it
@@ -180,4 +195,27 @@ export function invalidate(prefix?: string) {
   for (const key of entries.keys()) {
     if (key.startsWith(prefix)) entries.delete(key)
   }
+}
+
+/**
+ * When the oldest still-servable cached value was fetched, or null if the cache
+ * holds nothing usable.
+ *
+ * The OLDEST, deliberately, not the newest. The newest is worthless as a
+ * freshness signal here: LiveGameStrip polls the schedule every 60 seconds
+ * whenever a game might be on, so "last successful fetch" would read as "just
+ * now" on every tab regardless of how old the table in front of the reader
+ * actually is. The oldest servable value is a true upper bound — nothing the
+ * app will show you without going back to the network is older than this.
+ *
+ * Expired entries are excluded because reading one goes to the network anyway,
+ * so it does not describe anything the reader is looking at.
+ */
+export function oldestServableAt(now = Date.now()): number | null {
+  let oldest: number | null = null
+  for (const entry of entries.values()) {
+    if (entry.expires <= now) continue
+    if (oldest === null || entry.at < oldest) oldest = entry.at
+  }
+  return oldest
 }

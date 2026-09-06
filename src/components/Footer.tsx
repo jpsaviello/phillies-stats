@@ -1,3 +1,5 @@
+import DataFreshness from './DataFreshness'
+
 /**
  * Attribution and disclaimer, on every tab.
  *
@@ -18,7 +20,13 @@ export default function Footer() {
           them from sitting on top of the last line of text once the reader has
           scrolled all the way down. */}
       <div className="max-w-7xl mx-auto px-4 py-6 pb-24 sm:pb-8">
-        <h2 className="card-label">Attribution</h2>
+        {/* Where the data came from, and how old it is — one subject, so one
+            place. It is also the only row on the page with width to spare for
+            it: the masthead at 375px has none. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="card-label">Attribution</h2>
+          <DataFreshness />
+        </div>
         <p className="mt-2 max-w-3xl text-xs leading-relaxed text-gray-500">
           Statistics and game data are owned by MLB and retrieved from the MLB Stats
           API. Team logos are the property of the Philadelphia Phillies. Betting odds
