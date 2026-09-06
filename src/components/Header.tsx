@@ -1,4 +1,5 @@
 import AuthWidget from './AuthWidget'
+import ThemeToggle from './ThemeToggle'
 import { easternToday, formatDate } from '../utils/date'
 import type { User } from '../types/auth'
 import type { Profile } from '../types/profile'
@@ -33,9 +34,13 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
                 PHILLIES" set on one line needs more than that in any size worth
                 calling a masthead — the previous fix shrank it until it fit,
                 and the wider face this world uses broke that again. Two lines
-                keeps the type at full scale and cannot truncate, which is what
-                a masthead is for. No `truncate`: it can no longer overflow. */}
-            <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase tracking-[0.01em] sm:tracking-wide leading-[1.05] sm:leading-none text-gray-900">
+                keeps the type from truncating, which is what a masthead is
+                for. It steps down to text-xl below `sm`: the theme control
+                takes ~46px of this row, and at text-2xl "PHILADELPHIA"
+                overflowed its box by 18px and printed over that control.
+                MEASURE `h1.scrollWidth - h1.clientWidth` at 375px after any
+                change here — there is no `truncate` to hide a mistake. */}
+            <h1 className="font-display text-xl sm:text-3xl font-bold uppercase tracking-[0.01em] sm:tracking-wide leading-[1.1] sm:leading-none text-gray-900">
               <span className="block sm:inline">Philadelphia</span>{' '}
               <span className="block sm:inline">Phillies</span>
             </h1>
@@ -50,12 +55,22 @@ export default function Header({ user, onAuthChange, profile, onProfileChange }:
             </p>
           </div>
         </div>
-        <AuthWidget
-          user={user}
-          onAuthChange={onAuthChange}
-          profile={profile}
-          onProfileChange={onProfileChange}
-        />
+        {/* Which way the ink runs, beside the account control.
+            MEASURE BEFORE ADDING A THIRD CONTROL HERE. At 375px this row holds
+            the logo, the two-line club name and ~118px of controls with about
+            12px to spare; a freshness chip was tried here and pushed the
+            masthead into the buttons — the name overflowed its box and printed
+            on top of them. That is why the data-freshness control lives in the
+            footer instead, next to the attribution it belongs with. */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ThemeToggle />
+          <AuthWidget
+            user={user}
+            onAuthChange={onAuthChange}
+            profile={profile}
+            onProfileChange={onProfileChange}
+          />
+        </div>
       </div>
     </header>
   )

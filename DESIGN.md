@@ -98,6 +98,12 @@ room with the broadcast on, first pitch between 6:40 and 10 PM ET. Light is for
 desk browsing and is cool neutral throughout — warmth is what the old world
 was, and a cream ground would drag it straight back.
 
+**The reader can override it.** The masthead carries a three-state control —
+system, light, dark — and `system` is the ABSENCE of `data-theme`, so the media
+query stays the deciding rule. Dark remains the base the app is designed
+against; the control says which way the ink runs, not which theme is primary.
+It is applied before first paint by an inline script, never by a React effect.
+
 ## Typography
 
 **Face:** Archivo (variable, self-hosted via `@fontsource-variable/archivo`),
@@ -185,6 +191,12 @@ the left is the one authored moment.
   dividers, sticky first column, `hover:bg-hover`, the sorted column banded.
 - **Section head** — heading plus optional fine print naming what the reader can
   do. Carries the affordance for anything a row opens.
+- **Header control** — bordered, 40px minimum so it clears a thumb, `gray-600`
+  ink warming to `gray-900` on hover. The theme toggle and the account control
+  share it; a third does not fit at 375px, so measure before adding one.
+- **Freshness control** — in the footer beside the attribution, stating how old
+  the data could be and refreshing it. Reads "as of", never "updated": the
+  figure is an upper bound, not a measurement.
 - **Modal** — `bg-panel-raised`, 2px heavy rule, dimmed backdrop.
 - **Panel footnote** — fine print stating the window, the threshold, and what
   the panel does not claim.

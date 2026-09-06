@@ -21,6 +21,28 @@
     <meta name="twitter:title" content="All Things Phils!" />
     <meta name="twitter:description" content="Live Philadelphia Phillies stats, standings, schedule, and odds." />
     <meta name="twitter:image" content="https://allthingsphils.com/og-image.png" />
+
+    <!--
+      Applies the reader's stored theme BEFORE first paint.
+
+      This has to be an inline script in the head, not a React effect: the
+      bundle runs after the first paint, so a light-preferring reader would see
+      the dark base render and then flip. Blocking and tiny is the correct
+      trade here — it is one synchronous localStorage read.
+
+      The key and the two values are duplicated from src/utils/theme.ts, which
+      this cannot import because it runs before the bundle exists. Keep them in
+      step. Absence of the attribute is the `system` state on purpose: it is
+      what lets the prefers-color-scheme rules in index.css decide.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem('phl:theme')
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {
+        /* Blocked site data: fall through to the system preference. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
