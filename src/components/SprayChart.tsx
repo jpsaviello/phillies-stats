@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { BattedBall } from '../types/mlb'
-import { FT_PER_UNIT, HOME_PLATE, hardestHit, outcomeClass } from '../utils/gameStory'
+import { FT_PER_UNIT, HOME_PLATE, SPRAY_FRAME, hardestHit, outcomeClass } from '../utils/gameStory'
 
 interface Props {
   balls: BattedBall[]
@@ -29,18 +29,28 @@ const MOUND = { x: HOME_PLATE.x, y: HOME_PLATE.y - u(60.5) }
 // mismatch documented in gameStory.ts. Deriving a 330-foot pole from it drew the
 // fence at ~112 units and put ordinary doubles OUTSIDE the wall.
 //
-// So these come from the batted-ball envelope itself, measured across five 2026
-// games (247 balls in play):
+// These are FIT TO OUTCOMES over 1,011 batted balls in 20 games of the 2026
+// season (37 home runs), not read off a tape measure.
 //
-//   home runs        152.1 - 178.2 units from the plate (n=8)
-//   deepest fly out  165.3
-//   deepest grounder  75.0
+// The first calibration used five games (n=8 home runs) and set the poles just
+// under the SHORTEST home run seen and centre just under the LONGEST. On the
+// wider sample that is far too deep: home runs actually run 143.2 - 192.7 units,
+// and 152/178 drew 28 of 37 of them INSIDE the wall — a ball the list below
+// calls a home run, plotted short of the fence it cleared.
 //
-// Poles just under the shortest home run, center just under the longest, which
-// leaves the fence where it physically belongs: deep flies die in front of it,
-// and a home run may legitimately land beyond it.
-const POLE_U = 152
-const CF_U = 178
+// There is real overlap between the deepest outs and the shortest home runs,
+// because a coordinate records where a ball was FIELDED: a catch at the track
+// and a shot into the first row land a few units apart. So no fence separates
+// them perfectly, and these were chosen by grid search to minimise misplacement,
+// weighting a home run drawn inside the wall as the worse error since the text
+// list names it:
+//
+//   152 / 178 (before)   28 of 37 home runs inside,  0 of 974 others beyond
+//   130 / 174 (now)       3 of 37 home runs inside, 12 of 974 others beyond
+//
+// Re-fit these against fresh games rather than nudging them by eye.
+const POLE_U = 130
+const CF_U = 174
 const POLE_OFF = POLE_U / Math.SQRT2
 const LF_POLE = { x: HOME_PLATE.x - POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
 const RF_POLE = { x: HOME_PLATE.x + POLE_OFF, y: HOME_PLATE.y - POLE_OFF }
@@ -120,7 +130,9 @@ export default function SprayChart({ balls, opponentName }: Props) {
       ) : (
         <>
           <svg
-            viewBox="10 16 232 200"
+            // Sized to the batted-ball envelope, not to the fence — a dot
+            // outside a viewBox is silently not drawn. See SPRAY_FRAME.
+            viewBox={`${SPRAY_FRAME.minX} ${SPRAY_FRAME.minY} ${SPRAY_FRAME.width} ${SPRAY_FRAME.height}`}
             className="mt-3 w-full max-w-md"
             role="img"
             aria-label={

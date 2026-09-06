@@ -45,6 +45,41 @@ export const HOME_PLATE = { x: 126, y: 203 }
 export const FT_PER_UNIT = 2.94
 
 /**
+ * The spray chart's drawing frame, in coordinate units.
+ *
+ * This is the SVG viewBox, and it lives here rather than in the component so it
+ * can be tested against real coordinates without a browser.
+ *
+ * IT MUST CONTAIN THE WHOLE BATTED-BALL ENVELOPE, NOT THE FIELD. The frame was
+ * previously sized to the fence (x 10..242, y 16..216) and silently CLIPPED
+ * anything beyond it — a dot outside a viewBox is not drawn and reports no
+ * error, so the ball simply was not there. Measured across 1,011 batted balls
+ * in 20 games of the 2026 season, that frame dropped five: two home runs (one
+ * at coordX 247.7, a 435-foot Schwarber shot to right) and three pop outs
+ * behind the plate at coordY > 220.
+ *
+ * Observed envelope over that sample:
+ *
+ *   coordX  24.9 .. 247.7
+ *   coordY  23.7 .. 222.0
+ *
+ * The bounds below clear that by more than one dot radius (R_MAX 4.2) on every
+ * side, and are symmetric about HOME_PLATE.x so the diamond sits centred.
+ * Widen them, never narrow them, if a ball ever lands outside.
+ */
+export const SPRAY_FRAME = { minX: -2, minY: 12, width: 256, height: 216 }
+
+/** True when a coordinate will actually be drawn inside SPRAY_FRAME. */
+export function withinSprayFrame(x: number, y: number, radius = 0): boolean {
+  return (
+    x - radius >= SPRAY_FRAME.minX &&
+    x + radius <= SPRAY_FRAME.minX + SPRAY_FRAME.width &&
+    y - radius >= SPRAY_FRAME.minY &&
+    y + radius <= SPRAY_FRAME.minY + SPRAY_FRAME.height
+  )
+}
+
+/**
  * Normalize MLB's home-team win probability to the Phillies.
  *
  * This is the whole reason this function exists. MLB reports
