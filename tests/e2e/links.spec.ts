@@ -43,6 +43,40 @@ test('a cold game link opens the box score', async ({ page }) => {
   expect(app.missingFixtures, 'uncovered API calls').toEqual([])
 })
 
+/**
+ * The home-run clip link inside the spray chart.
+ *
+ * SAMPLE.gamePk is PHI 0-1 AT Arizona, so its one home run (James McCann, bottom
+ * of the 8th) belongs to the OPPONENT — which is why this switches sides first,
+ * and why it is a useful case: the join is on a playId, not on anything about
+ * which club batted, and a version that only worked for the Phillies would pass
+ * a same-side test vacuously.
+ *
+ * The href is asserted in full because the slug is the whole link: MLB derives
+ * it from the raw play, not from the headline, so it cannot be reconstructed
+ * from anything else on the page if the join ever silently stops matching.
+ */
+test('a home run in the spray chart links to its clip', async ({ page }) => {
+  const app = await useApp(page)
+  await page.goto(`/#/today?game=${SAMPLE.gamePk}`)
+
+  const spray = page.locator('[role="dialog"] section').filter({ hasText: 'Spray Chart' })
+  await expect(spray).toBeVisible({ timeout: 20_000 })
+  // The opponent tab is the second button in the side toggle.
+  await spray.getByRole('button').last().click()
+
+  const clip = spray.locator('a[href*="mlb.com/video"]')
+  await expect(clip).toHaveCount(1)
+  await expect(clip).toHaveAttribute(
+    'href',
+    'https://www.mlb.com/video/jonathan-bowlan-in-play-run-s-to-james-mccann'
+  )
+  await expect(clip).toContainText('James McCann')
+  // Opening MLB.com in place would strand the reader outside the app.
+  await expect(clip).toHaveAttribute('target', '_blank')
+  expect(app.missingFixtures, 'uncovered API calls').toEqual([])
+})
+
 test('clicking a row opens the modal and puts it in the URL', async ({ page }) => {
   await useApp(page)
   await gotoTab(page, 'batting')

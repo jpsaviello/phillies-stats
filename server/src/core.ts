@@ -77,12 +77,15 @@ const MLB_V1_1 = 'https://statsapi.mlb.com/api/v1.1'
 //
 //   /game/{pk}/feed/live       -> v1.1 only (v1 has no live feed)
 //   /game/{pk}/winProbability  -> v1 only   (v1.1 returns 404)
+//   /game/{pk}/content         -> v1 only   (v1.1 returns 404)
 //
 // `find` takes the FIRST match, so putting the general /game/ rule ahead of the
-// winProbability one silently sends it to v1.1 and reintroduces that 404. Same
-// ordering constraint mlbCachePolicy() documents for its /feed/live branch.
+// winProbability or content one silently sends it to v1.1 and reintroduces that
+// 404. Same ordering constraint mlbCachePolicy() documents for its /feed/live
+// branch.
 const MLB_ALLOWED: [test: (path: string) => boolean, base: string][] = [
   [p => p.startsWith('/game/') && p.endsWith('/winProbability'), MLB_V1],
+  [p => p.startsWith('/game/') && p.endsWith('/content'), MLB_V1],
   [p => p.startsWith('/game/'), MLB_V1_1],
   [p => p.startsWith('/teams/'), MLB_V1],
   [p => p.startsWith('/stats'), MLB_V1],
@@ -113,13 +116,82 @@ function mlbCachePolicy(path: string): string {
   // LiveGameStrip polls the schedule every 60s to decide whether a game has
   // started; a longer window would delay the live strip appearing by that much.
   if (path.startsWith('/schedule')) return 'public, max-age=60, stale-while-revalidate=240'
-  // Reached by /game/{pk}/winProbability (GameDetailModal's Game Story section),
-  // the first non-/feed/live game path this app requests. 60s is right for the
-  // same reason the box score carries it: a finished game's curve never changes,
-  // but the same URL during a game in progress does. Mirrors the BOXSCORE client
-  // TTL fetchWinProbability uses.
+  // Reached by /game/{pk}/winProbability and /game/{pk}/content
+  // (GameDetailModal's Game Story section), the non-/feed/live game paths this
+  // app requests. 60s is right for the same reason the box score carries it: a
+  // finished game's curve and highlight reel never change, but the same URLs
+  // during a game in progress do -- MLB posts a home run's clip within minutes
+  // of it landing. Mirrors the BOXSCORE client TTL both fetches use.
   if (path.startsWith('/game/')) return 'public, max-age=60'
   return 'public, max-age=300, stale-while-revalidate=1500'
+}
+
+/**
+ * The one highlight thumbnail worth keeping: the smallest 16:9 cut at least
+ * THUMB_MIN_WIDTH across, so a ~112px tile still has pixels on a 2x screen.
+ *
+ * MLB ships 25 cuts per item -- 19 aspect ratios of 16:9 plus 4:3 and 64:27 --
+ * each with `src`, `at2x` and `at3x`. At roughly 120 characters a URL that is
+ * ~11KB of thumbnails per highlight, and 440KB across a full game's items,
+ * which is the bulk of what trimGameContent() exists to remove.
+ */
+const THUMB_MIN_WIDTH = 320
+
+interface ContentImageCut {
+  aspectRatio?: string
+  width?: number
+  height?: number
+  src?: string
+}
+
+function pickThumbnail(cuts: unknown): ContentImageCut[] {
+  if (!Array.isArray(cuts)) return []
+  const wide = (cuts as ContentImageCut[])
+    .filter(c => c?.aspectRatio === '16:9' && typeof c.width === 'number' && typeof c.src === 'string')
+    .sort((a, b) => (a.width ?? 0) - (b.width ?? 0))
+  const cut = wide.find(c => (c.width ?? 0) >= THUMB_MIN_WIDTH) ?? wide[wide.length - 1]
+  return cut ? [{ aspectRatio: cut.aspectRatio, width: cut.width, height: cut.height, src: cut.src }] : []
+}
+
+/**
+ * Narrow /game/{pk}/content to the highlight fields the spray chart's home-run
+ * clips actually use.
+ *
+ * THIS EXISTS BECAUSE /content IGNORES `fields=`. Every other MLB endpoint in
+ * this app is trimmed in its own query string -- the live feed goes from ~860KB
+ * to ~72KB that way -- but /content returns a byte-identical 594KB response
+ * whether `fields=` is present or not (verified on gamePk 823419: 594,248 bytes
+ * either way). So the trim that belongs in the URL has to happen here instead.
+ * Measured on that same game: 594,248 -> 15,567 bytes (2.6%).
+ *
+ * It is a strict SUBSET of the upstream document, in the upstream's own nesting,
+ * exactly as `fields=` would have produced -- so the client parses one shape
+ * whether or not this function ever ran. The one thing `fields=` could not have
+ * done is choose a single image cut, which is where most of the weight is.
+ *
+ * `editorial` (the recap article, ~45KB) and `media` (~29KB) are dropped whole:
+ * nothing in this app reads them.
+ */
+export function trimGameContent(body: unknown): unknown {
+  const items = (body as { highlights?: { highlights?: { items?: unknown } } })
+    ?.highlights?.highlights?.items
+  if (!Array.isArray(items)) return { highlights: { highlights: { items: [] } } }
+  return {
+    highlights: {
+      highlights: {
+        items: items.map((raw: Record<string, unknown>) => ({
+          // The join key: a highlight's `guid` is the `playId` of the play event
+          // it was cut from. See src/utils/gameStory.ts.
+          guid: raw.guid,
+          slug: raw.slug,
+          title: raw.title,
+          blurb: raw.blurb,
+          duration: raw.duration,
+          image: { cuts: pickThumbnail((raw.image as { cuts?: unknown })?.cuts) },
+        })),
+      },
+    },
+  }
 }
 
 export async function mlbProxy(path: string, search: string): Promise<RouteResult> {
@@ -129,7 +201,12 @@ export async function mlbProxy(path: string, search: string): Promise<RouteResul
   }
   const res = await fetch(`${match[1]}${path}${search}`)
   if (!res.ok) return { status: 502, body: { error: `MLB API ${res.status}` } }
-  return { status: 200, body: await res.json(), cacheControl: mlbCachePolicy(path) }
+  const body = await res.json()
+  return {
+    status: 200,
+    body: path.endsWith('/content') ? trimGameContent(body) : body,
+    cacheControl: mlbCachePolicy(path),
+  }
 }
 
 const ODDS_CACHE_TTL = 30 * 60 * 1000

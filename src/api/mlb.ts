@@ -462,7 +462,10 @@ export interface GameBoxscore {
         result?: { event?: string }
         about?: { inning?: number; isTopInning?: boolean }
         matchup?: { batter?: { id: number; fullName: string } }
-        playEvents?: { hitData?: HitData }[]
+        // `playId` is a per-pitch UUID, and it is the join key to a home run's
+        // video clip: a highlight item's `guid` IS this value. See
+        // fetchGameHighlights below and homeRunClips() in utils/gameStory.ts.
+        playEvents?: { hitData?: HitData; playId?: string }[]
       }[]
     }
     // Absent for games that haven't produced a decision yet.
@@ -487,7 +490,7 @@ const BOXSCORE_FIELDS =
   'decisions,winner,loser,save,note,' +
   'plays,allPlays,playEvents,hitData,launchSpeed,launchAngle,totalDistance,' +
   'trajectory,hardness,location,coordinates,coordX,coordY,matchup,batter,' +
-  'result,event,about,inning,isTopInning'
+  'result,event,about,inning,isTopInning,playId'
 
 export async function fetchBoxscore(gamePk: number): Promise<GameBoxscore> {
   return get(`/game/${gamePk}/feed/live?fields=${BOXSCORE_FIELDS}`, BOXSCORE)
@@ -527,6 +530,60 @@ const WIN_PROB_FIELDS =
  */
 export async function fetchWinProbability(gamePk: number): Promise<WinProbEntry[]> {
   return get(`/game/${gamePk}/winProbability?fields=${WIN_PROB_FIELDS}`, BOXSCORE)
+}
+
+/**
+ * One video highlight, as the backend hands it over.
+ *
+ * `guid` is the whole point: for a clip cut from a single play it holds that
+ * play event's `playId`, which is how a home run on the spray chart finds its
+ * video. Verified across 56 games and 121 home runs of the 2026 season -- 117
+ * matched, and the four that did not were all one game (the Field of Dreams
+ * broadcast, whose clips carry no guid at all), so a missing clip is a normal
+ * state to render around rather than an error.
+ *
+ * Every field is optional because a clip that was never cut from one play --
+ * the game recap, the condensed game, a "Data Viz" segment -- carries no guid,
+ * and those items ride along in the same list.
+ */
+export interface HighlightItem {
+  guid?: string
+  /** The path segment of the clip's page: https://www.mlb.com/video/{slug}. */
+  slug?: string
+  title?: string
+  blurb?: string
+  /** "00:00:29". */
+  duration?: string
+  image?: { cuts?: { aspectRatio?: string; width?: number; height?: number; src?: string }[] }
+}
+
+interface GameContent {
+  highlights?: { highlights?: { items?: HighlightItem[] } }
+}
+
+/**
+ * The game's video highlights.
+ *
+ * TWO TRAPS, both already handled but neither obvious from the call site.
+ *
+ * This path is api/v1 ONLY -- v1.1 returns 404 -- so MLB_ALLOWED in
+ * server/src/core.ts matches it with an ordered predicate ahead of the general
+ * /game/ -> v1.1 rule, exactly as it does for winProbability.
+ *
+ * And it IGNORES `fields=`, alone among the endpoints in this file: the
+ * response is a byte-identical 594KB with or without one. That is why there is
+ * no field list here and why the backend narrows the response itself, in
+ * trimGameContent() -- the only place in this app where the proxy shapes a
+ * body rather than passing it through. Do not add a `fields=` here expecting it
+ * to do anything.
+ *
+ * BOXSCORE ttl for the same reason the box score and win probability carry it:
+ * a finished game's reel never changes, but a game in progress gains clips as
+ * it goes.
+ */
+export async function fetchGameHighlights(gamePk: number): Promise<HighlightItem[]> {
+  const data = await get<GameContent>(`/game/${gamePk}/content`, BOXSCORE)
+  return data.highlights?.highlights?.items ?? []
 }
 
 // Trimmed to just the pitching lines — BullpenUsage needs numbers from every
