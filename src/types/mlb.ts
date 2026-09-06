@@ -325,7 +325,33 @@ export interface BattedBall {
   inning: number
   isTopInning: boolean
   isPhillies: boolean
+  /**
+   * The play event's per-pitch UUID, and the join key to MLB's video: a
+   * highlight item's `guid` holds this same value. Optional because nothing
+   * else here depends on it — a ball with no playId still plots, it just has no
+   * clip. See homeRunClips() in utils/gameStory.ts.
+   */
+  playId?: string
   hit: HitData
+}
+
+/**
+ * A home run paired with its video clip, for the list under the spray chart.
+ *
+ * `url` is null when MLB cut no play-linked clip for it. That is a real state,
+ * not an error — measured at 4 of 121 home runs across 56 games of the 2026
+ * season, all four in the Field of Dreams broadcast, whose highlights carry no
+ * guid — so the row still renders, just without a link.
+ */
+export interface HomeRunClip {
+  ball: BattedBall
+  /** https://www.mlb.com/video/{slug}, or null when no clip matched. */
+  url: string | null
+  /** MLB's own caption, e.g. "Kyle Schwarber's solo home run (41)". */
+  title: string | null
+  /** "0:29", already humanized from MLB's "00:00:29". */
+  duration: string | null
+  thumbnailUrl: string | null
 }
 
 /**

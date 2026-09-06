@@ -3,8 +3,8 @@
 // function here can be replayed against saved statsapi JSON with no browser and
 // no dev server.
 
-import type { GameBoxscore, WinProbEntry } from '../api/mlb'
-import type { BattedBall, HitData, WinProbPoint } from '../types/mlb'
+import type { GameBoxscore, HighlightItem, WinProbEntry } from '../api/mlb'
+import type { BattedBall, HitData, HomeRunClip, WinProbPoint } from '../types/mlb'
 
 /**
  * The batted-ball coordinate frame, derived from FIELDER POSITIONS rather than
@@ -63,11 +63,26 @@ export const FT_PER_UNIT = 2.94
  *   coordX  24.9 .. 247.7
  *   coordY  23.7 .. 222.0
  *
- * The bounds below clear that by more than one dot radius (R_MAX 4.2) on every
- * side, and are symmetric about HOME_PLATE.x so the diamond sits centred.
- * Widen them, never narrow them, if a ball ever lands outside.
+ * The bounds below clear that by more than a full MARKER radius on every side,
+ * and are symmetric about HOME_PLATE.x so the diamond sits centred. Widen them,
+ * never narrow them, if a ball ever lands outside.
+ *
+ * WIDENED 2026-09-06 from (-2, 12, 256, 216) when home runs gained their ring.
+ * That frame cleared the envelope by one DOT radius, so the ring — 2.6 units
+ * outside the dot — put the right edge of a 247.7 shot past the boundary and
+ * clipped it into a crescent. The same silent failure the frame was widened for
+ * the first time, one marker change later: anything that grows a marker has to
+ * grow this too, which is what MAX_MARKER_RADIUS below exists to make checkable.
  */
-export const SPRAY_FRAME = { minX: -2, minY: 12, width: 256, height: 216 }
+export const SPRAY_FRAME = { minX: -6, minY: 10, width: 264, height: 222 }
+
+/**
+ * The furthest any drawn marker reaches from its coordinate: the largest dot
+ * (SprayChart's R_MAX) plus the home-run ring drawn outside it. SPRAY_FRAME must
+ * clear the batted-ball envelope by at least this much, and the unit tests
+ * assert exactly that against the real extreme coordinates.
+ */
+export const MAX_MARKER_RADIUS = 6.8
 
 /** True when a coordinate will actually be drawn inside SPRAY_FRAME. */
 export function withinSprayFrame(x: number, y: number, radius = 0): boolean {
@@ -162,6 +177,7 @@ export function battedBalls(box: GameBoxscore, philliesId: number): BattedBall[]
         inning: play.about?.inning ?? 0,
         isTopInning: isTop,
         isPhillies: philliesBatting,
+        playId: event.playId,
         hit,
       })
     }
@@ -194,4 +210,81 @@ export function inningLabel(inning: number, halfInning: string): string {
     : inning % 10 === 3 && inning !== 13 ? 'rd'
     : 'th'
   return `${half} ${inning}${suffix}`
+}
+
+/**
+ * Where a clip lives on MLB.com. The highlight item's `slug` is the whole path
+ * segment — it is not derived from the headline, and often differs from it
+ * ("Ronald Acuña Jr.'s solo home run (15)" is served at
+ * /video/zack-wheeler-in-play-run-s-to-ronald-acuna-jr-x4055).
+ */
+const VIDEO_BASE = 'https://www.mlb.com/video/'
+
+/**
+ * MLB writes durations as "00:00:29". Trim the leading zero units so a
+ * half-minute clip reads "0:29" rather than "00:00:29", and leave anything that
+ * isn't in that shape alone rather than guessing at it.
+ */
+export function clipDuration(raw: string | undefined): string | null {
+  if (!raw) return null
+  const parts = raw.split(':')
+  if (parts.length !== 3 || parts.some(part => !/^\d+$/.test(part))) return null
+  const [h, m, sec] = parts.map(Number)
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`
+}
+
+/**
+ * Index a game's highlights by the play they were cut from.
+ *
+ * A highlight's `guid` IS the `playId` of its play event — that is the entire
+ * join, and it holds across home and road games, both clubs, and every clip
+ * type MLB cuts per-play. Items with no guid (the recap, the condensed game,
+ * the "Data Viz" and "Field View" segments, which are edits of a play rather
+ * than the play) are skipped: they would otherwise all collide on `undefined`
+ * and hand an arbitrary one of them to the first home run asked about.
+ *
+ * FIRST WRITER WINS on a duplicate guid, so the ordering MLB returns — which
+ * leads with the primary cut of each play — is preserved.
+ */
+export function indexClipsByPlayId(items: HighlightItem[]): Map<string, HighlightItem> {
+  const byPlay = new Map<string, HighlightItem>()
+  for (const item of items) {
+    if (!item.guid || byPlay.has(item.guid)) continue
+    byPlay.set(item.guid, item)
+  }
+  return byPlay
+}
+
+/** The smallest kept thumbnail, or null. The backend already narrows `cuts` to one. */
+function thumbnailOf(item: HighlightItem | undefined): string | null {
+  return item?.image?.cuts?.[0]?.src ?? null
+}
+
+/**
+ * Every home run among `balls`, in game order, paired with its clip.
+ *
+ * Takes already-flattened batted balls rather than the raw feed so it inherits
+ * the side split the spray chart is already showing — the caller passes the
+ * Phillies' balls or the opponent's, and gets that club's home runs back.
+ *
+ * A home run with no matching clip still comes back, with nulls. Both cases are
+ * normal: MLB may not have cut a play-linked clip (the Field of Dreams game),
+ * and during a live game the clip lands minutes after the ball does.
+ */
+export function homeRunClips(
+  balls: BattedBall[],
+  clips: Map<string, HighlightItem>
+): HomeRunClip[] {
+  return balls
+    .filter(ball => ball.event === 'Home Run')
+    .map(ball => {
+      const item = ball.playId ? clips.get(ball.playId) : undefined
+      return {
+        ball,
+        url: item?.slug ? `${VIDEO_BASE}${item.slug}` : null,
+        title: item?.title ?? item?.blurb ?? null,
+        duration: clipDuration(item?.duration),
+        thumbnailUrl: thumbnailOf(item),
+      }
+    })
 }

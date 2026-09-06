@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameBoxscore, WinProbEntry } from '../../api/mlb'
-import { SPRAY_FRAME, battedBalls, hardestHit, inningLabel, outcomeClass, toPhilliesProbability, turningPoints, withinSprayFrame } from '../gameStory'
+import type { BattedBall } from '../../types/mlb'
+import { MAX_MARKER_RADIUS, SPRAY_FRAME, battedBalls, clipDuration, hardestHit, homeRunClips, indexClipsByPlayId, inningLabel, outcomeClass, toPhilliesProbability, turningPoints, withinSprayFrame } from '../gameStory'
 
 const PHILLIES = 143
 
@@ -158,6 +159,26 @@ describe('battedBalls', () => {
     expect(balls[0]).toMatchObject({ batterName: 'Kyle Schwarber', event: 'Home Run', inning: 4 })
   })
 
+  it('carries the play event\'s playId through, since it is the video join key', () => {
+    // A highlight item's `guid` IS this value. Lose it here and every home run
+    // silently renders without a clip.
+    const box = boxWith([
+      {
+        result: { event: 'Home Run' },
+        about: { inning: 4, isTopInning: true },
+        matchup: { batter: { id: 3, fullName: 'Kyle Schwarber' } },
+        playEvents: [
+          { playId: 'not-the-ball-in-play' },
+          {
+            hitData: { coordinates: { coordX: 247.7, coordY: 69.6 }, launchSpeed: 108.7 },
+            playId: 'a55f1cd4-de41-3c6c-8e98-07784a780448',
+          },
+        ],
+      },
+    ])
+    expect(battedBalls(box, PHILLIES)[0].playId).toBe('a55f1cd4-de41-3c6c-8e98-07784a780448')
+  })
+
   it('returns nothing for a game with no plays', () => {
     expect(battedBalls({ gameData: boxWith([]).gameData, liveData: {} }, PHILLIES)).toEqual([])
   })
@@ -226,6 +247,20 @@ describe('withinSprayFrame', () => {
     expect(withinSprayFrame(x, y, R_MAX)).toBe(true)
   })
 
+  // The ring a home run is drawn with reaches further than the dot does, and
+  // the frame was already snug: at MAX_MARKER_RADIUS the original bounds clipped
+  // the right edge off that same Schwarber home run. This is the assertion that
+  // fails if a future marker grows without the frame growing with it.
+  it.each([
+    ['Schwarber HR to right, 823419', 247.67, 69.6],
+    ['deep HR to right, 823429', 244.8, 95.9],
+    ['pop out behind the plate, 823423', 122.6, 222.0],
+    ['leftmost ball in sample', 24.9, 120.0],
+    ['shallowest ball in sample', 126.0, 23.7],
+  ])('draws the full home-run marker for %s', (_label, x, y) => {
+    expect(withinSprayFrame(x, y, MAX_MARKER_RADIUS)).toBe(true)
+  })
+
   it('is symmetric about home plate, so the diamond sits centred', () => {
     // HOME_PLATE.x is 126; the frame must extend equally either side of it.
     expect(126 - SPRAY_FRAME.minX).toBe(SPRAY_FRAME.minX + SPRAY_FRAME.width - 126)
@@ -234,5 +269,129 @@ describe('withinSprayFrame', () => {
   it('rejects a coordinate outside the frame', () => {
     expect(withinSprayFrame(SPRAY_FRAME.minX - 1, 100)).toBe(false)
     expect(withinSprayFrame(100, SPRAY_FRAME.minY - 1)).toBe(false)
+  })
+})
+
+// A batted ball, minimal but structurally real: only the fields the clip list
+// reads are filled in.
+function ball(over: Partial<BattedBall> = {}): BattedBall {
+  return {
+    batterId: 656941,
+    batterName: 'Kyle Schwarber',
+    event: 'Home Run',
+    inning: 4,
+    isTopInning: false,
+    isPhillies: true,
+    playId: 'a55f1cd4-de41-3c6c-8e98-07784a780448',
+    hit: { coordinates: { coordX: 247.67, coordY: 69.6 }, launchSpeed: 108.7, totalDistance: 435 },
+    ...over,
+  }
+}
+
+describe('indexClipsByPlayId', () => {
+  it('keys highlights by the guid that equals a play event playId', () => {
+    // This IS the join. Verified against 121 home runs across 56 games of 2026:
+    // 117 matched, and all four misses were one broadcast whose clips carry no
+    // guid at all.
+    const clips = indexClipsByPlayId([
+      { guid: 'a55f1cd4', slug: 'schwarber-homers-41', title: "Kyle Schwarber's solo home run (41)" },
+    ])
+    expect(clips.get('a55f1cd4')?.slug).toBe('schwarber-homers-41')
+  })
+
+  it('skips items with no guid rather than letting them collide', () => {
+    // The recap, the condensed game and the "Data Viz" segments all arrive in
+    // the same list with no guid. Keyed on `undefined` they would overwrite each
+    // other and hand an arbitrary survivor to the first home run asked about.
+    const clips = indexClipsByPlayId([
+      { slug: 'game-recap', title: 'Phillies win 4-2' },
+      { slug: 'condensed-game', title: 'Condensed Game' },
+      { guid: 'abc', slug: 'real-clip' },
+    ])
+    expect(clips.size).toBe(1)
+    expect(clips.get('abc')?.slug).toBe('real-clip')
+  })
+
+  it('keeps the first item on a duplicate guid', () => {
+    // MLB leads with the primary cut of a play; a later alternate edit sharing
+    // the guid must not displace it.
+    const clips = indexClipsByPlayId([
+      { guid: 'abc', slug: 'primary' },
+      { guid: 'abc', slug: 'alternate-angle' },
+    ])
+    expect(clips.get('abc')?.slug).toBe('primary')
+  })
+})
+
+describe('clipDuration', () => {
+  it('humanizes MLB\'s hh:mm:ss', () => {
+    expect(clipDuration('00:00:29')).toBe('0:29')
+    expect(clipDuration('00:03:15')).toBe('3:15')
+  })
+
+  it('keeps the hour when there is one', () => {
+    expect(clipDuration('01:04:05')).toBe('1:04:05')
+  })
+
+  it('returns null rather than guessing at an unexpected shape', () => {
+    for (const raw of [undefined, '', '29', '3:15', 'PT29S']) {
+      expect(clipDuration(raw)).toBeNull()
+    }
+  })
+})
+
+describe('homeRunClips', () => {
+  const clips = indexClipsByPlayId([
+    {
+      guid: 'a55f1cd4-de41-3c6c-8e98-07784a780448',
+      slug: 'kyle-schwarber-homers-41-on-a-fly-ball-to-right-field-x9260',
+      title: "Kyle Schwarber's solo home run (41)",
+      duration: '00:00:29',
+      image: { cuts: [{ aspectRatio: '16:9', width: 320, height: 180, src: 'https://img.example/thumb.jpg' }] },
+    },
+  ])
+
+  it('links a home run to its clip page', () => {
+    const [hr] = homeRunClips([ball()], clips)
+    expect(hr.url).toBe(
+      'https://www.mlb.com/video/kyle-schwarber-homers-41-on-a-fly-ball-to-right-field-x9260'
+    )
+    expect(hr.title).toBe("Kyle Schwarber's solo home run (41)")
+    expect(hr.duration).toBe('0:29')
+    expect(hr.thumbnailUrl).toBe('https://img.example/thumb.jpg')
+  })
+
+  it('keeps only home runs, in game order', () => {
+    const balls = [
+      ball({ event: 'Double', inning: 1, playId: 'x' }),
+      ball({ inning: 2, playId: 'first-hr' }),
+      ball({ event: 'Groundout', inning: 3, playId: 'y' }),
+      ball({ inning: 7, playId: 'second-hr' }),
+    ]
+    expect(homeRunClips(balls, clips).map(h => h.ball.inning)).toEqual([2, 7])
+  })
+
+  it('still returns a home run MLB cut no clip for', () => {
+    // 4 of 121 in the 2026 sample, all in one broadcast. A home run vanishing
+    // from the list because its video is missing would be worse than a row with
+    // no link — the reader watched it happen.
+    const [hr] = homeRunClips([ball({ playId: 'no-clip-for-this' })], clips)
+    expect(hr.ball.batterName).toBe('Kyle Schwarber')
+    expect(hr.url).toBeNull()
+    expect(hr.title).toBeNull()
+    expect(hr.thumbnailUrl).toBeNull()
+  })
+
+  it('tolerates a batted ball with no playId at all', () => {
+    const [hr] = homeRunClips([ball({ playId: undefined })], clips)
+    expect(hr.url).toBeNull()
+  })
+
+  it('does not link a clip that has a guid but no slug', () => {
+    // The slug IS the URL path; without it there is nowhere to point.
+    const slugless = indexClipsByPlayId([{ guid: 'abc', title: 'A home run' }])
+    const [hr] = homeRunClips([ball({ playId: 'abc' })], slugless)
+    expect(hr.url).toBeNull()
+    expect(hr.title).toBe('A home run')
   })
 })

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchBoxscore, fetchWinProbability, teamLogoUrl } from '../api/mlb'
-import type { BoxscorePlayer, BoxscoreTeam, GameBoxscore, WinProbEntry } from '../api/mlb'
+import { fetchBoxscore, fetchGameHighlights, fetchWinProbability, teamLogoUrl } from '../api/mlb'
+import type { BoxscorePlayer, BoxscoreTeam, GameBoxscore, HighlightItem, WinProbEntry } from '../api/mlb'
 import { formatDate } from '../utils/date'
-import { battedBalls, toPhilliesProbability } from '../utils/gameStory'
+import { battedBalls, indexClipsByPlayId, toPhilliesProbability } from '../utils/gameStory'
 import SprayChart from './SprayChart'
 import WinProbabilityChart from './WinProbabilityChart'
 
@@ -203,6 +203,7 @@ export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Pr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [winProb, setWinProb] = useState<WinProbEntry[] | null>(null)
+  const [highlights, setHighlights] = useState<HighlightItem[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -222,6 +223,7 @@ export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Pr
     if (!enableGameStory) return
     let cancelled = false
     setWinProb(null)
+    setHighlights([])
     fetchWinProbability(gamePk)
       .then(data => { if (!cancelled) setWinProb(data) })
       .catch(() => { if (!cancelled) setWinProb([]) })
@@ -289,6 +291,26 @@ export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Pr
   )
 
   const balls = useMemo(() => (feed == null ? [] : battedBalls(feed, PHILLIES_ID)), [feed])
+  const hasHomeRun = useMemo(() => balls.some(b => b.event === 'Home Run'), [balls])
+  const clips = useMemo(() => indexClipsByPlayId(highlights), [highlights])
+
+  // A THIRD independent effect, same reasoning as win probability above: the
+  // home-run clips are a bonus, so a failure here renders unlinked home runs
+  // rather than blanking anything.
+  //
+  // Gated on the game actually having a home run, which is why it depends on
+  // `feed` and runs after the box score rather than beside it. /content is the
+  // one endpoint in this app that ignores `fields=` (the backend trims it
+  // instead), and there is nothing to show on a game without a home run, so the
+  // request is simply not made for one — roughly a fifth of games.
+  useEffect(() => {
+    if (!enableGameStory || !hasHomeRun) return
+    let cancelled = false
+    fetchGameHighlights(gamePk)
+      .then(items => { if (!cancelled) setHighlights(items) })
+      .catch(() => { if (!cancelled) setHighlights([]) })
+    return () => { cancelled = true }
+  }, [gamePk, enableGameStory, hasHomeRun])
 
   const decisions = feed?.liveData.decisions
   const decisionParts = [
@@ -345,7 +367,7 @@ export default function GameDetailModal({ gamePk, enableGameStory, onClose }: Pr
                 <WinProbabilityChart points={winProbPoints} opponentName={opponentName} />
               )}
               {enableGameStory && balls.length > 0 && (
-                <SprayChart balls={balls} opponentName={opponentName} />
+                <SprayChart balls={balls} opponentName={opponentName} clips={clips} />
               )}
               {enableGameStory && (winProbPoints.length > 1 || balls.length > 0) && (
                 <div className="mt-6 mb-5 border-b border-gray-100" />
