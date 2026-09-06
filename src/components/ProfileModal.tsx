@@ -73,7 +73,7 @@ function updateFrom(form: FormState): ProfileUpdate {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50'
+  'w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-red placeholder:text-gray-500 focus:border-scale-2 focus:outline-none disabled:bg-gray-50'
 const labelClass = 'mb-1 block text-sm font-medium text-gray-700'
 
 // Modal mechanics (backdrop click, Escape, role="dialog", stopPropagation,
@@ -337,7 +337,7 @@ export default function ProfileModal({
                       className="h-16 w-16 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-phillies-navy font-display text-xl text-white">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-scale-1 font-display text-xl text-white">
                       {profileInitials(profile, user)}
                     </div>
                   )}

@@ -93,7 +93,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
           type="button"
           aria-label="Open profile"
           onClick={() => setProfileModalOpen(true)}
-          className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-white/10"
+          className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-gray-900 hover:bg-hover"
         >
           {profile?.avatarDataUrl ? (
             <img
@@ -102,7 +102,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
               className="h-7 w-7 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-scale-1 text-xs font-semibold text-white">
               {profileInitials(profile, user)}
             </span>
           )}
@@ -113,7 +113,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
         <button
           type="button"
           onClick={handleSignOut}
-          className="rounded-lg border border-white/40 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/10"
+          className="rounded-lg border border-rule px-3 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
         >
           Sign out
         </button>
@@ -140,7 +140,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
         type="button"
         aria-label="Sign in"
         onClick={openModal}
-        className="shrink-0 rounded-lg border border-white/40 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/10"
+        className="shrink-0 rounded-lg border border-rule px-3 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:border-rule-heavy hover:bg-hover"
       >
         Sign In
       </button>
@@ -155,7 +155,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
             aria-modal="true"
             aria-label={mode === 'signup' ? 'Create account' : 'Sign in'}
             // text-gray-900 is load-bearing: the modal renders inside the header,
-            // which sets text-white, so anything without an explicit color would
+            // which no longer sets a text color, so anything without an explicit color would
             // inherit white on this white panel — including input carets.
             className="w-full max-w-sm bg-panel-raised p-6 text-gray-900 border-2 border-rule-heavy"
             // Clicks inside the panel must not reach the backdrop's close handler.
@@ -200,7 +200,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
                   autoComplete="email"
                   autoFocus
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-red placeholder:text-gray-500 focus:border-scale-2 focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 
@@ -222,7 +222,7 @@ export default function AuthWidget({ user, onAuthChange, profile, onProfileChang
                   maxLength={200}
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   placeholder={mode === 'signup' ? 'At least 8 characters' : ''}
-                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-navy placeholder:text-gray-500 focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+                  className="w-full rounded-lg border border-gray-300 bg-panel px-3 py-2 text-sm text-gray-900 caret-phillies-red placeholder:text-gray-500 focus:border-scale-2 focus:outline-none disabled:bg-gray-50"
                 />
               </div>
 

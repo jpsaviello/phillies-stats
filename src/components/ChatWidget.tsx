@@ -92,13 +92,13 @@ export default function ChatWidget() {
       aria-label="Phillies chat"
       className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-h-[70vh] flex flex-col bg-panel-raised border-2 border-rule-heavy overflow-hidden"
     >
-      <div className="flex items-center justify-between bg-phillies-navy px-4 py-3 text-white">
+      <div className="flex items-center justify-between bg-panel border-b border-rule px-4 py-3 text-gray-900">
         <h2 className="font-display text-lg uppercase tracking-wide">Phils Chat</h2>
         <button
           type="button"
           aria-label="Close chat"
           onClick={() => setOpen(false)}
-          className="rounded p-2.5 -m-1 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="rounded p-2.5 -m-1 text-gray-500 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-phillies-red/40"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +169,7 @@ export default function ChatWidget() {
           disabled={sending}
           maxLength={MAX_MESSAGE_CHARS}
           placeholder="Ask about the Phillies…"
-          className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-phillies-navy focus:outline-none disabled:bg-gray-50"
+          className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-scale-2 focus:outline-none disabled:bg-gray-50"
         />
         <button
           type="submit"

@@ -111,7 +111,8 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
                 Designation only — MLB's roster feed carries no injury details or return dates.
               </p>
             )}
-            <ScrollX className="mt-3">
+            <div className="card overflow-hidden mt-3">
+            <ScrollX>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -143,6 +144,7 @@ export default function Roster({ signedIn, favorites, onToggleFavorite }: Props)
                 </tbody>
               </table>
             </ScrollX>
+            </div>
           </section>
         ))}
       </div>
