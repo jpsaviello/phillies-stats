@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { fetchSeasonResults, fetchWildCardStandings } from '../api/mlb'
+import { fetchSeasonResults, fetchWildCardStandings, NL_LEAGUE_ID } from '../api/mlb'
 import type { SeasonGameResult, WildCardRecord } from '../types/mlb'
 import { applyTiebreakers, teamsNeedingTiebreak, type TiebreakerNote } from '../utils/tiebreakers'
 
 const PHILLIES_ID = 143
-const NL_LEAGUE_ID = 104
-/** The NL sends its top 3 wild card teams to the postseason (2022 format). */
+/** Each league sends its top 3 wild card teams to the postseason (2022 format). */
 export const PLAYOFF_SPOTS = 3
 const MIN_ROWS_SHOWN = 7
 
@@ -24,15 +23,32 @@ export interface WildCardRace {
   loading: boolean
 }
 
+export interface WildCardRaceOptions {
+  /**
+   * Which league's race. Defaults to the NL — the Phillies' league, and the only
+   * one the wild card table and Playoff Push have any reason to state.
+   */
+  leagueId?: number
+  /**
+   * How far down the standings ties have to be resolved, in rows.
+   *
+   * Defaults to the window WildCardStandings actually renders, which is what the
+   * table and the panel need. The playoff bracket asks for a smaller one: it
+   * shows the three clubs in plus the first out, so resolving a tie at rank 7
+   * would buy two head-to-head round trips nothing on screen depends on.
+   */
+  tiebreakWindow?: number
+}
+
 /**
- * The tiebreaker-corrected wild card race, fetched once per Standings mount.
+ * One league's tiebreaker-corrected wild card race.
  *
  * This lives in a hook rather than inside WildCardStandings because the Playoff
  * Push panel states a playoff position from the same ordering. Two independent
  * copies would double the tiebreaker round trips and, worse, could drift apart —
  * a panel claiming 4th above a table showing 3rd is worse than either alone.
  */
-export function useWildCardRace(): WildCardRace {
+export function useWildCardRace({ leagueId = NL_LEAGUE_ID, tiebreakWindow }: WildCardRaceOptions = {}): WildCardRace {
   const [records, setRecords] = useState<WildCardRecord[]>([])
   const [notes, setNotes] = useState<Map<number, TiebreakerNote>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -42,8 +58,8 @@ export function useWildCardRace(): WildCardRace {
     // loading, so the extra round trip costs a slightly later paint but avoids
     // visibly rearranging the playoff cutoff in front of the user.
     async function load() {
-      const wildCard = await fetchWildCardStandings()
-      const ids = teamsNeedingTiebreak(wildCard, windowSize(wildCard))
+      const wildCard = await fetchWildCardStandings(leagueId)
+      const ids = teamsNeedingTiebreak(wildCard, tiebreakWindow ?? windowSize(wildCard))
       if (!ids.length) return { ordered: wildCard, notes: new Map<number, TiebreakerNote>() }
 
       const settled = await Promise.allSettled(ids.map(fetchSeasonResults))
@@ -55,7 +71,7 @@ export function useWildCardRace(): WildCardRace {
       // which is worse than not reordering at all.
       if (results.size < ids.length) return { ordered: wildCard, notes: new Map<number, TiebreakerNote>() }
 
-      return applyTiebreakers(wildCard, results, NL_LEAGUE_ID)
+      return applyTiebreakers(wildCard, results, leagueId)
     }
 
     load()
@@ -65,7 +81,7 @@ export function useWildCardRace(): WildCardRace {
       })
       .catch(() => setRecords([]))
       .finally(() => setLoading(false))
-  }, [])
+  }, [leagueId, tiebreakWindow])
 
   return { records, notes, loading }
 }

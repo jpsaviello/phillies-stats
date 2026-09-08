@@ -130,6 +130,19 @@ export interface RosterEntry {
   status: { description: string }
 }
 
+/**
+ * A club's record broken out by opponent group, as both standings responses
+ * carry it.
+ *
+ * These are the raw material for tiebreaker criteria 2 and 3 (intradivision,
+ * then intraleague) — see src/utils/tiebreakers.ts, which reads the same shape
+ * structurally so it can order either standings type.
+ */
+export interface SplitRecords {
+  divisionRecords?: { division: { id: number }; wins: number; losses: number }[]
+  leagueRecords?: { league: { id: number }; wins: number; losses: number }[]
+}
+
 export interface StandingsRecord {
   team: { id: number; name: string }
   wins: number
@@ -146,7 +159,26 @@ export interface StandingsRecord {
   eliminationNumber?: string
   wildCardEliminationNumber?: string
   divisionLeader?: boolean
+  /** True once the club has clinched its division outright, not merely a berth. */
+  divisionChamp?: boolean
   clinched?: boolean
+  records?: SplitRecords
+}
+
+/**
+ * One division leader, with the division it leads attached.
+ *
+ * The regularSeason response nests division id on the GROUP rather than on the
+ * team, and carries no division name at all, so fetchDivisionLeaders() supplies
+ * both. The id is what makes this assignable to TiebreakerRecord — criterion 2
+ * needs to know which of a club's three divisionRecords is its own.
+ */
+export interface DivisionLeaderRecord extends Omit<StandingsRecord, 'team'> {
+  team: {
+    id: number
+    name: string
+    division: { id: number; name: string }
+  }
 }
 
 /** One not-yet-played regular-season game, reduced to what the panel needs. */
@@ -177,10 +209,7 @@ export interface WildCardRecord {
   wildCardRank: string
   wildCardGamesBack: string
   clinchIndicator?: string
-  records?: {
-    divisionRecords?: { division: { id: number }; wins: number; losses: number }[]
-    leagueRecords?: { league: { id: number }; wins: number; losses: number }[]
-  }
+  records?: SplitRecords
 }
 
 /** One completed regular-season game, reduced to what a head-to-head tally needs. */

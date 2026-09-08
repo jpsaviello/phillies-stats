@@ -1,5 +1,6 @@
 import type { GameLogSplit, HitData, StatSplit } from '../types/mlb'
 import { cached, NO_CACHE, type CacheOptions } from '../utils/cache'
+import { divisionName } from '../utils/playoffPicture'
 
 const BASE = '/api/mlb'
 const MINUTE = 60_000
@@ -99,15 +100,64 @@ export async function fetchPitchingStats() {
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
 
+export const AL_LEAGUE_ID = 103
+export const NL_LEAGUE_ID = 104
+
+// One league's regularSeason standings: ONE group per division, all three of them.
+//
+// Private, and both public callers below go through it, because they want
+// different slices of the SAME response and the cache is keyed on the URL string
+// — factoring the literal out is what makes fetchDivisionLeaders(NL) free rather
+// than making it depend on somebody remembering to keep two URLs byte-identical.
+//
+// Deliberately ONE league per request rather than `leagueId=103,104`. The
+// combined call would let the whole playoff picture ride on the request
+// fetchStandings already makes, but fetchStandings is also HeroStrip's, which
+// runs on EVERY tab — so the combined response (81KB against 40KB, measured)
+// would put the American League on the critical path of a reader who never opens
+// the Standings tab. The AL's two requests stay on the tab that draws them.
+async function regularSeason(leagueId: number) {
+  const data = await get<{
+    records: {
+      division: { id: number }
+      teamRecords: import('../types/mlb').StandingsRecord[]
+    }[]
+  }>(`/standings?leagueId=${leagueId}&season=${SEASON}&standingsTypes=regularSeason`)
+  return data.records ?? []
+}
+
 export async function fetchStandings() {
   // NL East division ID = 204
-  const data = await get<{ records: { teamRecords: import('../types/mlb').StandingsRecord[] }[] }>(
-    `/standings?leagueId=104&season=${SEASON}&standingsTypes=regularSeason`
-  )
-  const nlEast = data.records.find(r =>
-    r.teamRecords.some(t => t.team.id === PHILLIES_ID)
-  )
+  const records = await regularSeason(NL_LEAGUE_ID)
+  const nlEast = records.find(r => r.teamRecords.some(t => t.team.id === PHILLIES_ID))
   return nlEast?.teamRecords ?? []
+}
+
+// One league's three division leaders, in no particular order — seeding them is
+// utils/playoffPicture.ts's job, and ordering them correctly needs the tiebreaker
+// chain rather than a sort (see hooks/useDivisionLeaders.ts).
+//
+// Two shapes are patched up here rather than downstream. The division id lives on
+// the GROUP, not on the team, so it's attached to each record — utils/tiebreakers.ts
+// reads `team.division.id` to find a club's own intradivision split. And the
+// response carries no division NAME at any hydration level, so it's supplied from
+// DIVISION_NAMES, which is fixed league structure rather than data.
+export async function fetchDivisionLeaders(leagueId: number) {
+  const records = await regularSeason(leagueId)
+  const leaders: import('../types/mlb').DivisionLeaderRecord[] = []
+  for (const group of records) {
+    for (const record of group.teamRecords ?? []) {
+      if (!record.divisionLeader) continue
+      leaders.push({
+        ...record,
+        team: {
+          ...record.team,
+          division: { id: group.division.id, name: divisionName(group.division.id) },
+        },
+      })
+    }
+  }
+  return leaders
 }
 
 // standingsTypes=wildCard returns a SINGLE record group for the league (not one
@@ -117,11 +167,16 @@ export async function fetchStandings() {
 // hydrate=team(division) is required for the intradivision tiebreaker (the team
 // object is otherwise just {id,name,link}). It also swaps team.name from the short
 // club name to the full one, which is why callers display team.teamName ?? team.name.
-export async function fetchWildCardStandings() {
-  const data = await get<{ records: { teamRecords: import('../types/mlb').WildCardRecord[] }[] }>(
-    `/standings?leagueId=104&season=${SEASON}&standingsTypes=wildCard&hydrate=team(division)`
-  )
-  return data.records[0]?.teamRecords ?? []
+export async function fetchWildCardStandings(leagueId: number = NL_LEAGUE_ID) {
+  const data = await get<{
+    records: { league?: { id: number }; teamRecords: import('../types/mlb').WildCardRecord[] }[]
+  }>(`/standings?leagueId=${leagueId}&season=${SEASON}&standingsTypes=wildCard&hydrate=team(division)`)
+  // One league per request, so there is one group — but it is matched by league
+  // rather than taken positionally, because `leagueId=103,104` returns both in
+  // an order this code should not be quietly depending on.
+  const records = data.records ?? []
+  const group = records.find(r => r.league?.id === leagueId) ?? records[0]
+  return group?.teamRecords ?? []
 }
 
 // One club's completed regular-season games, reduced to opponent + win/loss. Used

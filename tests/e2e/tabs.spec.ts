@@ -35,6 +35,54 @@ for (const tab of TABS) {
   })
 }
 
+test('the playoff picture seeds a full field in both leagues', async ({ page }) => {
+  // The bracket self-hides on anything short of six clubs, so "it silently
+  // isn't there" is its failure mode — the same shape as a tab that mounts
+  // empty, and invisible to both `npm run build` and Vitest.
+  const app = await useApp(page)
+  await gotoTab(page, 'standings')
+
+  await expect(page.getByRole('heading', { name: 'Playoff Picture' })).toBeVisible()
+
+  // Structure, not clubs: which teams are in each field is a property of the
+  // fixture and will change the next time it's recorded, but a full picture is
+  // always one byes card and two Wild Card Series per league in the stacked
+  // layout, and one mirrored bracket with both leagues' rounds labelled.
+  //
+  // Counted rather than asserted visible on purpose: the panel draws the
+  // bracket at `xl` and the stacked cards below it, so which one a given
+  // viewport shows depends on whether a scrollbar eats the breakpoint. Both are
+  // in the DOM either way, and a league whose field came up short renders
+  // NEITHER — which is the silence this test exists to catch.
+  // `exact` throughout: the empty bracket slots carry screen-reader labels like
+  // "NL Wild Card Series winner, to be decided", and a substring match counts
+  // those and their ancestors too.
+  await expect(page.getByText('First-round byes', { exact: true })).toHaveCount(2)
+  await expect(page.getByText('Wild Card Series', { exact: true })).toHaveCount(4)
+  // Presence rather than a count: "NL Wild Card" is also Playoff Push's card
+  // label further down the same tab, and this assertion is about the bracket
+  // having drawn every round of both leagues, not about how many times a phrase
+  // appears on the page.
+  for (const round of ['NL Wild Card', 'NLDS', 'NLCS', 'AL Wild Card', 'ALDS', 'ALCS']) {
+    await expect(page.getByText(round, { exact: true }).first(), round).toBeAttached()
+  }
+
+  // Every seeded club carries its club mark. Worth asserting because the failure
+  // is invisible: the <img> hides itself on error, so a broken URL leaves a
+  // bracket that still reads correctly and simply has no logos in it — which is
+  // exactly what the development sandbox shows, since it blocks mlbstatic.com.
+  // Twelve clubs, drawn twice (bracket plus the stacked fallback).
+  const picture = page.getByRole('region', { name: 'Playoff Picture' })
+  const logos = picture.locator('img[src*="team-logos"]')
+  await expect(logos).toHaveCount(24)
+  for (const box of await logos.all()) {
+    expect(await box.getAttribute('src')).toMatch(/^https:\/\/www\.mlbstatic\.com\/team-logos\/\d+\.svg$/)
+  }
+
+  expect(app.missingFixtures, 'uncovered API calls — re-run npm run test:e2e:record').toEqual([])
+  expect(app.consoleErrors).toEqual([])
+})
+
 test('the tables actually have rows', async ({ page }) => {
   // A table that renders its header and no body passes a "does the tab load"
   // check while being completely broken.

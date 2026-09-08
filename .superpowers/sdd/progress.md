@@ -1185,3 +1185,47 @@ OUTSTANDING -- needs the user:
     imagePullPolicy: Never). Vercel needs only the push.
 
 All tasks complete. Uncommitted working tree -- staging/committing/pushing is the user's.
+# Progress Ledger: playoff-picture
+
+Plan: docs/superpowers/plans/2026-09-08-playoff-picture.md
+Base: a51fafa
+
+Task 1: complete (fetchDivisionLeaders shares fetchStandings' cache entry via nlRegularSeason(); verified in the browser — one regularSeason request on the tab, not two)
+Task 2: complete (src/utils/playoffPicture.ts, 13 tests; the format trap and the bye pairings are the two that matter)
+Task 3: complete (PlayoffPicture mounted full width above the Standings grid, behind enablePlayoffPicture)
+Task 4: complete
+  - Verified against the live 2026-09-08 field: MIL 1 / LAD 2 (byes) · ATL 3 v ARI 6 · PHI 4 v CHC 5 · first out SD 76-68, 0.5 back. Matches the API by hand.
+  - Two viewports (1280, 375) and both themes; 0px horizontal overflow, nothing past the right edge at 375, 0 contrast failures on the tab in dark.
+  - Smoke suite 37 -> 38 tests, all green, still hermetic (no new fixture: the bracket reads the standings URL the tab already asked for).
+  - Note: this sandbox ships Chromium 1194 against Playwright's expected 1234, so e2e needs the config's existing PLAYWRIGHT_CHROMIUM_PATH escape hatch. Pre-existing, unrelated to this feature.
+  - Minor (accepted): division NAMES come from a local id->name map, since the only way to get them from the API is a hydrate that would change the URL and cost a second request. Division ids are fixed league structure.
+  - Minor (accepted): tiebreaker criterion 4 (last half of intraleague games) is still unimplemented upstream in utils/tiebreakers.ts, so two leaders tied through criterion 3 keep the API's order — same limitation the wild card table already carries.
+All tasks complete.
+
+Follow-up (same day, requested): both leagues, not just the NL.
+
+- fetchDivisionLeaders / fetchWildCardStandings take a leagueId; useWildCardRace takes { leagueId, tiebreakWindow }. Every existing call site and URL is unchanged, so HeroStrip / PlayoffPush / WildCardStandings are untouched and no recorded fixture moved.
+- Kept one league per request rather than leagueId=103,104 (81KB vs 40KB measured, and fetchStandings is HeroStrip's, which runs on every tab). Confirmed in the browser: 4 standings requests on the tab, the NL regularSeason one shared with fetchStandings.
+- AL asks for tiebreakWindow 4 (three in plus first out) rather than the seven rows the wild card table renders.
+- Live AL is the format trap in the flesh: NYY 81-62 seeds 4th, below CWS 75-68 on a bye and HOU 73-71 hosting. Good confirmation the two lists are never merged.
+- Layout: each league is one column of three cards (byes card + two series) so both leagues fit in about the height the single NL bracket took.
+- Two new fixtures recorded surgically (AL regularSeason, AL wildCard) instead of a full re-record, which would have refreshed every fixture with 09-08 data against a clock frozen to 09-03.
+- Verified 1280 dark, 1280 light, 375 dark: 0px overflow, nothing past the right edge, no app console errors. 255 unit tests, 39 smoke tests, lint and build green.
+
+Follow-up 2 (same day, requested): draw it as the mirrored tournament bracket, not two stacked lists.
+
+- NL runs inward from the left, AL from the right, meeting at the World Series in the centre; a dashed empty box for every round the standings cannot decide, which is what makes it a bracket rather than a list.
+- Geometry moved into playoffPicture.ts (BRACKET / BRACKET_ROWS / BRACKET_COLUMNS / mirrorX), every row derived rather than typed in, with tests for the connector midpoints, the halves' symmetry, no overlap in the Division Series column, and BRACKET_WIDTH <= 1248. Same posture as SPRAY_FRAME: a drifted midpoint or an overwide diagram reports nothing.
+- Two layouts: bracket at xl, the existing stacked cards below it, both from one model, CSS picking between them (a JS breakpoint would flash the wrong one on first paint). A single resolved league falls back to stacked at every width, since a mirror needs two halves.
+- Bug caught in the browser pass, not by any test: the round labels were positioned at top:0 of the BOXES container, which is offset down by labelHeight — so the outermost label rendered underneath the first team box instead of above it. Labels now live in their own strip in the outer container.
+- e2e assertions had to become exact + presence-based: the empty slots' sr-only labels contain the round names, and "NL Wild Card" is also PlayoffPush's card label on the same tab.
+- Verified 1440 dark, 1440 light, 1100 (stacked), 375: 0px overflow, nothing past the right edge, 0 contrast failures in both themes, no app console errors. 261 unit tests, 39 smoke tests, lint and build green.
+- NL is the left half because this is a Phillies app; the reference bracket puts the AL there and `side` is the only thing that would change.
+
+Follow-up 3: team logos.
+
+- They were already wired at both call sites and are blank in every screenshot from here because the sandbox cannot reach www.mlbstatic.com at all (curl returns http=000, matching what CLAUDE.md documents). Confirmed rather than assumed before touching anything.
+- Made them worth drawing: 16px -> 20px in the bracket, and the team column 132 -> 140 so the seed chip, logo and the longest short club name ("Guardians", "White Sox", "Nationals") all fit without truncating. BRACKET_WIDTH 1164 -> 1196, still inside the 1248 the geometry test guards.
+- Verified by intercepting the blocked host and serving stand-in SVGs at the same URLs, so the layout WITH images could be seen and measured: 12 logos at 20px in the panel, none broken, 0px overflow at 1440 (both themes) and 375.
+- Added the assertion that was missing: 24 img[src*="team-logos"] inside the panel, each with a well-formed URL. Nothing checked this before, and the failure is invisible — the onError hide means a broken URL leaves a bracket that reads fine and simply has no logos.
+- Panel root became <section aria-label="Playoff Picture">, which is both a real landmark and what scopes that count (HeroStrip draws logos on the same page).
