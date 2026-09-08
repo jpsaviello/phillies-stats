@@ -44,7 +44,8 @@ export default function App() {
   // must be killable without taking the box score down with them.
   // enableBullpenUsage gates only the panel above the Pitching tab's table, and
   // enableBattingForm the matching Hot & Cold panel above the Batting tab's.
-  // enableLeagueRankings gates only the panel at the foot of the Standings tab.
+  // enableLeagueRankings gates only the panel at the foot of the Standings tab,
+  // and enablePlayoffPicture only the bracket at the head of it.
   // enableRosterTab is the first flag that gates a whole TAB, so flag-off has to
   // remove the nav entry too, not just the panel — see the `hidden` prop below.
   const {
@@ -56,6 +57,7 @@ export default function App() {
     enableBullpenUsage = true,
     enableBattingForm = true,
     enableLeagueRankings = true,
+    enablePlayoffPicture = true,
     enableRosterTab = true,
   } = useFlags()
   // Lives here rather than inside AuthWidget so features added later can gate
@@ -203,7 +205,12 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
           />
         )}
-        {tab === 'standings' && <Standings enableLeagueRankings={enableLeagueRankings} />}
+        {tab === 'standings' && (
+          <Standings
+            enableLeagueRankings={enableLeagueRankings}
+            enablePlayoffPicture={enablePlayoffPicture}
+          />
+        )}
         {tab === 'schedule' && (
           <Schedule
             enableGameDetail={enableGameDetail}

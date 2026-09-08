@@ -35,6 +35,24 @@ for (const tab of TABS) {
   })
 }
 
+test('the playoff picture seeds a full field', async ({ page }) => {
+  // The bracket self-hides on anything short of six clubs, so "it silently
+  // isn't there" is its failure mode — the same shape as a tab that mounts
+  // empty, and invisible to both `npm run build` and Vitest.
+  const app = await useApp(page)
+  await gotoTab(page, 'standings')
+
+  await expect(page.getByRole('heading', { name: 'NL Playoff Picture' })).toBeVisible()
+  // Structure, not clubs: which six teams are in the field is a property of the
+  // fixture and will change the next time it's recorded, but a bracket is
+  // always two byes and two Wild Card Series.
+  await expect(page.getByText('First-round bye')).toHaveCount(2)
+  await expect(page.getByText('Wild Card Series')).toHaveCount(2)
+
+  expect(app.missingFixtures, 'uncovered API calls — re-run npm run test:e2e:record').toEqual([])
+  expect(app.consoleErrors).toEqual([])
+})
+
 test('the tables actually have rows', async ({ page }) => {
   // A table that renders its header and no body passes a "does the tab load"
   // check while being completely broken.

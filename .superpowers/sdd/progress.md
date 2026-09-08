@@ -1185,3 +1185,19 @@ OUTSTANDING -- needs the user:
     imagePullPolicy: Never). Vercel needs only the push.
 
 All tasks complete. Uncommitted working tree -- staging/committing/pushing is the user's.
+# Progress Ledger: playoff-picture
+
+Plan: docs/superpowers/plans/2026-09-08-playoff-picture.md
+Base: a51fafa
+
+Task 1: complete (fetchDivisionLeaders shares fetchStandings' cache entry via nlRegularSeason(); verified in the browser — one regularSeason request on the tab, not two)
+Task 2: complete (src/utils/playoffPicture.ts, 13 tests; the format trap and the bye pairings are the two that matter)
+Task 3: complete (PlayoffPicture mounted full width above the Standings grid, behind enablePlayoffPicture)
+Task 4: complete
+  - Verified against the live 2026-09-08 field: MIL 1 / LAD 2 (byes) · ATL 3 v ARI 6 · PHI 4 v CHC 5 · first out SD 76-68, 0.5 back. Matches the API by hand.
+  - Two viewports (1280, 375) and both themes; 0px horizontal overflow, nothing past the right edge at 375, 0 contrast failures on the tab in dark.
+  - Smoke suite 37 -> 38 tests, all green, still hermetic (no new fixture: the bracket reads the standings URL the tab already asked for).
+  - Note: this sandbox ships Chromium 1194 against Playwright's expected 1234, so e2e needs the config's existing PLAYWRIGHT_CHROMIUM_PATH escape hatch. Pre-existing, unrelated to this feature.
+  - Minor (accepted): division NAMES come from a local id->name map, since the only way to get them from the API is a hydrate that would change the URL and cost a second request. Division ids are fixed league structure.
+  - Minor (accepted): tiebreaker criterion 4 (last half of intraleague games) is still unimplemented upstream in utils/tiebreakers.ts, so two leaders tied through criterion 3 keep the API's order — same limitation the wild card table already carries.
+All tasks complete.

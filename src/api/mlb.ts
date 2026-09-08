@@ -99,15 +99,60 @@ export async function fetchPitchingStats() {
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
 
+// The NL's regularSeason standings: ONE group per division, all three of them.
+//
+// Private, and both public callers below go through it, because they want
+// different slices of the SAME response and the cache is keyed on the URL string
+// — factoring the literal out is what makes fetchDivisionLeaders() free rather
+// than making it depend on somebody remembering to keep two URLs byte-identical.
+async function nlRegularSeason() {
+  const data = await get<{
+    records: {
+      division: { id: number }
+      teamRecords: import('../types/mlb').StandingsRecord[]
+    }[]
+  }>(`/standings?leagueId=104&season=${SEASON}&standingsTypes=regularSeason`)
+  return data.records ?? []
+}
+
 export async function fetchStandings() {
   // NL East division ID = 204
-  const data = await get<{ records: { teamRecords: import('../types/mlb').StandingsRecord[] }[] }>(
-    `/standings?leagueId=104&season=${SEASON}&standingsTypes=regularSeason`
-  )
-  const nlEast = data.records.find(r =>
-    r.teamRecords.some(t => t.team.id === PHILLIES_ID)
-  )
+  const records = await nlRegularSeason()
+  const nlEast = records.find(r => r.teamRecords.some(t => t.team.id === PHILLIES_ID))
   return nlEast?.teamRecords ?? []
+}
+
+// The three NL division leaders, in no particular order — seeding them is
+// utils/playoffPicture.ts's job, and ordering them correctly needs the tiebreaker
+// chain rather than a sort (see hooks/useDivisionLeaders.ts).
+//
+// Two shapes are patched up here rather than downstream. The division id lives on
+// the GROUP, not on the team, so it's attached to each record — utils/tiebreakers.ts
+// reads `team.division.id` to find a club's own intradivision split. And the
+// response carries no division NAME at any hydration level, so it's supplied from
+// NL_DIVISION_NAMES, which is fixed league structure rather than data.
+const NL_DIVISION_NAMES: Record<number, string> = {
+  203: 'NL West',
+  204: 'NL East',
+  205: 'NL Central',
+}
+
+export async function fetchDivisionLeaders() {
+  const records = await nlRegularSeason()
+  const leaders: import('../types/mlb').DivisionLeaderRecord[] = []
+  for (const group of records) {
+    for (const record of group.teamRecords ?? []) {
+      if (!record.divisionLeader) continue
+      leaders.push({
+        ...record,
+        team: {
+          ...record.team,
+          division: { id: group.division.id, name: NL_DIVISION_NAMES[group.division.id] ?? '' },
+        },
+      })
+    }
+  }
+  return leaders
 }
 
 // standingsTypes=wildCard returns a SINGLE record group for the league (not one

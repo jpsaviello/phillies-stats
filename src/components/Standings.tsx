@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { fetchStandings } from '../api/mlb'
 import type { StandingsRecord } from '../types/mlb'
+import { useDivisionLeaders } from '../hooks/useDivisionLeaders'
 import { useWildCardRace } from '../hooks/useWildCardRace'
 import LeagueRankings from './LeagueRankings'
+import PlayoffPicture from './PlayoffPicture'
 import PlayoffPush from './PlayoffPush'
 import WildCardStandings from './WildCardStandings'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
@@ -10,12 +12,13 @@ import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 const PHILLIES_ID = 143
 
 interface Props {
-  // Independent self-hiding panel, same arrangement as the other flag-gated
-  // panels. Defaults on so an unreachable LD client renders it.
+  // Independent self-hiding panels, same arrangement as the other flag-gated
+  // panels. Default on so an unreachable LD client renders them.
   enableLeagueRankings?: boolean
+  enablePlayoffPicture?: boolean
 }
 
-export default function Standings({ enableLeagueRankings = true }: Props) {
+export default function Standings({ enableLeagueRankings = true, enablePlayoffPicture = true }: Props) {
   const [records, setRecords] = useState<StandingsRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +26,10 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
   // playoff position, and the tiebreaker round trips are expensive enough that
   // fetching them twice would be wasteful as well as divergence-prone.
   const race = useWildCardRace()
+  // Costs no request of its own: fetchDivisionLeaders reads the same standings
+  // URL fetchStandings already asked for, so the bracket is served from the
+  // cache entry the effect below fills.
+  const leaders = useDivisionLeaders()
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -47,20 +54,26 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
   const twoUp = showWildCard || enableLeagueRankings
 
   return (
-    /*
-      Two columns from `lg` up, one below it.
+    <div className="space-y-8">
+      {/* Full width, above the grid: the bracket is neither the division column
+          nor the race column, it is the tab's headline, and two bye cards
+          beside two series cards want the whole width to do it. */}
+      {enablePlayoffPicture && <PlayoffPicture wildCard={race} divisionLeaders={leaders} />}
 
-      The tab reads division-on-the-left, race-on-the-right: where the club sits
-      in the NL East beside where it sits in the wild card and among all 30
-      clubs. It was a single `max-w-2xl` column pinned to the left edge, which
-      left more than half of a 1280px screen empty and read as an unfinished
-      page rather than as a reading column. Same structure and the same
-      reasoning as the Today tab, which solved this first.
+      {/*
+        Two columns from `lg` up, one below it.
 
-      When the right column has nothing to show, the grid drops to one centered
-      column rather than stranding the division table beside a void.
-    */
-    <div className={twoUp ? 'grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start' : 'max-w-2xl mx-auto space-y-8'}>
+        The tab reads division-on-the-left, race-on-the-right: where the club sits
+        in the NL East beside where it sits in the wild card and among all 30
+        clubs. It was a single `max-w-2xl` column pinned to the left edge, which
+        left more than half of a 1280px screen empty and read as an unfinished
+        page rather than as a reading column. Same structure and the same
+        reasoning as the Today tab, which solved this first.
+
+        When the right column has nothing to show, the grid drops to one centered
+        column rather than stranding the division table beside a void.
+      */}
+      <div className={twoUp ? 'grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start' : 'max-w-2xl mx-auto space-y-8'}>
       <div className="space-y-8 min-w-0">
       <PlayoffPush divisionRecords={records} {...race} />
       {loading ? (
@@ -119,6 +132,7 @@ export default function Standings({ enableLeagueRankings = true }: Props) {
           down and it can't take them down. */}
       {enableLeagueRankings && <LeagueRankings />}
       </div>
+    </div>
     </div>
   )
 }
