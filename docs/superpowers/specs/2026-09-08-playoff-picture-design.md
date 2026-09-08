@@ -2,9 +2,9 @@
 
 ## Goal
 
-Show the **National League postseason field as it stands right now** — all six
-clubs, seeded, paired into the Wild Card Series they would actually play — at the
-top of the Standings tab.
+Show **both leagues' postseason fields as they stand right now** — twelve clubs,
+seeded, paired into the Wild Card Series they would actually play — at the top of
+the Standings tab.
 
 The tab already answers "where are the Phillies?" three different ways: the NL
 East table (division position), the Wild Card table (race position), and Playoff
@@ -45,9 +45,9 @@ structurally where a standings table cannot.
 
 ## The load-bearing decisions
 
-### 1. Zero new network requests
+### 1. The NL half is free; the AL half costs two requests, on this tab only
 
-The two responses this needs are already on the wire on every Standings load.
+The NL's two responses are already on the wire on every Standings load.
 
 **Wild card side** — `useWildCardRace()` is already owned by `Standings` and
 spread into `PlayoffPush` and `WildCardStandings`. The bracket becomes its **third**
@@ -60,15 +60,34 @@ seeding a club 6th above a table ranking it 3rd is worse than either alone.
 NL divisions**, and then throws two of them away to return the NL East group.
 Rather than a second request, the URL is factored into one private helper
 (`nlRegularSeason()`) that both `fetchStandings()` and the new
-`fetchDivisionLeaders()` call. One URL literal, two exports, one cache key — the
-sharing is structural rather than an invariant somebody has to remember. The
-request count on the tab is unchanged, and no new e2e fixture is needed.
+`fetchDivisionLeaders(leagueId)` call. One URL literal, two exports, one cache key
+— the sharing is structural rather than an invariant somebody has to remember.
+
+**The American League is data the app has no other reason to hold**, so it is two
+requests: `regularSeason` and `wildCard` for `leagueId=103`. Both standings
+endpoints do accept `leagueId=103,104` and return one group per league, which
+would have made the whole bracket ride on requests the tab already makes — and it
+is the wrong trade, because `fetchStandings` is **HeroStrip's too, and HeroStrip
+runs on every tab**. Measured, the combined response is 81KB against 40KB, so
+that version puts the American League on the critical path of a reader who never
+opens this tab. One league per request keeps the AL's cost on the tab that draws
+it. Two new e2e fixtures; no existing URL changes, so nothing already recorded is
+touched.
+
+The AL's wild card race also asks for a **smaller tiebreak window** than the NL's.
+`useWildCardRace` resolves ties across the seven rows `WildCardStandings` renders;
+the bracket shows three clubs in plus the first out, so the AL half asks for four
+and does not buy head-to-head round trips for a tie at rank 7 that nothing on
+screen depends on.
 
 ### 2. Division winners are seeds 1–3, period
 
 Under the 2022 format the three division winners take seeds 1–3 **ordered among
 themselves**, and the three wild cards take 4–6. A wild card club with a better
-record than a division winner still seeds below it. The seeding function therefore
+record than a division winner still seeds below it. **The American League on the
+day this shipped is the case in the flesh**: the Yankees are 81-62 and seed
+*fourth*, below a 75-68 White Sox club on a bye and a 73-71 Astros club that
+would host them a round later. The seeding function therefore
 never sorts the six clubs together — it sorts two lists and concatenates them, and
 a unit test pins the case where a wild card club out-records a division winner.
 
@@ -84,7 +103,9 @@ team ID — so ordering the three leaders by raw record would put the wrong club
 bye whenever two of them share a winning percentage. `src/utils/tiebreakers.ts`
 already implements the real chain (head-to-head → intradivision → intraleague) and
 is written against a structural `TiebreakerRecord` shape *specifically* so a second
-caller could reuse it. This is that caller.
+caller could reuse it. This is that caller, twice — once per league, with the
+league id passed through to criterion 3 (intraleague record) so the AL is
+measured against the AL.
 
 `applyTiebreakers` groups **consecutive** equal-pct clubs, so the leaders are sorted
 by percentage first. The head-to-head fetch (`fetchSeasonResults`, ~25KB per club)
@@ -96,8 +117,10 @@ map.
 The regularSeason response carries `records.divisionRecords` and
 `records.leagueRecords` (criteria 2 and 3) but no `team.division`, so the division
 id is attached from the group each record came in. Division **names** are not in
-the response at any hydration level that keeps the URL shared, so the three NL
-division ids are a local constant — they are fixed league structure, not data.
+the response at any hydration level that keeps the URL one league wide, so all six
+division ids are a local constant in `playoffPicture.ts` — fixed league structure,
+not data — and a unit test asserts every one of them resolves, since a gap would
+render a blank where a division belongs and report nothing.
 
 ### 4. It describes, it does not predict
 
@@ -115,10 +138,13 @@ chip; the Phillies get the same red dot marker every other table in the app uses
 to mark their row. Clinch state is shown where MLB reports it, in the same green
 as the wild card table's indicator.
 
-### 5. Self-hiding, and mounted outside the other fetches' branches
+### 5. Self-hiding per league, and mounted outside the other fetches' branches
 
-Renders `null` unless the field is complete (three leaders **and** three wild card
-clubs) — same convention as `HeroStrip`, `MatchupPreview`, `BullpenUsage` and
+**Each league resolves and fails on its own** — a dead AL request leaves the NL
+bracket standing and drops to a single centred column, the same independence
+`LeagueRankings`' two cards and `PlayoffPush`' two fetches already have. A league
+renders `null` unless its field is complete (three leaders **and** three wild card
+clubs), and the panel disappears only when neither league has one — same convention as `HeroStrip`, `MatchupPreview`, `BullpenUsage` and
 `WildCardStandings`. That covers the offseason, the first days of a season, a
 failed request, and any future format change that would make a six-team bracket a
 lie. It mounts outside `Standings`' loading/error branches like its siblings, so a
@@ -127,20 +153,31 @@ division-standings failure cannot take it down and it cannot take them down.
 ### 6. Placement: full width, above the two-column grid
 
 The Standings tab is a two-column grid from `lg` up (division-left, race-right).
-The bracket is neither: it is the tab's headline and it wants horizontal room —
-two bye cards beside two series cards. So `Standings` gains one level of
-structure, `space-y-8` wrapping the bracket above the existing grid, and the grid
-itself is untouched. Below `lg` the bracket stacks to a single column like
-everything else.
+The bracket is neither: it is the tab's headline and it wants horizontal room. So
+`Standings` gains one level of structure, `space-y-8` wrapping the bracket above
+the existing grid, and the grid itself is untouched.
+
+Inside the panel the two columns are the two **leagues**, NL first because this is
+a Phillies app. Each league is one column of three cards — a byes card holding
+seeds 1 and 2, then the 3v6 and 4v5 series — rather than byes-beside-series, which
+is what lets both leagues occupy roughly the height one league took. Below `lg`
+they stack, NL then AL.
 
 ## Data flow
 
 ```
 Standings
-  ├── useWildCardRace()      (already there — now spread into three children)
-  ├── useDivisionLeaders()   (new hook; shares fetchStandings' cache entry)
-  └── PlayoffPicture         (pure render over both, via utils/playoffPicture.ts)
+  ├── useWildCardRace()               NL — already there, now spread into three children
+  ├── useDivisionLeaders(NL)          new hook; shares fetchStandings' cache entry
+  └── PlayoffPicture                  takes both as props
+        ├── useWildCardRace({ leagueId: AL, tiebreakWindow: 4 })
+        └── useDivisionLeaders(AL)    the AL's two requests, owned here
 ```
+
+The AL hooks live in the component rather than in `Standings` because nothing else
+in the app wants that data — the same arrangement as `LeagueRankings`. The
+prop-passing convention exists to prevent *duplicate* fetches, and there is no
+second consumer to duplicate against.
 
 `src/utils/playoffPicture.ts` holds all the seeding logic as pure functions over
 plain records, unit-tested in `src/utils/__tests__/playoffPicture.test.ts` —
@@ -149,16 +186,15 @@ incomplete-field null, and the first-team-out boundary.
 
 ## Non-goals
 
-- **No AL bracket.** This is a Phillies app; a second bracket doubles the requests
-  and the height to show a field the reader has no stake in.
 - **No playoff probabilities.** Requires simulating the rest of the league; anything
   less is a fabricated number wearing false precision.
 - **No historical/what-if seeding.** The tab states today.
 
 ## Cost
 
-No new endpoint, no new npm dependency, no backend change, no DB or secret change,
-no new e2e fixture. One LaunchDarkly flag, `enablePlayoffPicture`, defaulted `true`
+No new endpoint, no new npm dependency, no backend change, no DB or secret change.
+Two new e2e fixtures (the AL's two standings responses); no existing fixture is
+re-recorded. One LaunchDarkly flag, `enablePlayoffPicture`, defaulted `true`
 in the `useFlags()` destructure — the same posture as `enableMatchupPreview`,
 `enableBattingForm` and `enableLeagueRankings`, which do not exist in LaunchDarkly
 yet and therefore always serve the code default.

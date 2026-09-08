@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchStandings } from '../api/mlb'
+import { fetchStandings, NL_LEAGUE_ID } from '../api/mlb'
 import type { StandingsRecord } from '../types/mlb'
 import { useDivisionLeaders } from '../hooks/useDivisionLeaders'
 import { useWildCardRace } from '../hooks/useWildCardRace'
@@ -26,10 +26,11 @@ export default function Standings({ enableLeagueRankings = true, enablePlayoffPi
   // playoff position, and the tiebreaker round trips are expensive enough that
   // fetching them twice would be wasteful as well as divergence-prone.
   const race = useWildCardRace()
-  // Costs no request of its own: fetchDivisionLeaders reads the same standings
-  // URL fetchStandings already asked for, so the bracket is served from the
-  // cache entry the effect below fills.
-  const leaders = useDivisionLeaders()
+  // Costs no request of its own: fetchDivisionLeaders(NL) reads the same
+  // standings URL fetchStandings already asked for, so the bracket's NL half is
+  // served from the cache entry the effect below fills. The bracket's AL half
+  // owns its own two requests — nothing else in the app wants them.
+  const leaders = useDivisionLeaders(NL_LEAGUE_ID)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {

@@ -1201,3 +1201,13 @@ Task 4: complete
   - Minor (accepted): division NAMES come from a local id->name map, since the only way to get them from the API is a hydrate that would change the URL and cost a second request. Division ids are fixed league structure.
   - Minor (accepted): tiebreaker criterion 4 (last half of intraleague games) is still unimplemented upstream in utils/tiebreakers.ts, so two leaders tied through criterion 3 keep the API's order — same limitation the wild card table already carries.
 All tasks complete.
+
+Follow-up (same day, requested): both leagues, not just the NL.
+
+- fetchDivisionLeaders / fetchWildCardStandings take a leagueId; useWildCardRace takes { leagueId, tiebreakWindow }. Every existing call site and URL is unchanged, so HeroStrip / PlayoffPush / WildCardStandings are untouched and no recorded fixture moved.
+- Kept one league per request rather than leagueId=103,104 (81KB vs 40KB measured, and fetchStandings is HeroStrip's, which runs on every tab). Confirmed in the browser: 4 standings requests on the tab, the NL regularSeason one shared with fetchStandings.
+- AL asks for tiebreakWindow 4 (three in plus first out) rather than the seven rows the wild card table renders.
+- Live AL is the format trap in the flesh: NYY 81-62 seeds 4th, below CWS 75-68 on a bye and HOU 73-71 hosting. Good confirmation the two lists are never merged.
+- Layout: each league is one column of three cards (byes card + two series) so both leagues fit in about the height the single NL bracket took.
+- Two new fixtures recorded surgically (AL regularSeason, AL wildCard) instead of a full re-record, which would have refreshed every fixture with 09-08 data against a clock frozen to 09-03.
+- Verified 1280 dark, 1280 light, 375 dark: 0px overflow, nothing past the right edge, no app console errors. 255 unit tests, 39 smoke tests, lint and build green.

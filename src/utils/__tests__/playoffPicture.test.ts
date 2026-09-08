@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DivisionLeaderRecord, WildCardRecord } from '../../types/mlb'
-import { buildPlayoffPicture, byRecord, seedOf } from '../playoffPicture'
+import { buildPlayoffPicture, byRecord, DIVISION_NAMES, divisionName, seedOf } from '../playoffPicture'
 
 const PHILLIES = 143
 
@@ -168,5 +168,22 @@ describe('seedOf', () => {
     expect(seedOf(picture, 109)).toBe(6)
     expect(seedOf(picture, 135)).toBeNull() // first team out
     expect(seedOf(null, PHILLIES)).toBeNull()
+  })
+})
+
+describe('divisionName', () => {
+  it('names all six divisions', () => {
+    // The standings response carries a division id and no name, so a gap here
+    // renders a blank where a division belongs and reports nothing.
+    for (const id of [200, 201, 202, 203, 204, 205]) {
+      expect(divisionName(id), `division ${id}`).toMatch(/^(AL|NL) (East|Central|West)$/)
+    }
+    expect(new Set(Object.values(DIVISION_NAMES)).size).toBe(6)
+  })
+
+  it('is empty rather than undefined for an id it has never met', () => {
+    // A realignment must degrade to a missing label, never to "undefined" printed
+    // in the middle of a bracket.
+    expect(divisionName(999)).toBe('')
   })
 })

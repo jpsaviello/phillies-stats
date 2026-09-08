@@ -8,7 +8,29 @@ import type { DivisionLeaderRecord, WildCardRecord } from '../types/mlb'
  * design spec.
  */
 
-/** The NL sends three division winners and three wild cards. */
+/**
+ * MLB's division ids, and the only place their names live.
+ *
+ * The standings response nests a division id on each group and carries no name
+ * for it at any hydration level that keeps the request one league wide, so this
+ * map supplies them. It is fixed league structure rather than data — the ids have
+ * not moved since the 1994 realignment — and a missing entry would render a blank
+ * where a division belongs, silently, which is why every id is unit-tested.
+ */
+export const DIVISION_NAMES: Record<number, string> = {
+  200: 'AL West',
+  201: 'AL East',
+  202: 'AL Central',
+  203: 'NL West',
+  204: 'NL East',
+  205: 'NL Central',
+}
+
+export function divisionName(divisionId: number): string {
+  return DIVISION_NAMES[divisionId] ?? ''
+}
+
+/** Each league sends three division winners and three wild cards. */
 export const DIVISION_WINNERS = 3
 export const WILD_CARDS = 3
 export const FIELD_SIZE = DIVISION_WINNERS + WILD_CARDS
