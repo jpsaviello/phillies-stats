@@ -67,6 +67,18 @@ test('the playoff picture seeds a full field in both leagues', async ({ page }) 
     await expect(page.getByText(round, { exact: true }).first(), round).toBeAttached()
   }
 
+  // Every seeded club carries its club mark. Worth asserting because the failure
+  // is invisible: the <img> hides itself on error, so a broken URL leaves a
+  // bracket that still reads correctly and simply has no logos in it — which is
+  // exactly what the development sandbox shows, since it blocks mlbstatic.com.
+  // Twelve clubs, drawn twice (bracket plus the stacked fallback).
+  const picture = page.getByRole('region', { name: 'Playoff Picture' })
+  const logos = picture.locator('img[src*="team-logos"]')
+  await expect(logos).toHaveCount(24)
+  for (const box of await logos.all()) {
+    expect(await box.getAttribute('src')).toMatch(/^https:\/\/www\.mlbstatic\.com\/team-logos\/\d+\.svg$/)
+  }
+
   expect(app.missingFixtures, 'uncovered API calls — re-run npm run test:e2e:record').toEqual([])
   expect(app.consoleErrors).toEqual([])
 })

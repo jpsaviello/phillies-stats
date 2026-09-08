@@ -54,7 +54,14 @@ const HALF_SPLIT = 24
 const CONNECTOR_W = 18
 /** The stub that carries a winner from the vertical bar into the next box. */
 const STUB_W = 8
-const TEAM_W = 132
+/**
+ * Wide enough for the seed chip, the club logo at a size worth drawing, and the
+ * longest short club name ("Guardians", "White Sox", "Nationals") without
+ * truncating it. The bracket has width to spare against the 1,248px container,
+ * and a truncated club name in a diagram whose whole job is naming the field is
+ * worse than a narrower one.
+ */
+const TEAM_W = 140
 const ROUND_W = 108
 /** The centre channel the World Series label sits in. */
 const GUTTER_W = 96

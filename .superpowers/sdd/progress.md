@@ -1221,3 +1221,11 @@ Follow-up 2 (same day, requested): draw it as the mirrored tournament bracket, n
 - e2e assertions had to become exact + presence-based: the empty slots' sr-only labels contain the round names, and "NL Wild Card" is also PlayoffPush's card label on the same tab.
 - Verified 1440 dark, 1440 light, 1100 (stacked), 375: 0px overflow, nothing past the right edge, 0 contrast failures in both themes, no app console errors. 261 unit tests, 39 smoke tests, lint and build green.
 - NL is the left half because this is a Phillies app; the reference bracket puts the AL there and `side` is the only thing that would change.
+
+Follow-up 3: team logos.
+
+- They were already wired at both call sites and are blank in every screenshot from here because the sandbox cannot reach www.mlbstatic.com at all (curl returns http=000, matching what CLAUDE.md documents). Confirmed rather than assumed before touching anything.
+- Made them worth drawing: 16px -> 20px in the bracket, and the team column 132 -> 140 so the seed chip, logo and the longest short club name ("Guardians", "White Sox", "Nationals") all fit without truncating. BRACKET_WIDTH 1164 -> 1196, still inside the 1248 the geometry test guards.
+- Verified by intercepting the blocked host and serving stand-in SVGs at the same URLs, so the layout WITH images could be seen and measured: 12 logos at 20px in the panel, none broken, 0px overflow at 1440 (both themes) and 375.
+- Added the assertion that was missing: 24 img[src*="team-logos"] inside the panel, each with a well-formed URL. Nothing checked this before, and the failure is invisible — the onError hide means a broken URL leaves a bracket that reads fine and simply has no logos.
+- Panel root became <section aria-label="Playoff Picture">, which is both a real landmark and what scopes that count (HeroStrip draws logos on the same page).

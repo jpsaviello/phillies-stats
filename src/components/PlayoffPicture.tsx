@@ -42,7 +42,13 @@ interface League {
 /* Shared pieces                                                              */
 /* -------------------------------------------------------------------------- */
 
-/** The club's logo, hidden rather than broken when the image can't be fetched. */
+/**
+ * The club's mark — how a bracket is read at a glance, before any name is.
+ *
+ * Hidden rather than broken when the image can't be fetched: every box is laid
+ * out to read correctly without it, which is not hypothetical, since the
+ * development sandbox blocks mlbstatic.com outright.
+ */
 function Logo({ teamId, size }: { teamId: number; size: string }) {
   return (
     <img
@@ -135,7 +141,7 @@ function BracketTeam({
   return (
     <Box x={x} y={y} width={BRACKET.teamWidth} className="card flex items-center gap-1.5 px-1.5">
       <SeedChip seed={team.seed} size="h-5 w-5" />
-      <Logo teamId={team.teamId} size="h-4 w-4" />
+      <Logo teamId={team.teamId} size="h-5 w-5" />
       <span className="min-w-0 flex-1 leading-tight">
         <span className="flex items-center gap-1">
           {isPhillies && (
@@ -548,7 +554,10 @@ export default function PlayoffPicture({ wildCard, divisionLeaders }: Props) {
   const bracket = shown.length === 2 ? (shown as [League, League]) : null
 
   return (
-    <div>
+    // A labelled region rather than a bare div: this is a large, self-contained
+    // block on a tab full of them, and it is the one a reader navigating by
+    // landmark would want to jump to.
+    <section aria-label="Playoff Picture">
       <SectionHead
         title="Playoff Picture"
         hint="Seeds if the season ended today. The three division winners hold the top seeds whatever anyone's record is; the wild cards seed 4 through 6, and the higher seed hosts every game of a Wild Card Series."
@@ -583,6 +592,6 @@ export default function PlayoffPicture({ wildCard, divisionLeaders }: Props) {
           intradivision, then intraleague record.
         </p>
       )}
-    </div>
+    </section>
   )
 }
