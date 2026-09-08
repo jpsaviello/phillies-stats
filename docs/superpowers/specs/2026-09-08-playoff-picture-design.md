@@ -157,11 +157,32 @@ The bracket is neither: it is the tab's headline and it wants horizontal room. S
 `Standings` gains one level of structure, `space-y-8` wrapping the bracket above
 the existing grid, and the grid itself is untouched.
 
-Inside the panel the two columns are the two **leagues**, NL first because this is
-a Phillies app. Each league is one column of three cards — a byes card holding
-seeds 1 and 2, then the 3v6 and 4v5 series — rather than byes-beside-series, which
-is what lets both leagues occupy roughly the height one league took. Below `lg`
-they stack, NL then AL.
+Inside the panel it is the **mirrored tournament bracket** every October graphic
+uses: NL running inward from the left, AL inward from the right, meeting at the
+World Series in the centre, with a dashed empty box for every round the standings
+cannot decide. NL is the left half because this is a Phillies app — the reference
+brackets put the AL there, and `side` is the only thing that would have to change.
+
+**Two layouts, and both are needed.** The bracket is 1,164px of fixed geometry, so
+it draws at `xl` and up; below that the same model renders as stacked cards (a
+byes card over the two Wild Card Series per league, two columns from `lg`). Both
+subtrees are always in the DOM and CSS picks one — a JS breakpoint would flash the
+wrong layout on first paint, and `display: none` keeps the hidden one away from
+screen readers. The bracket needs two leagues to mirror, so a single resolved
+field falls back to the stacked cards at every width.
+
+**The geometry lives in `playoffPicture.ts`, not the component**, for the reason
+`SPRAY_FRAME` does. Every connector is a bracket spanning two slots whose stub
+must land exactly on the centre of the box it feeds, so every row is derived
+rather than typed in, and the invariants are unit-tested: the midpoints, the
+symmetry of the two halves, no two boxes overlapping in the crowded Division
+Series column, and `BRACKET_WIDTH <= 1248` — a bracket wider than the container
+simply overflows the page. `mirrorX` is the only difference between the halves.
+
+**The empty boxes are the feature, not filler.** They are what makes this a
+bracket rather than a list, and they are the honest rendering of a round the
+standings cannot decide. They carry `sr-only` labels, since a dashed rectangle
+reads as nothing without one.
 
 ## Data flow
 

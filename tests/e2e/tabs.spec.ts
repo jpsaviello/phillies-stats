@@ -43,13 +43,29 @@ test('the playoff picture seeds a full field in both leagues', async ({ page }) 
   await gotoTab(page, 'standings')
 
   await expect(page.getByRole('heading', { name: 'Playoff Picture' })).toBeVisible()
+
   // Structure, not clubs: which teams are in each field is a property of the
-  // fixture and will change the next time it's recorded, but each league is
-  // always one byes card and two Wild Card Series.
-  await expect(page.getByRole('heading', { name: 'National League' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'American League' })).toBeVisible()
-  await expect(page.getByText('First-round byes')).toHaveCount(2)
-  await expect(page.getByText('Wild Card Series')).toHaveCount(4)
+  // fixture and will change the next time it's recorded, but a full picture is
+  // always one byes card and two Wild Card Series per league in the stacked
+  // layout, and one mirrored bracket with both leagues' rounds labelled.
+  //
+  // Counted rather than asserted visible on purpose: the panel draws the
+  // bracket at `xl` and the stacked cards below it, so which one a given
+  // viewport shows depends on whether a scrollbar eats the breakpoint. Both are
+  // in the DOM either way, and a league whose field came up short renders
+  // NEITHER — which is the silence this test exists to catch.
+  // `exact` throughout: the empty bracket slots carry screen-reader labels like
+  // "NL Wild Card Series winner, to be decided", and a substring match counts
+  // those and their ancestors too.
+  await expect(page.getByText('First-round byes', { exact: true })).toHaveCount(2)
+  await expect(page.getByText('Wild Card Series', { exact: true })).toHaveCount(4)
+  // Presence rather than a count: "NL Wild Card" is also Playoff Push's card
+  // label further down the same tab, and this assertion is about the bracket
+  // having drawn every round of both leagues, not about how many times a phrase
+  // appears on the page.
+  for (const round of ['NL Wild Card', 'NLDS', 'NLCS', 'AL Wild Card', 'ALDS', 'ALCS']) {
+    await expect(page.getByText(round, { exact: true }).first(), round).toBeAttached()
+  }
 
   expect(app.missingFixtures, 'uncovered API calls — re-run npm run test:e2e:record').toEqual([])
   expect(app.consoleErrors).toEqual([])

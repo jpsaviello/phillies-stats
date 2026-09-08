@@ -30,6 +30,110 @@ export function divisionName(divisionId: number): string {
   return DIVISION_NAMES[divisionId] ?? ''
 }
 
+/* ---------------------------------------------------------------------------
+   Bracket geometry.
+
+   The diagram's shape never varies — four clubs in the Wild Card round, two
+   byes entering at the Division Series, two Championship Series slots and a
+   pennant box per league — so the whole thing is arithmetic on a handful of
+   constants, and it lives here rather than in the component for the reason
+   SPRAY_FRAME does: a connector whose midpoint drifts a few pixels off the box
+   it points at is a silent defect no browser will ever report, and a bracket
+   wider than the column it is drawn in just overflows. Both are unit-tested.
+   --------------------------------------------------------------------------- */
+
+/** Height of every box in the bracket — team boxes and empty slots alike. */
+const BOX_H = 44
+/** Air between the two boxes of one matchup. */
+const MATCH_GAP = 8
+/** Centre-to-centre of those two boxes. */
+const PITCH = BOX_H + MATCH_GAP
+/** Air between the top half of a league's bracket and the bottom half. */
+const HALF_SPLIT = 24
+
+const CONNECTOR_W = 18
+/** The stub that carries a winner from the vertical bar into the next box. */
+const STUB_W = 8
+const TEAM_W = 132
+const ROUND_W = 108
+/** The centre channel the World Series label sits in. */
+const GUTTER_W = 96
+/** Room above the boxes for the round labels. */
+const LABEL_H = 22
+
+export const BRACKET = {
+  boxHeight: BOX_H,
+  labelHeight: LABEL_H,
+  connectorWidth: CONNECTOR_W,
+  stubWidth: STUB_W,
+  barWidth: CONNECTOR_W - STUB_W,
+  teamWidth: TEAM_W,
+  roundWidth: ROUND_W,
+  gutterWidth: GUTTER_W,
+} as const
+
+/**
+ * Centre y of every slot in one league's bracket, top to bottom.
+ *
+ * Each value is derived rather than typed in, because every connector in the
+ * diagram is a bracket spanning two of these whose stub lands on a third — so
+ * the midpoints have to be exact, not close.
+ */
+function bracketRows() {
+  const wildCardA = BOX_H / 2
+  const wildCardB = wildCardA + PITCH
+  // The Wild Card Series winner enters the Division Series opposite the bye
+  // club, so its empty box sits on that matchup's centre line.
+  const wildCardWinner = (wildCardA + wildCardB) / 2
+  const bye = wildCardWinner + PITCH
+  const championship = (wildCardWinner + bye) / 2
+  const byeLower = bye + BOX_H + HALF_SPLIT
+  const centre = (bye + byeLower) / 2
+  const flip = (y: number) => 2 * centre - y
+
+  return {
+    height: centre * 2,
+    centre,
+    /** Seeds 4, 5, 3 and 6 — the clubs that actually play the Wild Card round. */
+    wildCard: [wildCardA, wildCardB, flip(wildCardB), flip(wildCardA)] as const,
+    /** The empty box each Wild Card Series feeds. */
+    wildCardWinner: [wildCardWinner, flip(wildCardWinner)] as const,
+    /** Seeds 1 and 2, who skip a round and enter here. */
+    bye: [bye, byeLower] as const,
+    /** The two Championship Series slots. */
+    championship: [championship, flip(championship)] as const,
+    /** The pennant box, which faces the other league's across the gutter. */
+    pennant: centre,
+  }
+}
+
+export const BRACKET_ROWS = bracketRows()
+
+const wildCardX = 0
+const divisionSeriesX = wildCardX + TEAM_W + CONNECTOR_W
+const championshipX = divisionSeriesX + TEAM_W + CONNECTOR_W
+const pennantX = championshipX + ROUND_W + CONNECTOR_W
+
+/** Left edge of each column for the league drawn on the LEFT, running inward. */
+export const BRACKET_COLUMNS = {
+  wildCard: wildCardX,
+  divisionSeries: divisionSeriesX,
+  championship: championshipX,
+  pennant: pennantX,
+} as const
+
+export const BRACKET_WIDTH = (pennantX + ROUND_W) * 2 + GUTTER_W
+
+/**
+ * The same column on the right-hand league, whose bracket runs the other way.
+ *
+ * One mirror rather than a second set of constants: the two halves are the same
+ * diagram, and two lists of numbers would be two lists to keep in step.
+ */
+export function mirrorX(x: number, width: number) {
+  return BRACKET_WIDTH - x - width
+}
+
 /** Each league sends three division winners and three wild cards. */
 export const DIVISION_WINNERS = 3
 export const WILD_CARDS = 3

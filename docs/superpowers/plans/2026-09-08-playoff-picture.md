@@ -34,10 +34,15 @@ the NL regularSeason one shared with `fetchStandings` rather than duplicated.
 
 ## Task 3 — the graphic
 
-- `src/components/PlayoffPicture.tsx`: per league a byes card, two series cards
-  and a first-team-out line; the two leagues side by side from `lg`, each
-  resolving and failing on its own. The AL's two hooks are owned here, since
-  nothing else in the app wants that data. No colour-by-seed.
+- `src/utils/playoffPicture.ts`: the bracket's geometry — every row derived so
+  each connector's stub lands on the centre of the box it feeds — plus tests for
+  the midpoints, the symmetry, the crowded Division Series column, and the whole
+  diagram fitting its container.
+- `src/components/PlayoffPicture.tsx`: the mirrored bracket at `xl` (NL inward
+  from the left, AL from the right, World Series in the centre, a dashed empty
+  box for every undecided round) and the stacked cards below it, both from one
+  model, each league resolving and failing on its own. The AL's two hooks are
+  owned here, since nothing else in the app wants that data. No colour-by-seed.
 - `src/components/Standings.tsx`: mount it full width above the existing grid,
   outside every fetch's loading/error branch.
 - `src/App.tsx`: `enablePlayoffPicture`, defaulted true.
@@ -45,8 +50,10 @@ the NL regularSeason one shared with `fetchStandings` rather than duplicated.
 ## Task 4 — verification
 
 - `npm run build`, `npm run lint`, `npm test`.
-- `tests/e2e/tabs.spec.ts`: one structural assertion (both league headings, two
-  byes cards, four series), since a self-hiding panel's failure mode is silence.
+- `tests/e2e/tabs.spec.ts`: one structural assertion (two byes cards and four
+  Wild Card Series stacked, every round label of both leagues in the bracket),
+  since a self-hiding panel's failure mode is silence. Counted, not asserted
+  visible: which layout a viewport shows depends on the scrollbar.
   Suite must stay hermetic: record the AL's two standings fixtures only, rather
   than re-recording every fixture against a clock frozen five days back.
 - `webapp-testing`: both themes, 1280 and 375, request accounting, contrast.

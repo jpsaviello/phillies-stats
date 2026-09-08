@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { DivisionLeaderRecord, WildCardRecord } from '../../types/mlb'
-import { buildPlayoffPicture, byRecord, DIVISION_NAMES, divisionName, seedOf } from '../playoffPicture'
+import {
+  BRACKET,
+  BRACKET_COLUMNS,
+  BRACKET_ROWS,
+  BRACKET_WIDTH,
+  buildPlayoffPicture,
+  byRecord,
+  DIVISION_NAMES,
+  divisionName,
+  mirrorX,
+  seedOf,
+} from '../playoffPicture'
 
 const PHILLIES = 143
 
@@ -185,5 +196,77 @@ describe('divisionName', () => {
     // A realignment must degrade to a missing label, never to "undefined" printed
     // in the middle of a bracket.
     expect(divisionName(999)).toBe('')
+  })
+})
+
+describe('bracket geometry', () => {
+  const rows = BRACKET_ROWS
+  const midpoint = (a: number, b: number) => (a + b) / 2
+
+  it('lands every connector stub on the centre of the box it feeds', () => {
+    // Each connector is a bracket spanning two slots whose stub carries the
+    // winner into a third. Off-by-a-pixel here is a diagram that looks broken
+    // and reports nothing, so the midpoints are asserted rather than eyeballed.
+    expect(rows.wildCardWinner[0]).toBe(midpoint(rows.wildCard[0], rows.wildCard[1]))
+    expect(rows.wildCardWinner[1]).toBe(midpoint(rows.wildCard[2], rows.wildCard[3]))
+    expect(rows.championship[0]).toBe(midpoint(rows.wildCardWinner[0], rows.bye[0]))
+    expect(rows.championship[1]).toBe(midpoint(rows.bye[1], rows.wildCardWinner[1]))
+    expect(rows.pennant).toBe(midpoint(rows.championship[0], rows.championship[1]))
+  })
+
+  it('is symmetric about its own centre line', () => {
+    const flip = (y: number) => 2 * rows.centre - y
+    expect(rows.wildCard[3]).toBe(flip(rows.wildCard[0]))
+    expect(rows.wildCard[2]).toBe(flip(rows.wildCard[1]))
+    expect(rows.wildCardWinner[1]).toBe(flip(rows.wildCardWinner[0]))
+    expect(rows.bye[1]).toBe(flip(rows.bye[0]))
+    expect(rows.championship[1]).toBe(flip(rows.championship[0]))
+    expect(rows.pennant).toBe(rows.centre)
+  })
+
+  it('keeps every box inside the frame it is drawn in', () => {
+    const half = BRACKET.boxHeight / 2
+    const every = [
+      ...rows.wildCard,
+      ...rows.wildCardWinner,
+      ...rows.bye,
+      ...rows.championship,
+      rows.pennant,
+    ]
+    for (const y of every) {
+      expect(y - half, `top of ${y}`).toBeGreaterThanOrEqual(0)
+      expect(y + half, `bottom of ${y}`).toBeLessThanOrEqual(rows.height)
+    }
+  })
+
+  it('never overlaps two boxes in the same column', () => {
+    // The Division Series column is the crowded one: a Wild Card winner slot,
+    // both byes, and the second winner slot all stack up in it.
+    const column = [rows.wildCardWinner[0], rows.bye[0], rows.bye[1], rows.wildCardWinner[1]]
+    for (let i = 1; i < column.length; i++) {
+      expect(column[i] - column[i - 1]).toBeGreaterThanOrEqual(BRACKET.boxHeight)
+    }
+  })
+
+  it('fits the widest container it is ever drawn in', () => {
+    // The panel sits in <main>'s max-w-7xl (1280px) less its px-4 gutters, and
+    // the bracket is a fixed pixel width — so it either fits or it overflows the
+    // page. This is the guard on widening a column by eye.
+    expect(BRACKET_WIDTH).toBeLessThanOrEqual(1280 - 32)
+  })
+
+  it('mirrors a column onto the other league without a second set of constants', () => {
+    const { teamWidth, roundWidth } = BRACKET
+    expect(mirrorX(BRACKET_COLUMNS.wildCard, teamWidth)).toBe(BRACKET_WIDTH - teamWidth)
+    // Round-trips, so the right-hand league is the left one reflected exactly.
+    expect(mirrorX(mirrorX(BRACKET_COLUMNS.championship, roundWidth), roundWidth)).toBe(
+      BRACKET_COLUMNS.championship
+    )
+    // The two pennant boxes face each other across the gutter, and nothing else
+    // may sit between them.
+    const leftPennantRight = BRACKET_COLUMNS.pennant + roundWidth
+    expect(mirrorX(BRACKET_COLUMNS.pennant, roundWidth) - leftPennantRight).toBe(
+      BRACKET.gutterWidth
+    )
   })
 })

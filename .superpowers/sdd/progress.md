@@ -1211,3 +1211,13 @@ Follow-up (same day, requested): both leagues, not just the NL.
 - Layout: each league is one column of three cards (byes card + two series) so both leagues fit in about the height the single NL bracket took.
 - Two new fixtures recorded surgically (AL regularSeason, AL wildCard) instead of a full re-record, which would have refreshed every fixture with 09-08 data against a clock frozen to 09-03.
 - Verified 1280 dark, 1280 light, 375 dark: 0px overflow, nothing past the right edge, no app console errors. 255 unit tests, 39 smoke tests, lint and build green.
+
+Follow-up 2 (same day, requested): draw it as the mirrored tournament bracket, not two stacked lists.
+
+- NL runs inward from the left, AL from the right, meeting at the World Series in the centre; a dashed empty box for every round the standings cannot decide, which is what makes it a bracket rather than a list.
+- Geometry moved into playoffPicture.ts (BRACKET / BRACKET_ROWS / BRACKET_COLUMNS / mirrorX), every row derived rather than typed in, with tests for the connector midpoints, the halves' symmetry, no overlap in the Division Series column, and BRACKET_WIDTH <= 1248. Same posture as SPRAY_FRAME: a drifted midpoint or an overwide diagram reports nothing.
+- Two layouts: bracket at xl, the existing stacked cards below it, both from one model, CSS picking between them (a JS breakpoint would flash the wrong one on first paint). A single resolved league falls back to stacked at every width, since a mirror needs two halves.
+- Bug caught in the browser pass, not by any test: the round labels were positioned at top:0 of the BOXES container, which is offset down by labelHeight — so the outermost label rendered underneath the first team box instead of above it. Labels now live in their own strip in the outer container.
+- e2e assertions had to become exact + presence-based: the empty slots' sr-only labels contain the round names, and "NL Wild Card" is also PlayoffPush's card label on the same tab.
+- Verified 1440 dark, 1440 light, 1100 (stacked), 375: 0px overflow, nothing past the right edge, 0 contrast failures in both themes, no app console errors. 261 unit tests, 39 smoke tests, lint and build green.
+- NL is the left half because this is a Phillies app; the reference bracket puts the AL there and `side` is the only thing that would change.
