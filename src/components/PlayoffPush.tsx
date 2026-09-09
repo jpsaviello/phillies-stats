@@ -48,7 +48,8 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
       .catch(() => setLeagueRecords(null))
   }, [])
 
-  const phillies = divisionRecords.find(r => r.team.id === PHILLIES_ID)
+  const philliesDivisionIndex = divisionRecords.findIndex(r => r.team.id === PHILLIES_ID)
+  const phillies = divisionRecords[philliesDivisionIndex]
   if (!phillies) return null
 
   const wildCardIndex = records.findIndex(r => r.team.id === PHILLIES_ID)
@@ -132,7 +133,11 @@ export default function PlayoffPush({ divisionRecords, records, notes, loading }
         <Card label="NL East">
           <Stat>{phillies.gamesBack === '-' ? 'First' : `${phillies.gamesBack} GB`}</Stat>
           <p className="mt-1 text-xs text-gray-600">
-            {ordinal(Number(phillies.divisionRank))} of {divisionRecords.length} · {phillies.wins}-
+            {/* Positional, not phillies.divisionRank — MLB's rank breaks a tie by
+                ascending team id, so on a tie it would state a different position
+                from the tiebroken NL East table directly below this panel. Same
+                reasoning as the # column in WildCardStandings. */}
+            {ordinal(philliesDivisionIndex + 1)} of {divisionRecords.length} · {phillies.wins}-
             {phillies.losses}
           </p>
           {divisionMagic !== null ? (

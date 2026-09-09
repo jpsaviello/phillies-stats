@@ -144,7 +144,18 @@ export interface SplitRecords {
 }
 
 export interface StandingsRecord {
-  team: { id: number; name: string }
+  team: {
+    id: number
+    name: string
+    /**
+     * Attached by fetchStandings from the GROUP the record arrived in — the
+     * regularSeason response nests division id there, never on the team. It is
+     * what makes this assignable to TiebreakerRecord: criterion 2 of the chain
+     * needs to know which of a club's three divisionRecords is its own, and a
+     * missing id silently skips that criterion rather than erroring.
+     */
+    division?: { id: number }
+  }
   wins: number
   losses: number
   gamesBack: string

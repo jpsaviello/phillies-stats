@@ -103,6 +103,25 @@ describe('applyTiebreakers', () => {
     expect(ordered.map(r => r.team.id)).toEqual([3, 2])
   })
 
+  it('cannot reach intradivision without a division id on the team', () => {
+    // Not a hypothetical: the regularSeason response nests the division id on the
+    // GROUP, never on the team, so fetchStandings/fetchDivisionLeaders attach it.
+    // Drop that step and criterion 2 finds no split to read, the chain falls
+    // through to intraleague, and the order silently changes — no error anywhere.
+    // Here intradivision favours club 2 and intraleague favours club 3.
+    const splits = (divisionWins: number, leagueWins: number) => ({
+      divisionRecords: [{ division: { id: NL_EAST }, wins: divisionWins, losses: 40 - divisionWins }],
+      leagueRecords: [{ league: { id: NL }, wins: leagueWins, losses: 80 - leagueWins }],
+    })
+    const even = results([[2, 3, 3], [3, 2, 3]])
+
+    const attached = [record(2, 74, 61, NL_EAST, splits(30, 40)), record(3, 74, 61, NL_EAST, splits(20, 50))]
+    expect(applyTiebreakers(attached, even, NL).ordered.map(r => r.team.id)).toEqual([2, 3])
+
+    const unattached: TiebreakerRecord[] = attached.map(r => ({ ...r, team: { id: r.team.id } }))
+    expect(applyTiebreakers(unattached, even, NL).ordered.map(r => r.team.id)).toEqual([3, 2])
+  })
+
   it('keeps the API order when every criterion is exhausted', () => {
     const records = [record(2, 74, 61), record(3, 74, 61)]
     const { ordered } = applyTiebreakers(records, new Map(), NL)
@@ -132,6 +151,19 @@ describe('applyTiebreakers', () => {
     ])
     const { ordered } = applyTiebreakers(records, h2h, NL)
     expect(ordered.map(r => r.team.id)).toEqual([4, 3, 2])
+  })
+
+  it('resolves a tie for the last place in the division, not just a contending one', () => {
+    // useDivisionRace passes records.length as the window because the NL East
+    // table renders every row it fetches: a tie for fourth prints in team-id
+    // order just as visibly as one for first.
+    const standings = [record(1, 90, 50), record(2, 85, 55), record(3, 80, 60), record(4, 70, 70), record(5, 70, 70)]
+    expect(teamsNeedingTiebreak(standings, standings.length).sort()).toEqual([4, 5])
+
+    const h2h = results([[5, 4, 8], [4, 5, -8]])
+    const { ordered, notes } = applyTiebreakers(standings, h2h, NL)
+    expect(ordered.map(r => r.team.id)).toEqual([1, 2, 3, 5, 4])
+    expect(notes.get(5)?.detail).toBe('Head-to-head vs tied clubs: 8-0')
   })
 
   it('preserves the clubs it was given, adding and dropping none', () => {
