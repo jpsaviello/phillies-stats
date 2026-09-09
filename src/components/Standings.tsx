@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
-import { fetchStandings, NL_LEAGUE_ID } from '../api/mlb'
-import type { StandingsRecord } from '../types/mlb'
+import { NL_LEAGUE_ID } from '../api/mlb'
 import { useDivisionLeaders } from '../hooks/useDivisionLeaders'
+import { useDivisionRace } from '../hooks/useDivisionRace'
 import { useWildCardRace } from '../hooks/useWildCardRace'
 import LeagueRankings from './LeagueRankings'
 import PlayoffPicture from './PlayoffPicture'
@@ -19,31 +18,16 @@ interface Props {
 }
 
 export default function Standings({ enableLeagueRankings = true, enablePlayoffPicture = true }: Props) {
-  const [records, setRecords] = useState<StandingsRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  // Owned here, not in either child: the panel and the table state the same
-  // playoff position, and the tiebreaker round trips are expensive enough that
-  // fetching them twice would be wasteful as well as divergence-prone.
+  // Both races are owned here rather than in the children: the panel and the
+  // tables state the same positions, and the tiebreaker round trips are expensive
+  // enough that fetching them twice would be wasteful as well as divergence-prone.
+  const { records, notes, loading, error, reload } = useDivisionRace()
   const race = useWildCardRace()
   // Costs no request of its own: fetchDivisionLeaders(NL) reads the same
-  // standings URL fetchStandings already asked for, so the bracket's NL half is
-  // served from the cache entry the effect below fills. The bracket's AL half
-  // owns its own two requests — nothing else in the app wants them.
+  // standings URL useDivisionRace already asked for, so the bracket's NL half is
+  // served from that cache entry. The bracket's AL half owns its own two
+  // requests — nothing else in the app wants them.
   const leaders = useDivisionLeaders(NL_LEAGUE_ID)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    fetchStandings()
-      .then(setRecords)
-      .catch(e => {
-        console.error('Failed to load standings', e)
-        setError("Couldn't load the standings right now.")
-      })
-      .finally(() => setLoading(false))
-  }, [reloadKey])
 
   // The panel and the wild card table both fail silently on their own, so they
   // render alongside the division table rather than inside its loading/error
@@ -80,7 +64,7 @@ export default function Standings({ enableLeagueRankings = true, enablePlayoffPi
       {loading ? (
         <TableSkeleton rows={5} cols={5} />
       ) : error ? (
-        <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
+        <ErrorState message={error} onRetry={reload} />
       ) : records.length === 0 ? (
         <EmptyState>No standings available yet.</EmptyState>
       ) : (
@@ -111,6 +95,15 @@ export default function Standings({ enableLeagueRankings = true, enablePlayoffPi
                       <span className="flex items-center gap-2">
                         {isPhillies && <span className="w-1.5 h-1.5 rounded-full bg-phillies-red inline-block" />}
                         {r.team.name}
+                        {notes.has(r.team.id) && (
+                          <span
+                            className="text-xs font-normal text-gray-500"
+                            aria-label={notes.get(r.team.id)!.detail}
+                            title={notes.get(r.team.id)!.detail}
+                          >
+                            †
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center tabular-nums">{r.wins}</td>
@@ -122,6 +115,12 @@ export default function Standings({ enableLeagueRankings = true, enablePlayoffPi
               })}
             </tbody>
           </table>
+          {notes.size > 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              † Tied on record. Order set by MLB tiebreakers: head-to-head, then
+              intradivision, then intraleague record.
+            </p>
+          )}
         </div>
       )}
       </div>

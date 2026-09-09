@@ -130,7 +130,17 @@ export async function fetchStandings() {
   // NL East division ID = 204
   const records = await regularSeason(NL_LEAGUE_ID)
   const nlEast = records.find(r => r.teamRecords.some(t => t.team.id === PHILLIES_ID))
-  return nlEast?.teamRecords ?? []
+  if (!nlEast) return []
+  // Same patch-up fetchDivisionLeaders does below, and for the same reason: the
+  // division id lives on the GROUP rather than on the team, and utils/tiebreakers.ts
+  // reads team.division.id to find a club's own intradivision split. Shaping only —
+  // the tiebreak itself stays in useDivisionRace, NOT here, because this response is
+  // also HeroStrip's and HeroStrip runs on every tab: folding the head-to-head round
+  // trips into this call would put them on tabs that never draw an order.
+  return (nlEast.teamRecords ?? []).map(record => ({
+    ...record,
+    team: { ...record.team, division: { id: nlEast.division.id } },
+  }))
 }
 
 // One league's three division leaders, in no particular order — seeding them is
