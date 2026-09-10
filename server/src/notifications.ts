@@ -341,7 +341,20 @@ export async function runDailyEmails(
   }
 }
 
-function unsubscribePage(title: string, message: string, siteUrl: string): string {
+function unsubscribePage(
+  title: string,
+  message: string,
+  siteUrl: string,
+  confirmForm?: { token: string; kind: string }
+): string {
+  const form =
+    confirmForm === undefined
+      ? ''
+      : `<form method="POST" style="margin:0 0 20px;">
+      <input type="hidden" name="token" value="${escapeHtml(confirmForm.token)}">
+      <input type="hidden" name="kind" value="${escapeHtml(confirmForm.kind)}">
+      <button type="submit" style="display:inline-block;background:#E81828;color:#fff;border:none;text-decoration:none;font-size:14px;font-weight:700;padding:11px 20px;border-radius:8px;cursor:pointer;">Unsubscribe</button>
+    </form>`
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title></head>
@@ -349,9 +362,23 @@ function unsubscribePage(title: string, message: string, siteUrl: string): strin
   <div style="max-width:520px;margin:64px auto;padding:32px;background:#fff;border-radius:12px;">
     <h1 style="margin:0 0 12px;font-size:22px;color:#002D72;">${title}</h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#374151;">${message}</p>
+    ${form}
     <a href="${siteUrl}" style="display:inline-block;background:#E81828;color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 20px;border-radius:8px;">Back to Phillies Stats</a>
   </div>
 </body></html>`
+}
+
+// Same escaping helper the email templates use for user-controlled/URL
+// values dropped into HTML -- kind/token here are attacker-reachable (a
+// crafted query string) even though the confirm form only ever renders our
+// own already-validated values.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function kindFrom(raw: string | undefined): UnsubscribeKind {
@@ -364,13 +391,23 @@ function kindFrom(raw: string | undefined): UnsubscribeKind {
  * Unauthenticated by design -- it's reached from an email, where the reader
  * has no session and should not need one. The token is 24 bytes of CSPRNG
  * output scoped to a single profile row, so it authorizes exactly one action
- * (turning that user's notification prefs off) and nothing else. POST is
- * accepted as well as GET so Gmail/Outlook's native one-click List-Unsubscribe
- * control works, which keeps an annoyed reader off the "report spam" button.
+ * (turning that user's notification prefs off) and nothing else.
+ *
+ * GET must be side-effect-free per RFC 8058: mail-security link scanners
+ * (Outlook Safe Links, corporate mail gateways, antivirus products) fetch
+ * every URL in an email -- including this one -- to check it isn't
+ * malicious, with no user ever clicking anything. A GET that mutates means
+ * those scanners silently unsubscribe every recipient shortly after each
+ * send. Only POST -- which is what a mail client's native one-click
+ * List-Unsubscribe control sends, per `List-Unsubscribe-Post` -- actually
+ * flips the prefs; GET renders the same confirmation page without touching
+ * the database, so a human clicking the link still sees a coherent flow (the
+ * page's own explanation covers why nothing changed until they submit).
  */
 export async function unsubscribe(
   token: string | undefined,
-  kind: string | undefined
+  kind: string | undefined,
+  method: 'GET' | 'POST'
 ): Promise<RouteResult> {
   const siteUrl = (process.env.SITE_ORIGIN ?? '/').replace(/\/+$/, '') || '/'
   const html = (title: string, message: string): RouteResult => ({
@@ -396,9 +433,50 @@ export async function unsubscribe(
     }
   }
 
+  const normalizedKind = kindFrom(kind)
+
+  if (method === 'GET') {
+    // Read-only: confirms the token is live and hands back a form that POSTs
+    // back here to actually flip the prefs. A link scanner fetching this GET
+    // sees the same page a human would and changes nothing.
+    try {
+      const found = await pool.query(
+        'SELECT 1 FROM user_profiles WHERE unsubscribe_token = $1 AND deleted_at IS NULL',
+        [token]
+      )
+      if ((found.rowCount ?? 0) === 0) {
+        return html(
+          'Link not recognized',
+          "That unsubscribe link is no longer valid. If you're still getting emails, sign in and turn notifications off in your profile."
+        )
+      }
+      return {
+        status: 200,
+        body: unsubscribePage(
+          'Unsubscribe from Phillies Daily?',
+          "Click below to stop these emails. You can turn them back on any time from your profile.",
+          siteUrl,
+          { token, kind: normalizedKind }
+        ),
+        contentType: 'text/html; charset=utf-8',
+      }
+    } catch (err) {
+      console.error('unsubscribe lookup failed', err)
+      return {
+        status: 502,
+        body: unsubscribePage(
+          'Something went wrong',
+          "We couldn't look up your preferences just now. Please try again later.",
+          siteUrl
+        ),
+        contentType: 'text/html; charset=utf-8',
+      }
+    }
+  }
+
   try {
     const updated = await pool.query(
-      `UPDATE user_profiles SET ${UNSUBSCRIBE_COLUMNS[kindFrom(kind)]}, updated_at = now()
+      `UPDATE user_profiles SET ${UNSUBSCRIBE_COLUMNS[normalizedKind]}, updated_at = now()
         WHERE unsubscribe_token = $1 AND deleted_at IS NULL`,
       [token]
     )

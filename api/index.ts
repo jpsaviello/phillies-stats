@@ -192,7 +192,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return reply(
           await unsubscribe(
             queryValue(queryParams['token']),
-            queryValue(queryParams['kind'])
+            queryValue(queryParams['kind']),
+            req.method
           )
         )
       }

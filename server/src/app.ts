@@ -177,14 +177,15 @@ app.get('/notifications/daily', async c =>
   reply(c, await runDailyEmails(c.req.header('authorization'), originFrom(c)))
 )
 
-// Both methods: GET for the link in the email footer, POST for the native
-// one-click Unsubscribe control Gmail/Outlook render from the
-// List-Unsubscribe header.
+// Both methods: GET for the link in the email footer (renders a confirm page,
+// no mutation -- RFC 8058, see unsubscribe()'s own comment), POST for the
+// confirm form and for the native one-click Unsubscribe control Gmail/Outlook
+// render from the List-Unsubscribe header.
 app.get('/notifications/unsubscribe', async c =>
-  reply(c, await unsubscribe(c.req.query('token'), c.req.query('kind')))
+  reply(c, await unsubscribe(c.req.query('token'), c.req.query('kind'), 'GET'))
 )
 app.post('/notifications/unsubscribe', async c =>
-  reply(c, await unsubscribe(c.req.query('token'), c.req.query('kind')))
+  reply(c, await unsubscribe(c.req.query('token'), c.req.query('kind'), 'POST'))
 )
 
 app.get('/health', c => c.json({ ok: true }))
