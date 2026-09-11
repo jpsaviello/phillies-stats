@@ -137,8 +137,11 @@ export function renderHtml(content: DailyEmailContent): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #ece6d8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-        <tr><td style="background:${NAVY};padding:20px 28px;border-top:4px solid ${RED};">
+        <tr><td style="background:${NAVY};padding:16px 28px;border-top:4px solid ${RED};">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td width="34" style="padding-right:12px;">
+              <img src="https://www.mlbstatic.com/team-logos/143.svg" width="34" height="34" alt="Phillies" style="display:block;width:34px;height:34px;">
+            </td>
             <td style="font-size:19px;font-weight:800;letter-spacing:0.05em;color:#ffffff;">PHILLIES DAILY</td>
             <td align="right" style="font-size:13px;color:#c7d2e6;white-space:nowrap;">${escapeHtml(content.dateLabel)}</td>
           </tr></table>
