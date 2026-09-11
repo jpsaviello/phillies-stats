@@ -93,22 +93,30 @@ export function renderText(content: DailyEmailContent): string {
   ].join('\n')
 }
 
-function htmlArticle(article: Article, title: string): string {
+function htmlArticle(article: Article, title: string, isFirst: boolean): string {
   const dateLine =
     article.historicalDate !== undefined
-      ? `<p style="margin:0 0 4px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${RED};font-weight:700;">${escapeHtml(formatLongDate(article.historicalDate))}</p>`
+      ? `<p style="margin:0 0 6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${RED};font-weight:700;">${escapeHtml(formatLongDate(article.historicalDate))}</p>`
       : ''
   const paragraphs = article.recap
     .map(
       p =>
-        `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#1f2937;">${escapeHtml(p)}</p>`
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#1f2937;">${escapeHtml(p)}</p>`
     )
     .join('')
-  return `
-    <tr><td style="padding:24px 28px 0;">
-      <p style="margin:0 0 10px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;font-weight:700;">${escapeHtml(title)}</p>
+  const divider = isFirst
+    ? ''
+    : '<tr><td style="padding:0 28px;"><div style="border-top:1px solid #e5e7eb;"></div></td></tr>'
+  return `${divider}
+    <tr><td style="padding:26px 28px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+        <tr>
+          <td style="background:${RED};width:4px;font-size:0;line-height:0;">&nbsp;</td>
+          <td style="padding-left:8px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;font-weight:700;">${escapeHtml(title)}</td>
+        </tr>
+      </table>
       ${dateLine}
-      <h2 style="margin:0 0 14px;font-size:21px;line-height:1.3;color:${NAVY};">${escapeHtml(article.headline)}</h2>
+      <h2 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:${NAVY};">${escapeHtml(article.headline)}</h2>
       ${paragraphs}
     </td></tr>`
 }
@@ -116,8 +124,10 @@ function htmlArticle(article: Article, title: string): string {
 export function renderHtml(content: DailyEmailContent): string {
   const greeting = content.greetingName !== null ? `Hi ${escapeHtml(content.greetingName)},` : 'Hi,'
   const articles = [
-    content.briefing !== null ? htmlArticle(content.briefing, "Today's briefing") : '',
-    content.onThisDay !== null ? htmlArticle(content.onThisDay, 'On this day') : '',
+    content.briefing !== null ? htmlArticle(content.briefing, "Today's briefing", true) : '',
+    content.onThisDay !== null
+      ? htmlArticle(content.onThisDay, 'On this day', content.briefing === null)
+      : '',
   ].join('')
 
   return `<!doctype html>
@@ -126,23 +136,25 @@ export function renderHtml(content: DailyEmailContent): string {
 <body style="margin:0;padding:0;background:${CREAM};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};padding:24px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-        <tr><td style="background:${NAVY};padding:18px 28px;">
-          <p style="margin:0;font-size:20px;font-weight:800;letter-spacing:0.04em;color:#ffffff;">PHILLIES DAILY</p>
-          <p style="margin:4px 0 0;font-size:13px;color:#c7d2e6;">${escapeHtml(content.dateLabel)}</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #ece6d8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+        <tr><td style="background:${NAVY};padding:20px 28px;border-top:4px solid ${RED};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="font-size:19px;font-weight:800;letter-spacing:0.05em;color:#ffffff;">PHILLIES DAILY</td>
+            <td align="right" style="font-size:13px;color:#c7d2e6;white-space:nowrap;">${escapeHtml(content.dateLabel)}</td>
+          </tr></table>
         </td></tr>
-        <tr><td style="padding:22px 28px 0;">
+        <tr><td style="padding:24px 28px 0;">
           <p style="margin:0;font-size:15px;color:#1f2937;">${greeting}</p>
         </td></tr>
         ${articles}
-        <tr><td style="padding:8px 28px 26px;">
-          <a href="${escapeHtml(content.siteUrl)}" style="display:inline-block;background:${RED};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:11px 20px;border-radius:8px;">See the full stats page</a>
+        <tr><td style="padding:26px 28px 28px;">
+          <a href="${escapeHtml(content.siteUrl)}" style="display:inline-block;background:${RED};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 22px;border-radius:8px;">See the full stats page &rarr;</a>
         </td></tr>
-        <tr><td style="border-top:1px solid #e5e7eb;padding:16px 28px 22px;">
-          <p style="margin:0;font-size:12px;line-height:1.5;color:#6b7280;">
+        <tr><td style="background:${CREAM};border-top:1px solid #ece6d8;padding:18px 28px 22px;">
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#8a8478;">
             You're getting this because you turned on email notifications in your Phillies Stats profile.<br>
-            <a href="${escapeHtml(content.unsubscribeUrl)}" style="color:#6b7280;">Unsubscribe</a> &middot;
-            <a href="${escapeHtml(content.siteUrl)}" style="color:#6b7280;">Manage preferences</a>
+            <a href="${escapeHtml(content.unsubscribeUrl)}" style="color:${NAVY};font-weight:600;">Unsubscribe</a> &middot;
+            <a href="${escapeHtml(content.siteUrl)}" style="color:${NAVY};font-weight:600;">Manage preferences</a>
           </p>
         </td></tr>
       </table>
