@@ -13,6 +13,7 @@ import {
   seriesContext,
   seriesOfGame,
   seriesStatusText,
+  shortRoundName,
   viewStatus,
   winsNeeded,
   type Round,
@@ -259,6 +260,17 @@ describe('seriesContext', () => {
     expect(seriesContext(g3, games, PHI)!.status).toBe('Series tied 1–1')
   })
 
+  it('claims no score or stakes for a game beyond the next one', () => {
+    const g3 = game('F', PHI, ATL, 3)
+    g3.ifNecessary = 'Y'
+    const games = [game('F', PHI, ATL, 1, { winner: ATL }), game('F', PHI, ATL, 2), g3]
+    const ctx = seriesContext(g3, games, PHI)!
+    expect(ctx.status).toBeNull()
+    expect(ctx.stakes).toBeNull()
+    expect(ctx.ifNecessary).toBe(true)
+    expect(ctx.gameNumber).toBe(3)
+  })
+
   it('is null for a regular-season game', () => {
     const g = game('F', PHI, ATL, 1)
     g.gameType = 'R'
@@ -353,5 +365,14 @@ describe('buildWorldSeries', () => {
     ])
     expect(ws.wins).toEqual([1, 1])
     expect(viewStatus(ws)).toBe('Series tied 1–1')
+  })
+})
+
+describe('shortRoundName', () => {
+  it('abbreviates each round the way fans do', () => {
+    expect(shortRoundName({ round: 'F', roundName: 'NL Wild Card Series' })).toBe('NL Wild Card')
+    expect(shortRoundName({ round: 'D', roundName: 'NL Division Series' })).toBe('NLDS')
+    expect(shortRoundName({ round: 'L', roundName: 'AL Championship Series' })).toBe('ALCS')
+    expect(shortRoundName({ round: 'W', roundName: 'World Series' })).toBe('World Series')
   })
 })

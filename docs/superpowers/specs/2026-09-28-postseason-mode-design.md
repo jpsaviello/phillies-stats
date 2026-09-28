@@ -151,13 +151,20 @@ fields the unfiltered `fetchSchedule` response already carries.
 
 - **Today headline:** a line under the opponent — `NL Wild Card Series · Game 2 ·
   Phillies lead 1–0` — plus a stakes chip (`Elimination game`, `Chance to clinch`,
-  `Winner take all`) when one applies. The label changes from "Next game" to
-  "Next game · Postseason".
+  `Winner take all`) when one applies. The card label stays "Next game"; the
+  round name already says it is a postseason game.
 - **Today last-game card:** the round and the series status after that game.
-- **Schedule rows:** a second line under the opponent name, `WCS Gm 2 · PHI lead 1–0`
-  style but spelled out (`Wild Card Gm 2 · Tied 1–1`), and a `Postseason` divider
-  before the first postseason game in the list (the existing `Upcoming` divider
-  still marks the results/first-pitch boundary).
+- **Schedule rows:** a full-width line under the row (indented under the opponent
+  from `sm` up — at 375px the name column is ~100px and the line wrapped five
+  times inside it): `NL Wild Card · Gm 2 · Braves lead 1–0 · Elimination game`,
+  with the round abbreviated the way fans do (`NLDS`, `ALCS`). A `Postseason`
+  divider goes before the first postseason game (the existing `Upcoming` divider
+  still marks the results/first-pitch boundary; one divider carries both labels
+  when they land on the same row).
+- **Only a played game and the series' next game get a score and stakes.** Game 3
+  of a series that is 1–0 with Game 2 unplayed could be entered at 2–0 (and never
+  happen) or at 1–1, so it reads `Gm 3 · If necessary` instead. The first draft
+  printed "Braves lead 1–0 · Elimination game" on it, which is false half the time.
 - **Moot games are dropped** on both tabs (`isMoot`): a Game 3 of a sweep must not
   headline Today or sit in the list with a first-pitch time.
 

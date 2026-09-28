@@ -182,8 +182,14 @@ export interface SeriesContext {
    * a schedule row that shows a result should show the series that result left.
    */
   status: string | null
-  /** Only for a game not yet Final, and from the focus club's side. */
+  /** Only for the series' NEXT game, and from the focus club's side. */
   stakes: Stakes | null
+  /**
+   * An unplayed game beyond the next one that MLB lists as if-necessary. Its
+   * "going in" score depends on games not yet played, so it gets this instead
+   * of a status.
+   */
+  ifNecessary: boolean
 }
 
 /**
@@ -196,6 +202,21 @@ export function seriesContext(game: Game, games: Game[], focusId: number): Serie
 
   const final = isFinal(game)
   const number = game.seriesGameNumber ?? null
+  // Only a played game and the series' next game have a knowable "going in"
+  // score. Game 3 of a series that is 1–0 with Game 2 still to play could be
+  // entered at 2–0 (and never happen) or 1–1 — so it states neither.
+  const isNext = series.next?.gamePk === game.gamePk
+  if (!final && !isNext && game.status.abstractGameState === 'Preview') {
+    return {
+      round: series.round,
+      roundName: game.seriesDescription || ROUNDS[series.round].name,
+      gameNumber: number,
+      bestOf: series.bestOf,
+      status: null,
+      stakes: null,
+      ifNecessary: game.ifNecessary === 'Y',
+    }
+  }
   const counted = series.games.filter(g => {
     if (!isFinal(g)) return false
     if (g.gamePk === game.gamePk) return final
@@ -231,6 +252,26 @@ export function seriesContext(game: Game, games: Game[], focusId: number): Serie
     bestOf: series.bestOf,
     status: seriesStatusText([nameOf(a), nameOf(b)], wins, decided),
     stakes,
+    ifNecessary: false,
+  }
+}
+
+/**
+ * The round as a fan abbreviates it — "NL Wild Card", "NLDS", "ALCS", "World
+ * Series" — for a schedule row, which at 375px has about 100px to say it in.
+ * The league comes off MLB's own series name; without one it is left out.
+ */
+export function shortRoundName(context: Pick<SeriesContext, 'round' | 'roundName'>): string {
+  const league = /^(NL|AL)\b/.exec(context.roundName)?.[1] ?? ''
+  switch (context.round) {
+    case 'F':
+      return league ? `${league} Wild Card` : 'Wild Card'
+    case 'D':
+      return `${league}DS`
+    case 'L':
+      return `${league}CS`
+    case 'W':
+      return 'World Series'
   }
 }
 
