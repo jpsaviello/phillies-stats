@@ -1,4 +1,6 @@
-import { AL_LEAGUE_ID, teamLogoUrl } from '../api/mlb'
+import { useEffect, useState } from 'react'
+import { AL_LEAGUE_ID, fetchPostseasonGames, teamLogoUrl } from '../api/mlb'
+import type { Game } from '../api/mlb'
 import { useDivisionLeaders, type DivisionLeaders } from '../hooks/useDivisionLeaders'
 import { useWildCardRace, type WildCardRace } from '../hooks/useWildCardRace'
 import {
@@ -13,7 +15,16 @@ import {
   type SeededTeam,
   type WildCardSeries,
 } from '../utils/playoffPicture'
+import {
+  buildLiveLeague,
+  buildWorldSeries,
+  ROUNDS,
+  viewStatus,
+  type LiveLeague,
+  type SeriesView,
+} from '../utils/postseason'
 import type { TiebreakerNote } from '../utils/tiebreakers'
+import { formatDate } from '../utils/date'
 import SectionHead from './SectionHead'
 
 const PHILLIES_ID = 143
@@ -36,6 +47,60 @@ interface League {
   loading: boolean
   field: Field | null
   notes: Map<number, TiebreakerNote>
+  /**
+   * The same field with series results filled in, once MLB's postseason
+   * schedule agrees with it — null during the regular season, on a failed
+   * schedule request, or if the schedule pairs clubs differently from our
+   * standings. See buildLiveLeague.
+   */
+  live: LiveLeague | null
+}
+
+/* -------------------------------------------------------------------------- */
+/* Series state                                                               */
+/* -------------------------------------------------------------------------- */
+
+/** One club's standing in one live slot, as the boxes draw it. */
+interface Standing {
+  /** This round's wins. */
+  wins: number
+  /** Out of the postseason — drawn at reduced emphasis. */
+  eliminated: boolean
+  /** Second line of the box: the round's state in words, or the season record. */
+  line: string
+  /**
+   * Whether a game of the series has been decided. Until one has, the box shows
+   * no win count — a column of zeros before first pitch is noise, not data.
+   */
+  started: boolean
+}
+
+/**
+ * A club's line in a slot: "Won 2–0", "Trails 0–1", "Tied 1–1".
+ *
+ * Before a slot's first game there is nothing to say about the series, so the
+ * regular-season record stays — it is still what a reader wants to compare
+ * across a matchup nobody has played yet.
+ */
+function standing(v: SeriesView, index: 0 | 1, team: SeededTeam): Standing {
+  const wins = v.wins[index]
+  const theirs = v.wins[1 - index]
+  const record = `${team.wins}-${team.losses}`
+  if (!v.series || wins + theirs === 0) return { wins, eliminated: false, line: record, started: false }
+  const score = `${wins}–${theirs}`
+  if (v.winner === index) return { wins, eliminated: false, line: `Won ${score}`, started: true }
+  if (v.winner !== null) return { wins, eliminated: true, line: `Lost ${score}`, started: true }
+  if (wins > theirs) return { wins, eliminated: false, line: `Leads ${score}`, started: true }
+  if (wins < theirs) return { wins, eliminated: false, line: `Trails ${score}`, started: true }
+  return { wins, eliminated: false, line: `Tied ${score}`, started: true }
+}
+
+/** The next unplayed game of a slot, as "Gm 2 · Wed, Sep 30". */
+function nextGameText(v: SeriesView): string | null {
+  const next = v.series?.next
+  if (!next) return null
+  const date = next.officialDate ?? next.gameDate.slice(0, 10)
+  return `Gm ${next.seriesGameNumber ?? '?'} · ${formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' })}`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -131,15 +196,23 @@ function BracketTeam({
   y,
   team,
   note,
+  live,
 }: {
   x: number
   y: number
   team: SeededTeam
   note?: TiebreakerNote
+  /** This round's state, once the postseason is under way. */
+  live?: Standing
 }) {
   const isPhillies = team.teamId === PHILLIES_ID
   return (
-    <Box x={x} y={y} width={BRACKET.teamWidth} className="card flex items-center gap-1.5 px-1.5">
+    <Box
+      x={x}
+      y={y}
+      width={BRACKET.teamWidth}
+      className={`card flex items-center gap-1.5 px-1.5 ${live?.eliminated ? 'opacity-60' : ''}`}
+    >
       <SeedChip seed={team.seed} size="h-5 w-5" />
       <Logo teamId={team.teamId} size="h-5 w-5" />
       <span className="min-w-0 flex-1 leading-tight">
@@ -152,10 +225,56 @@ function BracketTeam({
           </span>
           <Marks team={team} note={note} />
         </span>
-        <span className="block text-[11px] tabular-nums text-gray-500">
-          {team.wins}-{team.losses}
+        <span className="block truncate text-[11px] tabular-nums text-gray-500">
+          {live ? live.line : `${team.wins}-${team.losses}`}
         </span>
       </span>
+      {live?.started && (
+        <span className="shrink-0 font-display text-lg font-bold tabular-nums text-mark" aria-label={`${live.wins} wins`}>
+          {live.wins}
+        </span>
+      )}
+    </Box>
+  )
+}
+
+/**
+ * A club in the two narrow columns (Championship Series and pennant), which
+ * are 108px — room for the mark, the name and the round's wins, not the seed
+ * chip or a second line. The seed is on the club's earlier box in the same row.
+ */
+function CompactTeam({
+  x,
+  y,
+  team,
+  live,
+}: {
+  x: number
+  y: number
+  team: SeededTeam
+  live: Standing
+}) {
+  const isPhillies = team.teamId === PHILLIES_ID
+  return (
+    <Box
+      x={x}
+      y={y}
+      width={BRACKET.roundWidth}
+      className={`card flex items-center gap-1.5 px-1.5 ${live.eliminated ? 'opacity-60' : ''}`}
+    >
+      <Logo teamId={team.teamId} size="h-4 w-4" />
+      <span
+        className={`min-w-0 flex-1 truncate text-[12px] leading-tight ${isPhillies ? 'font-semibold' : ''} text-gray-900`}
+        title={live.line}
+      >
+        {team.name}
+        <span className="sr-only">, {live.line}</span>
+      </span>
+      {live.started && (
+        <span className="shrink-0 font-display text-base font-bold tabular-nums text-mark" aria-hidden>
+          {live.wins}
+        </span>
+      )}
     </Box>
   )
 }
@@ -251,11 +370,16 @@ function LeagueHalf({
   notes,
   side,
   abbr,
+  live,
+  pennant,
 }: {
   field: Field
   notes: Map<number, TiebreakerNote>
   side: 'left' | 'right'
   abbr: string
+  live: LiveLeague | null
+  /** This league's champion's standing in the World Series, once there is one. */
+  pennant: Standing | null
 }) {
   const rows = BRACKET_ROWS
   const { teamWidth, roundWidth, connectorWidth } = BRACKET
@@ -268,34 +392,69 @@ function LeagueHalf({
   const csX = place(BRACKET_COLUMNS.championship, roundWidth)
   const pennantX = place(BRACKET_COLUMNS.pennant, roundWidth)
 
-  // series[1] is the 4/5 matchup and series[0] the 3/6 — top and bottom halves.
+  // series[1] is the 4/5 matchup and series[0] the 3/6 — top and bottom halves,
+  // which is also the order LiveLeague.wildCard is built in.
   const [lower, upper] = field.series
-  const pairs: [WildCardSeries, number, number][] = [
-    [upper, rows.wildCard[0], rows.wildCard[1]],
-    [lower, rows.wildCard[2], rows.wildCard[3]],
+  const pairs: [WildCardSeries, number, number, SeriesView | null][] = [
+    [upper, rows.wildCard[0], rows.wildCard[1], live?.wildCard[0] ?? null],
+    [lower, rows.wildCard[2], rows.wildCard[3], live?.wildCard[1] ?? null],
   ]
 
   return (
     <>
-      {pairs.map(([series, topY, bottomY]) => (
+      {pairs.map(([series, topY, bottomY, slot]) => (
         <span key={series.higher.teamId}>
-          <BracketTeam x={wcX} y={topY} team={series.higher} note={notes.get(series.higher.teamId)} />
-          <BracketTeam x={wcX} y={bottomY} team={series.lower} note={notes.get(series.lower.teamId)} />
+          <BracketTeam
+            x={wcX}
+            y={topY}
+            team={series.higher}
+            note={notes.get(series.higher.teamId)}
+            live={slot ? standing(slot, 0, series.higher) : undefined}
+          />
+          <BracketTeam
+            x={wcX}
+            y={bottomY}
+            team={series.lower}
+            note={notes.get(series.lower.teamId)}
+            live={slot ? standing(slot, 1, series.lower) : undefined}
+          />
           <Connector x={after(BRACKET_COLUMNS.wildCard, teamWidth)} from={topY} to={bottomY} side={side} />
         </span>
       ))}
 
-      {field.byes.map((bye, i) => (
-        <span key={bye.team.teamId}>
-          <EmptySlot
-            x={dsX}
-            y={rows.wildCardWinner[i]}
-            width={teamWidth}
-            label={`${abbr} Wild Card Series winner, ${bye.awaits.join(' or ')} seed, to be decided`}
-          />
-          <BracketTeam x={dsX} y={rows.bye[i]} team={bye.team} note={notes.get(bye.team.teamId)} />
-        </span>
-      ))}
+      {field.byes.map((bye, i) => {
+        const division = live?.division[i] ?? null
+        // The Wild Card winner's box fills in the moment its series is decided;
+        // until then it is the same dashed slot the projection draws.
+        const challenger = division?.entrants[1] ?? null
+        return (
+          <span key={bye.team.teamId}>
+            {division && challenger ? (
+              <BracketTeam
+                x={dsX}
+                y={rows.wildCardWinner[i]}
+                team={challenger}
+                note={notes.get(challenger.teamId)}
+                live={standing(division, 1, challenger)}
+              />
+            ) : (
+              <EmptySlot
+                x={dsX}
+                y={rows.wildCardWinner[i]}
+                width={teamWidth}
+                label={`${abbr} Wild Card Series winner, ${bye.awaits.join(' or ')} seed, to be decided`}
+              />
+            )}
+            <BracketTeam
+              x={dsX}
+              y={rows.bye[i]}
+              team={bye.team}
+              note={notes.get(bye.team.teamId)}
+              live={division ? standing(division, 0, bye.team) : undefined}
+            />
+          </span>
+        )
+      })}
 
       {/* The bye club and the Wild Card winner meet in the Division Series, so
           each connector spans one of each rather than two of a kind. */}
@@ -312,15 +471,21 @@ function LeagueHalf({
         side={side}
       />
 
-      {rows.championship.map((y, i) => (
-        <EmptySlot
-          key={y}
-          x={csX}
-          y={y}
-          width={roundWidth}
-          label={`${abbr} Division Series winner ${i + 1}, to be decided`}
-        />
-      ))}
+      {rows.championship.map((y, i) => {
+        const cs = live?.championship ?? null
+        const team = cs?.entrants[i] ?? null
+        return cs && team ? (
+          <CompactTeam key={y} x={csX} y={y} team={team} live={standing(cs, i as 0 | 1, team)} />
+        ) : (
+          <EmptySlot
+            key={y}
+            x={csX}
+            y={y}
+            width={roundWidth}
+            label={`${abbr} Division Series winner ${i + 1}, to be decided`}
+          />
+        )
+      })}
       <Connector
         x={after(BRACKET_COLUMNS.championship, roundWidth)}
         from={rows.championship[0]}
@@ -328,19 +493,32 @@ function LeagueHalf({
         side={side}
       />
 
-      <EmptySlot
-        x={pennantX}
-        y={rows.pennant}
-        width={roundWidth}
-        label={`${abbr} pennant winner, to be decided`}
-      />
+      {live?.champion && pennant ? (
+        <CompactTeam x={pennantX} y={rows.pennant} team={live.champion} live={pennant} />
+      ) : (
+        <EmptySlot
+          x={pennantX}
+          y={rows.pennant}
+          width={roundWidth}
+          label={`${abbr} pennant winner, to be decided`}
+        />
+      )}
     </>
   )
 }
 
-function BracketDiagram({ leagues }: { leagues: [League, League] }) {
+function BracketDiagram({ leagues, worldSeries }: { leagues: [League, League]; worldSeries: SeriesView | null }) {
   const rows = BRACKET_ROWS
   const [left, right] = leagues
+  // World Series entrants are [NL, AL]; the pennant box on each side shows its
+  // own league's champion's World Series wins.
+  const pennantFor = (league: League): Standing | null => {
+    const champ = league.live?.champion
+    if (!worldSeries || !champ) return null
+    const i = worldSeries.entrants[0]?.teamId === champ.teamId ? 0 : 1
+    return standing(worldSeries, i, champ)
+  }
+  const wsStatus = worldSeries ? viewStatus(worldSeries) ?? nextGameText(worldSeries) : null
   return (
     <div className="overflow-hidden">
       <div
@@ -359,8 +537,22 @@ function BracketDiagram({ leagues }: { leagues: [League, League] }) {
             className="absolute border-l border-dashed border-hairline"
             style={{ left: BRACKET_WIDTH / 2, top: 0, height: rows.height }}
           />
-          <LeagueHalf field={left.field!} notes={left.notes} side="left" abbr={left.abbr} />
-          <LeagueHalf field={right.field!} notes={right.notes} side="right" abbr={right.abbr} />
+          <LeagueHalf
+            field={left.field!}
+            notes={left.notes}
+            side="left"
+            abbr={left.abbr}
+            live={left.live}
+            pennant={pennantFor(left)}
+          />
+          <LeagueHalf
+            field={right.field!}
+            notes={right.notes}
+            side="right"
+            abbr={right.abbr}
+            live={right.live}
+            pennant={pennantFor(right)}
+          />
           {/* No connector into this one: the two pennant boxes face each other
               across the gutter, which is the World Series. */}
           <div
@@ -381,6 +573,20 @@ function BracketDiagram({ leagues }: { leagues: [League, League] }) {
               Series
             </span>
           </div>
+          {/* Below the label rather than inside its 44px box, so the label
+              stays on the pennant centre line the two pennant boxes face. */}
+          {wsStatus && (
+            <div
+              className="absolute text-center text-[11px] leading-tight tabular-nums text-gray-600"
+              style={{
+                left: BRACKET_COLUMNS.pennant + BRACKET.roundWidth,
+                top: rows.pennant + BRACKET.boxHeight / 2 + 4,
+                width: BRACKET.gutterWidth,
+              }}
+            >
+              {wsStatus}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -478,6 +684,117 @@ function StackedLeague({ league }: { league: League }) {
   )
 }
 
+/**
+ * One club's line in a live series card: seed, mark, name, the round's state in
+ * words and its wins — or, for a slot whose feeding series isn't decided, what
+ * it is waiting on.
+ */
+function LiveTeamLine({
+  slot,
+  index,
+  pending,
+}: {
+  slot: SeriesView
+  index: 0 | 1
+  /** Shown in place of a club that hasn't been decided: "Winner of 4/5". */
+  pending: string
+}) {
+  const team = slot.entrants[index]
+  if (!team) {
+    return <div className="px-3 py-2 text-sm italic text-gray-500">{pending}</div>
+  }
+  const isPhillies = team.teamId === PHILLIES_ID
+  const st = standing(slot, index, team)
+  return (
+    <div
+      className={`flex items-center gap-2 px-3 py-2 sm:gap-3 ${isPhillies ? 'bg-hover' : ''} ${st.eliminated ? 'opacity-60' : ''}`}
+    >
+      <SeedChip seed={team.seed} size="h-6 w-6" />
+      <Logo teamId={team.teamId} size="h-5 w-5" />
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        {isPhillies && (
+          <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-phillies-red" />
+        )}
+        <span className={`truncate ${isPhillies ? 'font-semibold' : ''} text-gray-900`}>{team.name}</span>
+      </span>
+      <span className="shrink-0 text-xs tabular-nums text-gray-500">{st.line}</span>
+      <span className="w-5 shrink-0 text-right font-display text-lg font-bold tabular-nums text-mark">
+        {st.started ? st.wins : ''}
+      </span>
+    </div>
+  )
+}
+
+function LiveSeriesCard({
+  title,
+  slot,
+  pending,
+}: {
+  title: string
+  slot: SeriesView
+  pending: [string, string]
+}) {
+  const bestOf = slot.series?.bestOf ?? ROUNDS[slot.round].bestOf
+  // The series score in words once it has one, otherwise when it resumes.
+  const footer = slot.winner !== null ? viewStatus(slot) : nextGameText(slot) ?? viewStatus(slot)
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 border-b border-hairline px-3 py-1.5">
+        <span className="card-label">{title}</span>
+        <span className="text-xs text-gray-500">Best of {bestOf}</span>
+      </div>
+      <LiveTeamLine slot={slot} index={0} pending={pending[0]} />
+      <div className="border-t border-hairline" />
+      <LiveTeamLine slot={slot} index={1} pending={pending[1]} />
+      {footer && (
+        <div className="border-t border-hairline px-3 py-1.5 text-xs tabular-nums text-gray-500">{footer}</div>
+      )}
+    </div>
+  )
+}
+
+const hasEntrant = (v: SeriesView) => v.entrants.some(t => t !== null)
+
+/**
+ * A live league as stacked cards, the most advanced round first: in October the
+ * question is "where does it stand now", and on a phone the Wild Card Series
+ * cards would otherwise push the current round below the fold for the rest of
+ * the month. A round appears once it has at least one known club.
+ */
+function StackedLiveLeague({ league }: { league: League }) {
+  const live = league.live!
+  const field = league.field!
+  const { abbr } = league
+  const awaits = (i: number) => `Winner of ${field.byes[i].awaits.join('/')}`
+  const cards: { key: string; title: string; slot: SeriesView; pending: [string, string] }[] = []
+  if (hasEntrant(live.championship)) {
+    cards.push({
+      key: 'cs',
+      title: `${abbr} Championship Series`,
+      slot: live.championship,
+      pending: [`${abbr}DS winner`, `${abbr}DS winner`],
+    })
+  }
+  live.division.forEach((slot, i) =>
+    cards.push({ key: `ds${i}`, title: `${abbr} Division Series`, slot, pending: ['', awaits(i)] })
+  )
+  live.wildCard.forEach((slot, i) =>
+    cards.push({ key: `wc${i}`, title: `${abbr} Wild Card Series`, slot, pending: ['', ''] })
+  )
+  return (
+    <section className="min-w-0">
+      <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-[0.08em] text-mark">
+        {league.name}
+      </h3>
+      <div className="space-y-3">
+        {cards.map(c => (
+          <LiveSeriesCard key={c.key} title={c.title} slot={c.slot} pending={c.pending} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /* -------------------------------------------------------------------------- */
 
 /** The best club currently outside a league's field — the boundary line. */
@@ -517,20 +834,40 @@ export default function PlayoffPicture({ wildCard, divisionLeaders }: Props) {
   const alWildCard = useWildCardRace({ leagueId: AL_LEAGUE_ID, tiebreakWindow: WILD_CARDS + 1 })
   const alLeaders = useDivisionLeaders(AL_LEAGUE_ID)
 
+  // The whole postseason schedule, both leagues. Waited on before first paint
+  // like the tiebreakers are: drawing the projection and then swapping in the
+  // live bracket a moment later would visibly rebuild the panel. A failure
+  // is an empty list, which leaves every league in projection mode.
+  const [postseason, setPostseason] = useState<Game[]>([])
+  const [postseasonLoading, setPostseasonLoading] = useState(true)
+  useEffect(() => {
+    let current = true
+    fetchPostseasonGames()
+      .then(games => { if (current) setPostseason(games) })
+      .catch(() => { if (current) setPostseason([]) })
+      .finally(() => { if (current) setPostseasonLoading(false) })
+    return () => { current = false }
+  }, [])
+
+  const nlField = buildPlayoffPicture(divisionLeaders.leaders, wildCard.records)
+  const alField = buildPlayoffPicture(alLeaders.leaders, alWildCard.records)
+
   const leagues: League[] = [
     {
       name: 'National League',
       abbr: 'NL',
-      loading: wildCard.loading || divisionLeaders.loading,
-      field: buildPlayoffPicture(divisionLeaders.leaders, wildCard.records),
+      loading: wildCard.loading || divisionLeaders.loading || postseasonLoading,
+      field: nlField,
       notes: new Map([...divisionLeaders.notes, ...wildCard.notes]),
+      live: buildLiveLeague(nlField, postseason),
     },
     {
       name: 'American League',
       abbr: 'AL',
-      loading: alWildCard.loading || alLeaders.loading,
-      field: buildPlayoffPicture(alLeaders.leaders, alWildCard.records),
+      loading: alWildCard.loading || alLeaders.loading || postseasonLoading,
+      field: alField,
       notes: new Map([...alLeaders.notes, ...alWildCard.notes]),
+      live: buildLiveLeague(alField, postseason),
     },
   ]
 
@@ -542,6 +879,11 @@ export default function PlayoffPicture({ wildCard, divisionLeaders }: Props) {
   // isn't a six-team bracket.
   const shown = leagues.filter(l => !l.loading && l.field !== null)
   if (!shown.length) return null
+
+  const isLive = shown.some(l => l.live !== null)
+  const [nl, al] = leagues
+  // Only once BOTH leagues are live: the World Series needs a pennant from each.
+  const worldSeries = nl.live && al.live ? buildWorldSeries(nl.live, al.live, postseason) : null
 
   const marked = shown.some(l =>
     [...l.field!.byes.map(b => b.team), ...l.field!.series.flatMap(s => [s.higher, s.lower])].some(
@@ -560,27 +902,47 @@ export default function PlayoffPicture({ wildCard, divisionLeaders }: Props) {
     <section aria-label="Playoff Picture">
       <SectionHead
         title="Playoff Picture"
-        hint="Seeds if the season ended today. The three division winners hold the top seeds whatever anyone's record is; the wild cards seed 4 through 6, and the higher seed hosts every game of a Wild Card Series."
+        hint={
+          isLive
+            ? 'The postseason as it stands. Seeds are from the final standings and series wins sit at the right of each club. There is no reseeding: the 1 seed meets the 4/5 winner and the 2 seed the 3/6 winner.'
+            : "Seeds if the season ended today. The three division winners hold the top seeds whatever anyone's record is; the wild cards seed 4 through 6, and the higher seed hosts every game of a Wild Card Series."
+        }
       />
 
       {bracket && (
         <div className="hidden xl:block">
-          <BracketDiagram leagues={bracket} />
-          <div className="mt-3 flex justify-between gap-4">
-            <FirstOut league={bracket[0]} />
-            <FirstOut league={bracket[1]} />
-          </div>
+          <BracketDiagram leagues={bracket} worldSeries={worldSeries} />
+          {/* The race for the last spot is over once the postseason starts. */}
+          {!isLive && (
+            <div className="mt-3 flex justify-between gap-4">
+              <FirstOut league={bracket[0]} />
+              <FirstOut league={bracket[1]} />
+            </div>
+          )}
         </div>
       )}
 
       <div className={bracket ? 'xl:hidden' : ''}>
+        {worldSeries && hasEntrant(worldSeries) && (
+          // First, above both leagues: once it has a club in it, it is the
+          // most advanced round there is.
+          <div className="mb-6">
+            <LiveSeriesCard
+              title="World Series"
+              slot={worldSeries}
+              pending={['NL champion', 'AL champion']}
+            />
+          </div>
+        )}
         <div className={shown.length > 1 ? 'grid gap-6 lg:grid-cols-2' : ''}>
           {shown.map(league => (
             <div key={league.name} className="min-w-0">
-              <StackedLeague league={league} />
-              <div className="mt-2">
-                <FirstOut league={league} />
-              </div>
+              {league.live ? <StackedLiveLeague league={league} /> : <StackedLeague league={league} />}
+              {!league.live && (
+                <div className="mt-2">
+                  <FirstOut league={league} />
+                </div>
+              )}
             </div>
           ))}
         </div>

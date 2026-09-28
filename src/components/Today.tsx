@@ -14,6 +14,7 @@ import { extractTeamPitchers } from '../utils/bullpen'
 import type { RawAppearance } from '../utils/bullpen'
 import { inningsToOuts, outsToInnings } from '../utils/innings'
 import { pickHeadline, recentResults, recordOver } from '../utils/today'
+import { isMoot, seriesContext, type SeriesContext } from '../utils/postseason'
 import type { DatedGame } from '../utils/today'
 import MatchupPreview from './MatchupPreview'
 import GameDetailModal from './GameDetailModal'
@@ -47,6 +48,37 @@ function gameView(game: Game) {
     oppScore: opp.score,
     won: us.isWinner,
   }
+}
+
+/** "NL Wild Card Series · Game 2". */
+function seriesLabel(context: SeriesContext) {
+  return context.gameNumber ? `${context.roundName} · Game ${context.gameNumber}` : context.roundName
+}
+
+/**
+ * A postseason game's place in its series, under the headline.
+ *
+ * The stakes chip is the club's own red only for the two cases where the
+ * Phillies' season can end tonight; a chance to clinch is stated in the quieter
+ * neutral chip. Both are facts about the series score, never a prediction.
+ */
+function SeriesLine({ context }: { context: SeriesContext }) {
+  const urgent = context.stakes === 'Elimination game' || context.stakes === 'Winner take all'
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm tabular-nums">
+      <span className="font-medium text-gray-900">{seriesLabel(context)}</span>
+      {context.status && <span className="text-gray-600">· {context.status}</span>}
+      {context.stakes && (
+        <span
+          className={`rounded-xs border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
+            urgent ? 'border-phillies-red text-live' : 'border-rule text-gray-600'
+          }`}
+        >
+          {context.stakes}
+        </span>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -91,7 +123,12 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
       fetchOdds().catch(() => [] as OddsGame[]),
     ])
       .then(([dates, oddsData]) => {
-        setGames(dates.flatMap(d => d.games.map(game => ({ game, date: d.date }))))
+        const all = dates.flatMap(d => d.games.map(game => ({ game, date: d.date })))
+        const raw = all.map(g => g.game)
+        // An if-necessary game in a series that's already over stays in MLB's
+        // schedule as `Scheduled` for a while; left in, a sweep's Game 3 would
+        // headline this tab as tonight's game. See isMoot.
+        setGames(all.filter(g => !isMoot(g.game, raw)))
         setOdds(oddsData)
       })
       .catch(e => {
@@ -138,6 +175,19 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
   }, [lastGame])
 
   const recentRecord = useMemo(() => recordOver(recent, PHILLIES_ID), [recent])
+
+  // What a postseason game means: the round, the game number, the series going
+  // in (or after, for last night's), and what's at stake. Null for a regular-
+  // season game, so both cards read exactly as before outside October. Derived
+  // from this tab's own window — every game of a Phillies series is a Phillies
+  // game, and no series spans more than the ten days it reaches back.
+  const context = useMemo(() => {
+    const raw = games.map(g => g.game)
+    return {
+      head: headline ? seriesContext(headline.game, raw, PHILLIES_ID) : null,
+      last: lastGame ? seriesContext(lastGame.game, raw, PHILLIES_ID) : null,
+    }
+  }, [games, headline, lastGame])
 
   function openGame(gamePk: number) {
     navigate({ game: gamePk })
@@ -212,6 +262,8 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
               </div>
             </div>
 
+            {context.head && <SeriesLine context={context.head} />}
+
             {headlineOdds && (
               <div className="mt-3 text-sm text-gray-500 tabular-nums">
                 ML {formatOdds(headlineOdds.ml)}
@@ -270,6 +322,14 @@ export default function Today({ enableGameDetail, enableMatchupPreview, enableGa
                   {last.isHome ? 'vs' : '@'} {last.opponent} ·{' '}
                   {formatDate(lastGame.date, { month: 'short', day: 'numeric' })}
                 </div>
+                {context.last && (
+                  // Wraps rather than truncating, which on a phone cut off the
+                  // series score — the end of the line and the point of it.
+                  <div className="text-xs text-gray-500 tabular-nums">
+                    {seriesLabel(context.last)}
+                    {context.last.status && ` · ${context.last.status}`}
+                  </div>
+                )}
               </div>
               {lastClickable && (
                 <button

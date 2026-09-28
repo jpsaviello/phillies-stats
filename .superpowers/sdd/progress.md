@@ -1229,3 +1229,15 @@ Follow-up 3: team logos.
 - Verified by intercepting the blocked host and serving stand-in SVGs at the same URLs, so the layout WITH images could be seen and measured: 12 logos at 20px in the panel, none broken, 0px overflow at 1440 (both themes) and 375.
 - Added the assertion that was missing: 24 img[src*="team-logos"] inside the panel, each with a well-formed URL. Nothing checked this before, and the failure is invisible — the onError hide means a broken URL leaves a bracket that reads fine and simply has no logos.
 - Panel root became <section aria-label="Playoff Picture">, which is both a real landmark and what scopes that count (HeroStrip draws logos on the same page).
+# Progress Ledger: postseason-mode
+
+Spec: docs/superpowers/specs/2026-09-28-postseason-mode-design.md
+Plan: docs/superpowers/plans/2026-09-28-postseason-mode.md
+
+Task 1: complete (c3b334e — fetchPostseasonGames, Game series fields, utils/postseason.ts + tests)
+Task 2: complete (a9157e4 — live bracket; verified in browser against real 2026 field + synthetic results at 1400/375)
+Task 3: complete (3346a63 — Today/Schedule series context; fixed during verification: "going in" score and stakes were printed on games beyond the next one; context line moved to its own full-width row after wrapping 5x at 375px)
+Task 4: complete (toggle — verified: ?split=post, Back returns, tab switch clears, empty state before first game, 2025 P data renders 12/10 rows)
+Task 5: complete (postseason-schedule fixture; e2e 38/39 — the one failure, links.spec "an open modal covers the nav", fails 1 in 5 on develop too: pre-existing flake, not fixed here)
+Minor (accepted): mobile live bracket keeps finished Wild Card cards below the current round rather than collapsing them.
+All tasks complete.

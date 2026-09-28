@@ -9,6 +9,7 @@ import GameDetailModal from './GameDetailModal'
 import { dismiss, navigate, useRoute } from '../hooks/useRoute'
 import MatchupPreview from './MatchupPreview'
 import SectionHead from './SectionHead'
+import { isMoot, isPostseasonGame, seriesContext, shortRoundName } from '../utils/postseason'
 import { EmptyState, ErrorState, TableSkeleton } from './Feedback'
 
 const PHILLIES_ID = 143
@@ -64,7 +65,15 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
       fetchOdds().catch(() => [] as OddsGame[]),
     ])
       .then(([scheduleData, oddsData]) => {
-        setDates(scheduleData)
+        // An if-necessary game in a series that's already over lingers in MLB's
+        // schedule as `Scheduled` until it's removed; it must not sit in the
+        // list with a first pitch that isn't happening. See isMoot.
+        const all = scheduleData.flatMap(d => d.games)
+        setDates(
+          scheduleData
+            .map(d => ({ ...d, games: d.games.filter(g => !isMoot(g, all)) }))
+            .filter(d => d.games.length > 0)
+        )
         setOdds(oddsData)
       })
       .catch(e => {
@@ -112,6 +121,12 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
   // below it carries a first pitch. Nothing marked that change, so 25 rows read
   // as one undifferentiated list. Drawn once, before the first unplayed game.
   let upcomingMarked = false
+  // Likewise once for the postseason: the rows below it are series games, and
+  // their context lines only make sense read as a run.
+  let postseasonMarked = false
+  // Every game in the window, for counting series. A Phillies series is made
+  // entirely of Phillies games, and ±14 days covers the longest one.
+  const allGames = flat.map(({ game }) => game)
 
   let upcomingOdds: ReturnType<typeof getPhilliesOdds> = null
   if (upcoming && upcoming.date === today) {
@@ -168,6 +183,9 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
           if (isAnchor) anchorPlaced = true
           const startsUpcoming = !isFinished && !upcomingMarked
           if (startsUpcoming) upcomingMarked = true
+          const startsPostseason = isPostseasonGame(game) && !postseasonMarked
+          if (startsPostseason) postseasonMarked = true
+          const series = seriesContext(game, allGames, PHILLIES_ID)
 
           const oddsKey = ['Philadelphia Phillies', opponent].sort().join('|')
           const oddsGame = oddsMap.get(oddsKey)
@@ -198,7 +216,7 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
               // every row used to tint its border, and the clickable ones were
               // distinguished only by a 40%-opacity border, so the affordance
               // read as noise. Matches the tables' hover:bg-hover.
-              className={`flex items-center gap-4 px-4 py-3 bg-panel rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-hover hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
+              className={`flex flex-wrap items-center gap-4 px-4 py-3 bg-panel rounded-lg border border-gray-100 transition-colors ${isToday ? 'border-phillies-red' : ''} ${clickable ? 'cursor-pointer hover:bg-hover hover:border-phillies-red/40 focus:outline-none focus:ring-2 focus:ring-phillies-red/40' : ''} ${isAnchor && flash ? 'ring-2 ring-phillies-red/60' : ''}`}
             >
               <div className="text-sm text-gray-500 w-24 shrink-0">
                 {formatDate(date, { month: 'short', day: 'numeric', weekday: 'short' })}
@@ -230,14 +248,36 @@ export default function Schedule({ enableGameDetail, enableMatchupPreview, enabl
                   {firstPitch(game) ?? game.status.detailedState}
                 </div>
               )}
+              {/* Its own full-width line under the row, not a second line in
+                  the name column: at 375px that column is ~100px, and the
+                  series score wrapped into five lines there. From `sm` up it is
+                  indented to sit under the opponent's name. */}
+              {series && (
+                <div className="basis-full -mt-2 text-xs text-gray-500 tabular-nums sm:pl-48">
+                  {shortRoundName(series)}
+                  {series.gameNumber && ` · Gm ${series.gameNumber}`}
+                  {series.status && ` · ${series.status}`}
+                  {series.ifNecessary && ' · If necessary'}
+                  {series.stakes && (
+                    <span className={series.stakes === 'Chance to clinch' ? '' : 'font-semibold text-live'}>
+                      {' · '}{series.stakes}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )
 
-          if (!startsUpcoming) return row
+          if (!startsUpcoming && !startsPostseason) return row
+          // One divider when both boundaries land on the same row — the
+          // postseason's first game is usually also the first unplayed one.
+          const divider = [startsPostseason && 'Postseason', startsUpcoming && 'Upcoming']
+            .filter(Boolean)
+            .join(' · ')
           return (
-            <div key={`upcoming-${game.gamePk}`} className="space-y-2">
+            <div key={`divider-${game.gamePk}`} className="space-y-2">
               <div aria-hidden="true" className="flex items-center gap-3 pt-4">
-                <span className="card-label whitespace-nowrap">Upcoming</span>
+                <span className="card-label whitespace-nowrap">{divider}</span>
                 <span className="h-px flex-1 bg-rule" />
               </div>
               {row}

@@ -67,9 +67,21 @@ export async function fetchRosterWithStats() {
   return data.roster ?? []
 }
 
-export async function fetchBattingStats() {
+/**
+ * Which half of the season a stat line covers: `R` regular season, `P` postseason
+ * only. MLB's default is regular season, so `R` adds nothing to the URL — the
+ * regular-season request stays byte-identical, which keeps its cache key (and the
+ * smoke suite's recorded fixtures) exactly where they were.
+ */
+export type StatGameType = 'R' | 'P'
+
+function gameTypeParam(gameType: StatGameType) {
+  return gameType === 'P' ? '&gameType=P' : ''
+}
+
+export async function fetchBattingStats(gameType: StatGameType = 'R') {
   const data = await get<{ stats: { splits: { player: import('../types/mlb').Player; stat: import('../types/mlb').BattingStats }[] }[] }>(
-    `/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL&hydrate=person`
+    `/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL&hydrate=person${gameTypeParam(gameType)}`
   )
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
@@ -93,9 +105,9 @@ export async function fetchBattingByDateRange(startDate: string, endDate: string
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
 
-export async function fetchPitchingStats() {
+export async function fetchPitchingStats(gameType: StatGameType = 'R') {
   const data = await get<{ stats: { splits: { player: import('../types/mlb').Player; stat: import('../types/mlb').PitchingStats }[] }[] }>(
-    `/stats?stats=season&group=pitching&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL`
+    `/stats?stats=season&group=pitching&season=${SEASON}&sportId=1&teamId=${PHILLIES_ID}&playerPool=ALL${gameTypeParam(gameType)}`
   )
   return (data.stats[0]?.splits ?? []).filter(s => s.player != null)
 }
@@ -388,6 +400,20 @@ export interface Game {
     home: GameTeam
     away: GameTeam
   }
+  /**
+   * The series fields. fetchSchedule carries no `fields=` filter, so these were
+   * always in its payload; they are typed now because postseason mode reads them.
+   * `gameType` is `R` for a regular-season game and `F`/`D`/`L`/`W` for the four
+   * postseason rounds — see utils/postseason.ts.
+   */
+  gameType?: string
+  officialDate?: string
+  seriesGameNumber?: number
+  gamesInSeries?: number
+  seriesDescription?: string
+  description?: string
+  /** `Y` for a game that is only played if the series is still undecided. */
+  ifNecessary?: string
 }
 
 interface GameTeam {
@@ -395,6 +421,33 @@ interface GameTeam {
   score?: number
   isWinner?: boolean
   probablePitcher?: import('../types/mlb').ProbablePitcher
+}
+
+const POSTSEASON_FIELDS = [
+  'dates', 'date', 'games', 'gamePk', 'gameDate', 'officialDate', 'gameType',
+  'status', 'abstractGameState', 'detailedState', 'startTimeTBD',
+  'teams', 'away', 'home', 'team', 'id', 'name', 'score', 'isWinner',
+  'seriesGameNumber', 'gamesInSeries', 'seriesDescription', 'description', 'ifNecessary',
+].join(',')
+
+/**
+ * Every game of this season's postseason, both leagues, all four rounds.
+ *
+ * MLB posts the WHOLE schedule in advance — all 53 potential games — with
+ * placeholder teams ("ATL/PHI", "NL Higher Seed") standing in for entrants that
+ * aren't decided yet; their ids are outside the 30 clubs', which is what
+ * `isClub` in utils/postseason.ts tests. The SCHEDULE cache profile, not STATS,
+ * because this carries the score of any postseason game in progress.
+ *
+ * Shared by the live bracket and the stat tables' postseason toggle, so one
+ * cache key serves both.
+ */
+export async function fetchPostseasonGames(): Promise<Game[]> {
+  const data = await get<{ dates?: { date: string; games: Game[] }[] }>(
+    `/schedule?sportId=1&season=${SEASON}&gameType=F,D,L,W&fields=${POSTSEASON_FIELDS}`,
+    SCHEDULE
+  )
+  return (data.dates ?? []).flatMap(d => d.games.map(g => ({ ...g, officialDate: g.officialDate ?? d.date })))
 }
 
 // Trimmed shape of the v1.1 live feed. Pre-game feeds omit linescore and
