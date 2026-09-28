@@ -7,6 +7,8 @@ import BattingForm from './BattingForm'
 import GameLogModal from './GameLogModal'
 import PlayerSearch from './PlayerSearch'
 import SectionHead from './SectionHead'
+import SplitToggle from './SplitToggle'
+import { usePhilliesInPostseason } from '../hooks/usePhilliesInPostseason'
 import ScrollX from './ScrollX'
 import StarButton from './StarButton'
 import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
@@ -35,7 +37,11 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
   // state: that makes the modal linkable, and makes Back close it instead of
   // leaving the site. Deriving it (rather than syncing state to the URL) means
   // there is only ever one source of truth to disagree with.
-  const { player: openPlayerId } = useRoute()
+  const { player: openPlayerId, split } = useRoute()
+  const post = split === 'post'
+  // Offered only when there is a postseason to show — or when a link already
+  // asked for one, so the reader can always get back to the regular season.
+  const offerSplit = usePhilliesInPostseason() || post
 
   // Bumping reloadKey re-runs the fetch; it's what the error state's Try again
   // button drives.
@@ -59,12 +65,37 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
       .finally(() => setLoading(false))
   }, [reloadKey])
 
+  // The postseason view's lines. Fetched only when asked for, and kept apart
+  // from `splits`: the game-log modal and Hot & Cold both describe the regular
+  // season, so they go on being fed regular-season lines whichever table is
+  // showing — a postseason line in the modal's header would sit over a
+  // regular-season game log.
+  const [postSplits, setPostSplits] = useState<Split[]>([])
+  const [postLoading, setPostLoading] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!post) return
+    setPostLoading(true)
+    setPostError(null)
+    fetchBattingStats('P')
+      .then(setPostSplits)
+      .catch(e => {
+        console.error('Failed to load postseason batting stats', e)
+        setPostError("Couldn't load postseason batting stats right now.")
+      })
+      .finally(() => setPostLoading(false))
+  }, [post, reloadKey])
+
+  const shownSplits = post ? postSplits : splits
+  const shownLoading = post ? postLoading : loading
+  const shownError = post ? postError : error
+
   // Looked up in `splits`, not the filtered/sorted rows, so a link to a player
   // with no at-bats still opens. Resolves to null until the fetch lands, which
   // is what lets a cold URL restore the modal once data arrives.
   const selected = openPlayerId === null ? null : splits.find(s => s.player.id === openPlayerId) ?? null
 
-  const sorted = [...splits]
+  const sorted = [...shownSplits]
     .filter(s => s.stat.atBats > 0)
     .sort((a, b) => {
       const av = parseFloat(String(a.stat[sort.key])) || 0
@@ -112,17 +143,35 @@ export default function BattingTable({ signedIn, favorites, onToggleFavorite, en
           what gives each row its season-OPS baseline for free. */}
       {enableBattingForm && <BattingForm seasonSplits={splits} />}
 
-      {loading ? (
+      {/* Above the loading/error/empty branches while the toggle is offered,
+          so a postseason view with nothing in it yet still has the control to
+          switch back. Otherwise it stays inside the success branch, as before. */}
+      {offerSplit && (
+        <SectionHead
+          title={post ? 'Postseason Batting' : 'Season Batting'}
+          hint="Select a batter for game logs, splits and a rolling trend. Game logs cover the regular season."
+        >
+          <SplitToggle split={split} />
+        </SectionHead>
+      )}
+
+      {shownLoading ? (
         <TableSkeleton rows={12} cols={9} />
-      ) : error ? (
-        <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
+      ) : shownError ? (
+        <ErrorState message={shownError} onRetry={() => setReloadKey(k => k + 1)} />
       ) : sorted.length === 0 ? (
         // Keyed on `sorted`, not `rows`: an empty table has nothing to search,
         // so the search box is not rendered at all in that case.
-        <EmptyState>No batters have recorded an at-bat yet this season.</EmptyState>
+        <EmptyState>
+          {post
+            ? 'No Phillies batter has a postseason at-bat yet.'
+            : 'No batters have recorded an at-bat yet this season.'}
+        </EmptyState>
       ) : (
         <>
-        <SectionHead title="Season Batting" hint="Select a batter for game logs, splits and a rolling trend." />
+        {!offerSplit && (
+          <SectionHead title="Season Batting" hint="Select a batter for game logs, splits and a rolling trend." />
+        )}
         <PlayerSearch
           value={query}
           onChange={setQuery}

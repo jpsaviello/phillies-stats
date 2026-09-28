@@ -7,6 +7,8 @@ import BullpenUsage from './BullpenUsage'
 import GameLogModal from './GameLogModal'
 import PlayerSearch from './PlayerSearch'
 import SectionHead from './SectionHead'
+import SplitToggle from './SplitToggle'
+import { usePhilliesInPostseason } from '../hooks/usePhilliesInPostseason'
 import ScrollX from './ScrollX'
 import StarButton from './StarButton'
 import { EmptyState, ErrorState, NoMatches, TableSkeleton } from './Feedback'
@@ -33,7 +35,10 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
   const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: keyof PitchingStats; dir: 'asc' | 'desc' }>({ key: 'era', dir: 'asc' })
   // Read from the URL, same as BattingTable — see the note there.
-  const { player: openPlayerId } = useRoute()
+  const { player: openPlayerId, split } = useRoute()
+  const post = split === 'post'
+  // See BattingTable: offered when there is a postseason, or a link asked.
+  const offerSplit = usePhilliesInPostseason() || post
 
   // See BattingTable — reloadKey drives the error state's Try again button.
   const [reloadKey, setReloadKey] = useState(0)
@@ -53,12 +58,35 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
       .finally(() => setLoading(false))
   }, [reloadKey])
 
+  // Postseason lines, fetched only when asked for and kept apart from `splits`,
+  // which BullpenUsage (role classification) and the game-log modal go on
+  // using — see the matching note in BattingTable.
+  const [postSplits, setPostSplits] = useState<Split[]>([])
+  const [postLoading, setPostLoading] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!post) return
+    setPostLoading(true)
+    setPostError(null)
+    fetchPitchingStats('P')
+      .then(setPostSplits)
+      .catch(e => {
+        console.error('Failed to load postseason pitching stats', e)
+        setPostError("Couldn't load postseason pitching stats right now.")
+      })
+      .finally(() => setPostLoading(false))
+  }, [post, reloadKey])
+
+  const shownSplits = post ? postSplits : splits
+  const shownLoading = post ? postLoading : loading
+  const shownError = post ? postError : error
+
   // Looked up in `splits`, not the filtered rows, so a link to a pitcher with
   // no innings still opens; null until the fetch lands, which is what restores
   // the modal from a cold URL.
   const selected = openPlayerId === null ? null : splits.find(s => s.player.id === openPlayerId) ?? null
 
-  const sorted = [...splits]
+  const sorted = [...shownSplits]
     .filter(s => parseFloat(s.stat.inningsPitched) > 0)
     .sort((a, b) => {
       const av = parseFloat(String(a.stat[sort.key])) || 0
@@ -99,15 +127,31 @@ export default function PitchingTable({ signedIn, favorites, onToggleFavorite, e
           classification — see the bullpen-usage design spec decision 3. */}
       {enableBullpenUsage && <BullpenUsage seasonSplits={splits} />}
 
-      {loading ? (
+      {/* See BattingTable: above the branches while the toggle is offered. */}
+      {offerSplit && (
+        <SectionHead
+          title={post ? 'Postseason Pitching' : 'Season Pitching'}
+          hint="Select a pitcher for game logs, splits and a rolling trend. Game logs cover the regular season."
+        >
+          <SplitToggle split={split} />
+        </SectionHead>
+      )}
+
+      {shownLoading ? (
         <TableSkeleton rows={12} cols={8} />
-      ) : error ? (
-        <ErrorState message={error} onRetry={() => setReloadKey(k => k + 1)} />
+      ) : shownError ? (
+        <ErrorState message={shownError} onRetry={() => setReloadKey(k => k + 1)} />
       ) : sorted.length === 0 ? (
-        <EmptyState>No pitchers have thrown an inning yet this season.</EmptyState>
+        <EmptyState>
+          {post
+            ? 'No Phillies pitcher has thrown a postseason inning yet.'
+            : 'No pitchers have thrown an inning yet this season.'}
+        </EmptyState>
       ) : (
         <>
-          <SectionHead title="Season Pitching" hint="Select a pitcher for game logs, splits and a rolling trend." />
+          {!offerSplit && (
+            <SectionHead title="Season Pitching" hint="Select a pitcher for game logs, splits and a rolling trend." />
+          )}
           <PlayerSearch
             value={query}
             onChange={setQuery}

@@ -36,6 +36,15 @@ export interface Route {
   player: number | null
   /** Open game-detail modal (gamePk), or null. */
   game: number | null
+  /**
+   * Which half of the season the Batting and Pitching tables show: `post` for
+   * the postseason, null for the regular season (the default, so an ordinary
+   * link carries nothing). In the URL rather than component state because it
+   * defines the view — "Phillies postseason batting" is worth linking to — and
+   * unlike the search box it changes on a click, not a keystroke, so a history
+   * entry per change is what Back should walk.
+   */
+  split: 'post' | null
 }
 
 function num(raw: string | null): number | null {
@@ -54,6 +63,7 @@ function parse(): Route {
     tab: (TABS as string[]).includes(path) ? (path as Tab) : DEFAULT_TAB,
     player: num(params.get('player')),
     game: num(params.get('game')),
+    split: params.get('split') === 'post' ? 'post' : null,
   }
 }
 
@@ -61,6 +71,7 @@ function format(route: Route): string {
   const params = new URLSearchParams()
   if (route.player !== null) params.set('player', String(route.player))
   if (route.game !== null) params.set('game', String(route.game))
+  if (route.split !== null) params.set('split', route.split)
   const query = params.toString()
   return `#/${route.tab}${query ? `?${query}` : ''}`
 }
@@ -117,10 +128,12 @@ export function dismiss(patch: Partial<Route>) {
 
 /**
  * Switching tabs closes whatever modal was open. Carrying `player` across would
- * reopen it over an unrelated tab as soon as that tab's data loaded.
+ * reopen it over an unrelated tab as soon as that tab's data loaded. `split`
+ * resets too: a tab should open on its default view, and `#/standings?split=post`
+ * would be an address that means nothing.
  */
 export function setTab(tab: Tab, opts?: { replace?: boolean }) {
-  navigate({ tab, player: null, game: null }, opts)
+  navigate({ tab, player: null, game: null, split: null }, opts)
 }
 
 export function useRoute(): Route {
